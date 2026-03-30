@@ -20,7 +20,7 @@ class ScoresLumiere(BaseModel):
     totSlm: Optional[int] = Field(None, ge=0, le=1_000)
 
     class Config:
-        populate_by_name = True
+        allow_population_by_field_name = True
 
     @property
     def has_detailed_slsa(self) -> bool:
@@ -59,14 +59,14 @@ class SLMPushRequest(BaseModel):
     platform: str = Field("android")
 
     class Config:
-        populate_by_name = True
+        allow_population_by_field_name = True
 
 
 class SLMPullRequest(BaseModel):
     session_key: str = Field(..., alias="sessionKey")
 
     class Config:
-        populate_by_name = True
+        allow_population_by_field_name = True
 
 
 class SLMPullResponse(BaseModel):
