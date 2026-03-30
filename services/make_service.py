@@ -76,7 +76,12 @@ class MakeService:
         if resp.status_code not in range(200, 300):
             raise MakeServiceError(resp.status_code, f"Make pull failed: {resp.text}")
 
-        data = resp.json()
+        raw = resp.text
+        try:
+            data = resp.json()
+        except Exception:
+            raise MakeServiceError(0, f"Make pull returned non-JSON: {raw[:500]!r}")
+
         if not data:
             return SLMPullResponse(session_key=session_key, found=False)
 
