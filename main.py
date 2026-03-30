@@ -4,7 +4,7 @@ import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from routers import slm
+from routers import slm, sla
 from services.make_service import MakeService
 
 
@@ -27,6 +27,7 @@ app = FastAPI(
 )
 
 app.include_router(slm.router)
+app.include_router(sla.router)
 
 
 @app.get("/health", tags=["System"], summary="Render health check")
