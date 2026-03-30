@@ -83,7 +83,8 @@ class MakeService:
         try:
             data = resp.json()
         except Exception:
-            raise MakeServiceError(0, f"Make pull returned non-JSON: {raw[:500]!r}")
+            # Make.com returns "Accepted" when the pull scenario has no Webhook Response module
+            return SLMPullResponse(session_key=session_key, found=False)
 
         if not data:
             return SLMPullResponse(session_key=session_key, found=False)
