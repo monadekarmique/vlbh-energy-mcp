@@ -40,24 +40,24 @@ class MakeService:
             # Therapist scores
             "SLA_T": t.sla,
             "SLSA_T": t.slsa_effective,
-            "SLSA_S1_T": t.slsa_s1,
-            "SLSA_S2_T": t.slsa_s2,
-            "SLSA_S3_T": t.slsa_s3,
-            "SLSA_S4_T": t.slsa_s4,
-            "SLSA_S5_T": t.slsa_s5,
+            "SLSA_S1_T": t.slsaS1,
+            "SLSA_S2_T": t.slsaS2,
+            "SLSA_S3_T": t.slsaS3,
+            "SLSA_S4_T": t.slsaS4,
+            "SLSA_S5_T": t.slsaS5,
             "SLM_T": t.slm,
-            "TotSLM_T": t.tot_slm,
+            "TotSLM_T": t.totSlm,
 
             # Patrick scores
             "SLA_P": p.sla,
             "SLSA_P": p.slsa_effective,
-            "SLSA_S1_P": p.slsa_s1,
-            "SLSA_S2_P": p.slsa_s2,
-            "SLSA_S3_P": p.slsa_s3,
-            "SLSA_S4_P": p.slsa_s4,
-            "SLSA_S5_P": p.slsa_s5,
+            "SLSA_S1_P": p.slsaS1,
+            "SLSA_S2_P": p.slsaS2,
+            "SLSA_S3_P": p.slsaS3,
+            "SLSA_S4_P": p.slsaS4,
+            "SLSA_S5_P": p.slsaS5,
             "SLM_P": p.slm,
-            "TotSLM_P": p.tot_slm,
+            "TotSLM_P": p.totSlm,
         }
 
         resp = await self._client.post(self._push_url, json=body)
