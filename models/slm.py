@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 
 
 class ScoresLumiere(BaseModel):
@@ -9,6 +9,8 @@ class ScoresLumiere(BaseModel):
     Ranges: SLA 0–350%, SLSA 0–50 000%, SLM 0–100 000%, Tot SLM 0–1 000%
     SLSA auto-calc = SA1+SA2+SA3+SA4+SA5 when any SA component is set.
     """
+    model_config = ConfigDict(populate_by_name=True)
+
     sla: Optional[int] = Field(None, ge=0, le=350)
     slsa: Optional[int] = Field(None, ge=0, le=50_000)
     slsaS1: Optional[int] = Field(None, ge=0, le=50_000)
@@ -19,8 +21,12 @@ class ScoresLumiere(BaseModel):
     slm: Optional[int] = Field(None, ge=0, le=100_000)
     totSlm: Optional[int] = Field(None, ge=0, le=1_000)
 
-    class Config:
-        allow_population_by_field_name = True
+    @model_validator(mode="after")
+    def recalc_slsa(self) -> "ScoresLumiere":
+        components = [self.slsaS1, self.slsaS2, self.slsaS3, self.slsaS4, self.slsaS5]
+        if any(x is not None for x in components):
+            self.slsa = sum(x or 0 for x in components)
+        return self
 
     @property
     def has_detailed_slsa(self) -> bool:
@@ -38,35 +44,21 @@ class ScoresLumiere(BaseModel):
     def slsa_effective(self) -> Optional[int]:
         return self.slsa_auto_calc if self.has_detailed_slsa else self.slsa
 
-    @validator("slsa", always=True, pre=False)
-    @classmethod
-    def recalc_slsa(cls, v, values):
-        s1 = values.get("slsaS1")
-        s2 = values.get("slsaS2")
-        s3 = values.get("slsaS3")
-        s4 = values.get("slsaS4")
-        s5 = values.get("slsaS5")
-        if any(x is not None for x in [s1, s2, s3, s4, s5]):
-            return sum(x or 0 for x in [s1, s2, s3, s4, s5])
-        return v
-
 
 class SLMPushRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     session_key: str = Field(..., alias="sessionKey")
     therapist: ScoresLumiere = Field(..., alias="scoresTherapist")
     patrick: ScoresLumiere = Field(..., alias="scoresPatrick")
     therapist_name: Optional[str] = Field(None, alias="therapistName")
     platform: str = Field("android")
 
-    class Config:
-        allow_population_by_field_name = True
-
 
 class SLMPullRequest(BaseModel):
-    session_key: str = Field(..., alias="sessionKey")
+    model_config = ConfigDict(populate_by_name=True)
 
-    class Config:
-        allow_population_by_field_name = True
+    session_key: str = Field(..., alias="sessionKey")
 
 
 class SLMPullResponse(BaseModel):
