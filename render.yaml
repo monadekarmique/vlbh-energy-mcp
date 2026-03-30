@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: vlbh-energy-mcp
+    runtime: python
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: MAKE_WEBHOOK_PUSH_URL
+        sync: false
+      - key: MAKE_WEBHOOK_PULL_URL
+        sync: false
+      - key: VLBH_TOKEN
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12"
