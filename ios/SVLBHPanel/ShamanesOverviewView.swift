@@ -1,204 +1,100 @@
 import SwiftUI
 
-// MARK: - Shamanes Overview View
+// MARK: - Shamanes Pending Badges
+//
+// Lit le record SHAMANES-PENDING via le webhook PULL existant.
+// Format: "0300:6|0301:4|0302:3|0303:1|455000:16"
+// Affiche un badge (chiffre) à côté de chaque shamane dans le menu recevoir.
 
-struct ShamanePending: Codable, Identifiable {
+struct ShamaneBadge: Identifiable {
     let code: String
     let name: String
-    let soins: Int
-    let recherche: Int
-    let total: Int
-    let records: [String]
-
+    let emoji: String
+    let count: Int
     var id: String { code }
-
-    var emoji: String {
-        switch code {
-        case "0300": return "🐱"   // Cornelia
-        case "0301": return "✨"   // Flavia
-        case "0302": return "🌸"   // Anne
-        case "0303": return "💫"   // Chloé
-        case "455000": return "🔬" // Patrick
-        default: return "👤"
-        }
-    }
-
-    var badgeColor: Color {
-        if total == 0 { return .green }
-        if total <= 3 { return .orange }
-        return .red
-    }
 }
-
-struct ShamanesPendingResponse: Codable {
-    let shamanes: [ShamanePending]
-    let total_soins: Int
-    let total_recherche: Int
-    let total: Int
-}
-
-// MARK: - View Model
 
 @MainActor
-class ShamanesViewModel: ObservableObject {
-    @Published var response: ShamanesPendingResponse?
-    @Published var isLoading = false
-    @Published var error: String?
+class ShamanesPendingManager: ObservableObject {
+    @Published var badges: [String: Int] = [:]  // code → count
 
-    // Configure with your backend URL
-    static let baseURL = "https://vlbh-energy-mcp.onrender.com"
+    static let shamanes: [(code: String, name: String, emoji: String)] = [
+        ("0300", "Cornelia", "\u{1F431}"),
+        ("0301", "Flavia", "\u{2728}"),
+        ("0302", "Anne", "\u{1F338}"),
+        ("0303", "Chlo\u{00e9}", "\u{1F4AB}"),
+        ("455000", "Patrick", "\u{1F52C}"),
+    ]
 
-    func fetch(token: String) async {
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-
-        guard let url = URL(string: "\(Self.baseURL)/shamanes/pending") else {
-            error = "URL invalide"
-            return
-        }
-
-        var req = URLRequest(url: url)
-        req.setValue(token, forHTTPHeaderField: "X-VLBH-Token")
-        req.timeoutInterval = 20
+    // Call this when the receive/pull menu opens
+    func fetch(pullURL: URL) async {
+        var req = URLRequest(url: pullURL)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["session_id": "SHAMANES-PENDING"])
+        req.timeoutInterval = 10
 
         do {
-            let (data, resp) = try await URLSession.shared.data(for: req)
-            guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
-                error = "HTTP \((resp as? HTTPURLResponse)?.statusCode ?? 0)"
-                return
-            }
-            response = try JSONDecoder().decode(ShamanesPendingResponse.self, from: data)
+            let (data, response) = try await URLSession.shared.data(for: req)
+            guard (response as? HTTPURLResponse)?.statusCode == 200,
+                  let text = String(data: data, encoding: .utf8),
+                  !text.isEmpty, text != "READ" else { return }
+            parse(text)
         } catch {
-            self.error = error.localizedDescription
+            print("[ShamanesPending] fetch error: \(error.localizedDescription)")
+        }
+    }
+
+    private func parse(_ text: String) {
+        // Format: "0300:6|0301:4|0302:3|0303:1|455000:16"
+        var result: [String: Int] = [:]
+        for pair in text.split(separator: "|") {
+            let parts = pair.split(separator: ":")
+            if parts.count == 2, let count = Int(parts[1]) {
+                result[String(parts[0])] = count
+            }
+        }
+        badges = result
+    }
+
+    func count(for code: String) -> Int {
+        badges[code] ?? 0
+    }
+
+    var allBadges: [ShamaneBadge] {
+        Self.shamanes.map { s in
+            ShamaneBadge(code: s.code, name: s.name, emoji: s.emoji, count: count(for: s.code))
         }
     }
 }
 
-// MARK: - View
+// MARK: - Badge View (to embed next to each shamane in the receive menu)
+//
+// Usage in your existing pull source picker:
+//
+//   @StateObject var pendingManager = ShamanesPendingManager()
+//
+//   ForEach(pendingManager.allBadges) { shamane in
+//       Button { selectSource(shamane.code) } label: {
+//           HStack {
+//               Text("\(shamane.emoji) \(shamane.name)")
+//               Spacer()
+//               if shamane.count > 0 {
+//                   PendingBadge(count: shamane.count)
+//               }
+//           }
+//       }
+//   }
+//   .task { await pendingManager.fetch(pullURL: yourPullWebhookURL) }
 
-struct ShamanesOverviewView: View {
-    @StateObject private var vm = ShamanesViewModel()
-    let vlbhToken: String
+struct PendingBadge: View {
+    let count: Int
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if vm.isLoading {
-                    ProgressView("Chargement...")
-                } else if let error = vm.error {
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundStyle(.orange)
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button("Réessayer") {
-                            Task { await vm.fetch(token: vlbhToken) }
-                        }
-                    }
-                } else if let data = vm.response {
-                    contentView(data)
-                } else {
-                    Text("Aucune donnée")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Shamanes")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await vm.fetch(token: vlbhToken) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-            }
-            .task {
-                await vm.fetch(token: vlbhToken)
-            }
-        }
-    }
-
-    // MARK: - Content
-
-    @ViewBuilder
-    private func contentView(_ data: ShamanesPendingResponse) -> some View {
-        List {
-            // Summary header
-            Section {
-                HStack(spacing: 24) {
-                    summaryPill("Soins", count: data.total_soins, color: .blue)
-                    summaryPill("Recherche", count: data.total_recherche, color: .purple)
-                    summaryPill("Total", count: data.total, color: data.total > 10 ? .red : .orange)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
-            }
-
-            // Shamanes list
-            Section("Soins en attente par shamane") {
-                ForEach(data.shamanes) { shamane in
-                    shamaneRow(shamane)
-                }
-            }
-        }
-    }
-
-    private func summaryPill(_ label: String, count: Int, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func shamaneRow(_ shamane: ShamanePending) -> some View {
-        DisclosureGroup {
-            ForEach(shamane.records, id: \.self) { key in
-                Text(key)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-        } label: {
-            HStack {
-                Text(shamane.emoji)
-                    .font(.title2)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(shamane.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Text("Code \(shamane.code)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    if shamane.soins > 0 {
-                        badge("\(shamane.soins) soins", color: .blue)
-                    }
-                    if shamane.recherche > 0 {
-                        badge("\(shamane.recherche) rech.", color: .purple)
-                    }
-                }
-            }
-        }
-    }
-
-    private func badge(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .semibold))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.15), in: Capsule())
-            .foregroundStyle(color)
+        Text("\(count)")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(minWidth: 22, minHeight: 22)
+            .background(count > 5 ? Color.red : Color.orange, in: Circle())
     }
 }
