@@ -3,6 +3,9 @@ import time
 import httpx
 from typing import Optional
 from models.slm import ScoresLumiere, SLMPushRequest, SLMPullResponse
+from models.lead import LeadPushRequest, LeadPullResponse
+from models.session import SessionPushRequest, SessionPullResponse
+from models.sla import SLAPushRequest, SLAPullResponse
 
 DATASTORE_ID = 155674
 TIMEOUT = 15.0
@@ -109,6 +112,148 @@ class MakeService:
             session_key=session_key,
             therapist=parse_scores("T"),
             patrick=parse_scores("P"),
+            found=True,
+            timestamp=data.get("timestamp"),
+        )
+
+    async def push_lead(self, payload: LeadPushRequest) -> dict:
+        body = {
+            "shamaneCode": payload.shamane_code,
+            "datastoreId": DATASTORE_ID,
+            "module": "LEAD",
+            "prenom": payload.prenom,
+            "nom": payload.nom,
+            "tier": payload.tier,
+            "status": payload.status,
+            "sessionKey": payload.session_key,
+            "platform": payload.platform,
+            "timestamp": int(time.time() * 1000),
+        }
+        resp = await self._client.post(self._push_url, json=body)
+        if resp.status_code not in range(200, 300):
+            raise MakeServiceError(resp.status_code, f"Make push lead failed: {resp.text}")
+        return {"ok": True, "make_status": resp.status_code}
+
+    async def pull_lead(self, shamane_code: str) -> LeadPullResponse:
+        body = {
+            "shamaneCode": shamane_code,
+            "datastoreId": DATASTORE_ID,
+            "module": "LEAD",
+        }
+        resp = await self._client.post(self._pull_url, json=body)
+        if resp.status_code not in range(200, 300):
+            raise MakeServiceError(resp.status_code, f"Make pull lead failed: {resp.text}")
+        raw = resp.text.strip()
+        if not raw:
+            return LeadPullResponse(shamane_code=shamane_code, found=False)
+        try:
+            data = resp.json()
+        except Exception:
+            return LeadPullResponse(shamane_code=shamane_code, found=False)
+        if not data:
+            return LeadPullResponse(shamane_code=shamane_code, found=False)
+        return LeadPullResponse(
+            shamane_code=shamane_code,
+            prenom=data.get("prenom"),
+            nom=data.get("nom"),
+            tier=data.get("tier"),
+            status=data.get("status"),
+            session_key=data.get("sessionKey"),
+            found=True,
+            timestamp=data.get("timestamp"),
+        )
+
+    async def push_session(self, payload: SessionPushRequest) -> dict:
+        body = {
+            "sessionKey": payload.session_key,
+            "datastoreId": DATASTORE_ID,
+            "module": "SESSION",
+            "patientId": payload.patient_id,
+            "sessionNum": payload.session_num,
+            "programCode": payload.program_code,
+            "practitionerCode": payload.practitioner_code,
+            "therapistName": payload.therapist_name,
+            "status": payload.status,
+            "eventCount": payload.event_count,
+            "liberatedCount": payload.liberated_count,
+            "platform": payload.platform,
+            "timestamp": int(time.time() * 1000),
+        }
+        resp = await self._client.post(self._push_url, json=body)
+        if resp.status_code not in range(200, 300):
+            raise MakeServiceError(resp.status_code, f"Make push session failed: {resp.text}")
+        return {"ok": True, "make_status": resp.status_code}
+
+    async def pull_session(self, session_key: str) -> SessionPullResponse:
+        body = {
+            "sessionKey": session_key,
+            "datastoreId": DATASTORE_ID,
+            "module": "SESSION",
+        }
+        resp = await self._client.post(self._pull_url, json=body)
+        if resp.status_code not in range(200, 300):
+            raise MakeServiceError(resp.status_code, f"Make pull session failed: {resp.text}")
+        raw = resp.text.strip()
+        if not raw:
+            return SessionPullResponse(session_key=session_key, found=False)
+        try:
+            data = resp.json()
+        except Exception:
+            return SessionPullResponse(session_key=session_key, found=False)
+        if not data:
+            return SessionPullResponse(session_key=session_key, found=False)
+        return SessionPullResponse(
+            session_key=session_key,
+            patient_id=data.get("patientId"),
+            session_num=data.get("sessionNum"),
+            program_code=data.get("programCode"),
+            practitioner_code=data.get("practitionerCode"),
+            therapist_name=data.get("therapistName"),
+            status=data.get("status"),
+            event_count=data.get("eventCount"),
+            liberated_count=data.get("liberatedCount"),
+            found=True,
+            timestamp=data.get("timestamp"),
+        )
+
+    async def push_sla(self, payload: SLAPushRequest) -> dict:
+        body = {
+            "sessionKey": payload.session_key,
+            "datastoreId": DATASTORE_ID,
+            "module": "SLA",
+            "therapistName": payload.therapist_name,
+            "platform": payload.platform,
+            "timestamp": int(time.time() * 1000),
+            "SLA_T": payload.sla_therapist,
+            "SLA_P": payload.sla_patrick,
+        }
+        resp = await self._client.post(self._push_url, json=body)
+        if resp.status_code not in range(200, 300):
+            raise MakeServiceError(resp.status_code, f"Make push SLA failed: {resp.text}")
+        return {"ok": True, "make_status": resp.status_code}
+
+    async def pull_sla(self, session_key: str) -> SLAPullResponse:
+        body = {
+            "sessionKey": session_key,
+            "datastoreId": DATASTORE_ID,
+            "module": "SLA",
+        }
+        resp = await self._client.post(self._pull_url, json=body)
+        if resp.status_code not in range(200, 300):
+            raise MakeServiceError(resp.status_code, f"Make pull SLA failed: {resp.text}")
+        raw = resp.text.strip()
+        if not raw:
+            return SLAPullResponse(session_key=session_key, found=False)
+        try:
+            data = resp.json()
+        except Exception:
+            return SLAPullResponse(session_key=session_key, found=False)
+        if not data:
+            return SLAPullResponse(session_key=session_key, found=False)
+        return SLAPullResponse(
+            session_key=session_key,
+            sla_therapist=data.get("SLA_T"),
+            sla_patrick=data.get("SLA_P"),
             found=True,
             timestamp=data.get("timestamp"),
         )
