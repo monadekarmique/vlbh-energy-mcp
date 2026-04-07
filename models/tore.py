@@ -51,6 +51,83 @@ class Sclerose(BaseModel):
     permeabilite: Optional[int] = Field(None, ge=0, le=100)
 
 
+class ScleroseTissulaire(BaseModel):
+    """
+    Sclérose tissulaire détaillée — cartographie des zones de rigidification.
+    fibroseIndex: indice de fibrose tissulaire (0–1000)
+    zonesAtteintes: nombre de zones atteintes (0–50)
+    profondeur: profondeur de sclérose en couches (0–10)
+    revascularisation: taux de revascularisation post-tore (0–100%)
+    decompaction: taux de décompaction tissulaire (0–100%)
+    """
+    model_config = ConfigDict(populate_by_name=True)
+
+    fibroseIndex: Optional[int] = Field(None, ge=0, le=1000, alias="fibroseIndex")
+    zonesAtteintes: Optional[int] = Field(None, ge=0, le=50, alias="zonesAtteintes")
+    profondeur: Optional[int] = Field(None, ge=0, le=10)
+    revascularisation: Optional[int] = Field(None, ge=0, le=100)
+    decompaction: Optional[int] = Field(None, ge=0, le=100)
+
+
+class CouplageToreGlycemie(BaseModel):
+    """
+    Couplage croisé tore–glycémie–sclérose.
+    Scores de corrélation entre le champ toroïdal et les marqueurs métaboliques.
+
+    correlationTG: corrélation tore↔glycémie (-100 à +100, 0=neutre)
+    correlationTS: corrélation tore↔sclérose (-100 à +100)
+    correlationGS: corrélation glycémie↔sclérose (-100 à +100)
+    scoreCouplage: score de couplage global (0–10 000), auto-calc
+    fluxNet: flux énergétique net du couplage (-100 000 à +100 000)
+    phaseCouplage: SYNERGIQUE | ANTAGONISTE | NEUTRE | TRANSITOIRE
+
+    Auto-calcul scoreCouplage:
+      abs(correlationTG) * poids_tg + abs(correlationTS) * poids_ts + abs(correlationGS) * poids_gs
+      avec poids_tg=50, poids_ts=30, poids_gs=20 (pondération tore-dominante)
+    """
+    model_config = ConfigDict(populate_by_name=True)
+
+    correlationTG: Optional[int] = Field(None, ge=-100, le=100, alias="correlationTG")
+    correlationTS: Optional[int] = Field(None, ge=-100, le=100, alias="correlationTS")
+    correlationGS: Optional[int] = Field(None, ge=-100, le=100, alias="correlationGS")
+    scoreCouplage: Optional[int] = Field(None, ge=0, le=10_000, alias="scoreCouplage")
+    fluxNet: Optional[int] = Field(None, ge=-100_000, le=100_000, alias="fluxNet")
+    phaseCouplage: Optional[str] = Field(
+        None, alias="phaseCouplage",
+        pattern=r"^(SYNERGIQUE|ANTAGONISTE|NEUTRE|TRANSITOIRE)$"
+    )
+    scleroseTissulaire: Optional[ScleroseTissulaire] = Field(None, alias="scleroseTissulaire")
+
+    @model_validator(mode="after")
+    def calc_score_couplage(self) -> "CouplageToreGlycemie":
+        corrs = [self.correlationTG, self.correlationTS, self.correlationGS]
+        if all(c is not None for c in corrs):
+            self.scoreCouplage = (
+                abs(self.correlationTG) * 50
+                + abs(self.correlationTS) * 30
+                + abs(self.correlationGS) * 20
+            )
+        return self
+
+    @model_validator(mode="after")
+    def infer_phase(self) -> "CouplageToreGlycemie":
+        if self.phaseCouplage is not None:
+            return self
+        corrs = [self.correlationTG, self.correlationTS, self.correlationGS]
+        if not all(c is not None for c in corrs):
+            return self
+        avg = sum(corrs) / 3
+        if avg > 30:
+            self.phaseCouplage = "SYNERGIQUE"
+        elif avg < -30:
+            self.phaseCouplage = "ANTAGONISTE"
+        elif abs(avg) <= 10:
+            self.phaseCouplage = "NEUTRE"
+        else:
+            self.phaseCouplage = "TRANSITOIRE"
+        return self
+
+
 class StockageEnergetique(BaseModel):
     """
     Restauration du stockage énergétique — intègre le champ toroïdal
@@ -65,6 +142,7 @@ class StockageEnergetique(BaseModel):
     tore: Optional[ChampToroidal] = None
     glycemie: Optional[Glycemie] = None
     sclerose: Optional[Sclerose] = None
+    couplage: Optional[CouplageToreGlycemie] = None
     niveau: Optional[int] = Field(None, ge=0, le=100_000)
     capacite: Optional[int] = Field(None, ge=0, le=100_000)
     tauxRestauration: Optional[int] = Field(None, ge=0, le=100, alias="tauxRestauration")

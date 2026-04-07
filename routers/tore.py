@@ -1,7 +1,11 @@
 from __future__ import annotations
 import time
 from fastapi import APIRouter, Depends, HTTPException, status
-from models.tore import TorePushRequest, TorePullRequest, TorePullResponse, StockageEnergetique, ChampToroidal, Glycemie, Sclerose
+from models.tore import (
+    TorePushRequest, TorePullRequest, TorePullResponse,
+    StockageEnergetique, ChampToroidal, Glycemie, Sclerose,
+    CouplageToreGlycemie, ScleroseTissulaire,
+)
 from services.make_service import MakeServiceError
 from dependencies import get_make_service, verify_token
 
@@ -29,6 +33,8 @@ async def push_tore(
     t = s.tore or ChampToroidal()
     g = s.glycemie or Glycemie()
     sc = s.sclerose or Sclerose()
+    cp = s.couplage or CouplageToreGlycemie()
+    st = cp.scleroseTissulaire or ScleroseTissulaire()
 
     body = {
         "sessionKey": payload.session_key,
@@ -55,6 +61,21 @@ async def push_tore(
         "scl_densite": sc.densite,
         "scl_elasticite": sc.elasticite,
         "scl_permeabilite": sc.permeabilite,
+
+        # Couplage tore–glycémie–sclérose
+        "cp_correlationTG": cp.correlationTG,
+        "cp_correlationTS": cp.correlationTS,
+        "cp_correlationGS": cp.correlationGS,
+        "cp_scoreCouplage": cp.scoreCouplage,
+        "cp_fluxNet": cp.fluxNet,
+        "cp_phaseCouplage": cp.phaseCouplage,
+
+        # Sclérose tissulaire détaillée
+        "st_fibroseIndex": st.fibroseIndex,
+        "st_zonesAtteintes": st.zonesAtteintes,
+        "st_profondeur": st.profondeur,
+        "st_revascularisation": st.revascularisation,
+        "st_decompaction": st.decompaction,
 
         # Stockage global
         "stockage_niveau": s.niveau,
@@ -124,10 +145,27 @@ async def pull_tore(
             elasticite=data.get("scl_elasticite"),
             permeabilite=data.get("scl_permeabilite"),
         )
+        sclerose_tiss = ScleroseTissulaire(
+            fibroseIndex=data.get("st_fibroseIndex"),
+            zonesAtteintes=data.get("st_zonesAtteintes"),
+            profondeur=data.get("st_profondeur"),
+            revascularisation=data.get("st_revascularisation"),
+            decompaction=data.get("st_decompaction"),
+        )
+        couplage = CouplageToreGlycemie(
+            correlationTG=data.get("cp_correlationTG"),
+            correlationTS=data.get("cp_correlationTS"),
+            correlationGS=data.get("cp_correlationGS"),
+            scoreCouplage=data.get("cp_scoreCouplage"),
+            fluxNet=data.get("cp_fluxNet"),
+            phaseCouplage=data.get("cp_phaseCouplage"),
+            scleroseTissulaire=sclerose_tiss,
+        )
         stockage = StockageEnergetique(
             tore=tore,
             glycemie=glycemie,
             sclerose=sclerose,
+            couplage=couplage,
             niveau=data.get("stockage_niveau"),
             capacite=data.get("stockage_capacite"),
             tauxRestauration=data.get("stockage_tauxRestauration"),
