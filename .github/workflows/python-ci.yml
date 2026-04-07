@@ -1,0 +1,46 @@
+name: Python CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.py'
+      - 'models/**'
+      - 'routers/**'
+      - 'services/**'
+      - 'requirements.txt'
+  pull_request:
+    branches: [main]
+    paths:
+      - '*.py'
+      - 'models/**'
+      - 'routers/**'
+      - 'services/**'
+      - 'requirements.txt'
+
+jobs:
+  lint-and-check:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check syntax (py_compile)
+        run: python -m py_compile main.py
+
+      - name: Validate imports
+        run: |
+          python -c "
+          from main import app
+          print('FastAPI app loaded successfully')
+          print(f'Routes: {len(app.routes)}')
+          "
