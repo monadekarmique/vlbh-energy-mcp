@@ -1,5 +1,32 @@
 # CLAUDE.md — Instructions pour l'agent Claude Code
 
+## Contexte projet
+
+- **Proprietaire** : Patrick Bays — Digital Shaman Lab
+- **Organisation GitHub** : monadekarmique
+- **Site** : vlbh.energy (WordPress)
+- **Ecosysteme** : SVLBH (Scores de Lumiere) / hDOM
+- **Backend data** : Make.com EU2 (datastores + webhooks)
+- **Langue de communication** : francais (code et commits en anglais)
+
+## Credentials & API Keys
+
+- **App Store Connect API Key** : stockee localement sur le Mac de Patrick
+  - Fichier .p8 + Key ID + Issuer ID
+  - Non disponible dans ce repo ni dans Notion
+  - Si besoin, DEMANDER a Patrick de la coller ou de la stocker dans un secret GitHub
+- **Make.com webhooks** : voir .env.example (MAKE_WEBHOOK_PUSH_URL, MAKE_WEBHOOK_PULL_URL)
+- **VLBH_TOKEN** : token d'auth pour les clients iOS/Android
+- **Render.com** : deploy auto depuis GitHub (render.yaml)
+
+## Comportement attendu de l'agent
+
+- NE PAS demander des infos deja documentees ici
+- Utiliser les outils MCP (GitHub, Notion, Make) au lieu de demander a Patrick de faire les choses manuellement
+- Quand un outil MCP est deconnecte, utiliser WebFetch en fallback
+- Creer les PR directement via GitHub MCP, ne pas donner de commandes `gh` a copier-coller
+- Patrick veut que l'agent FASSE les choses, pas qu'il explique comment les faire
+
 ## CI/CD Rules
 
 ### GitHub Actions
