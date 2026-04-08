@@ -12,7 +12,8 @@ Fields mirror the official Tarif 590 form sections:
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+import datetime as _dt
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional
@@ -80,7 +81,7 @@ class Tarif590Patient(BaseModel):
     """Section Patient du Tarif 590."""
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
-    date_of_birth: date
+    date_of_birth: _dt.date
     street: Optional[str] = Field(None, max_length=150)
     house_number: Optional[str] = Field(None, max_length=20)
     postal_code: Optional[str] = Field(None, max_length=10)
@@ -97,7 +98,7 @@ class Tarif590Patient(BaseModel):
 
 class Tarif590Prestation(BaseModel):
     """Ligne de prestation Tarif 590."""
-    date: date = Field(..., description="Date de la prestation")
+    service_date: _dt.date = Field(..., alias="date", description="Date de la prestation")
     tarif_code: str = Field(default="590", max_length=10,
                             description="Code tarif (590 = thérapie complémentaire)")
     code_prestation: str = Field(..., max_length=10,
@@ -136,7 +137,7 @@ class Tarif590Request(BaseModel):
     therapeute: Tarif590Therapeute
     patient: Tarif590Patient
     prestations: list[Tarif590Prestation] = Field(..., min_length=1, max_length=50)
-    invoice_date: date = Field(default_factory=date.today)
+    invoice_date: _dt.date = Field(default_factory=_dt.date.today)
     invoice_number: Optional[str] = Field(None, max_length=30,
                                            description="Numéro de facture (auto si vide)")
     reference_number: Optional[str] = Field(None, max_length=27,

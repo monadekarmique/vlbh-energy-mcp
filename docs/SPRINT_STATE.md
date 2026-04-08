@@ -12,7 +12,7 @@
 | J2 — Tarif 590 + Scores + Rose des Vents | DONE | 2026-04-08 |
 | J3 — Finition plan 59 + debut plan 179 | DONE | 2026-04-08 |
 | J4 — Tore Couplages + Chromo + Auth | DONE | 2026-04-08 |
-| J5 — Deploy + tests + mobile | EN ATTENTE | |
+| J5 — Deploy + tests + mobile | DONE | 2026-04-08 |
 
 ## Branche Git
 
@@ -59,6 +59,20 @@
 | routers/tore_session.py | CREE | J4 |
 | docs/004_j4_tables.sql | CREE | J4 |
 | main.py | MODIFIE | J4 |
+| Tests/conftest.py | CREE | J5 |
+| Tests/test_models.py | CREE | J5 |
+| Tests/test_health.py | CREE | J5 |
+| Tests/test_patients.py | CREE | J5 |
+| Tests/test_chromo.py | CREE | J5 |
+| Tests/test_tore_sessions.py | CREE | J5 |
+| Tests/test_pipeline.py | CREE | J5 |
+| Tests/test_scores.py | CREE | J5 |
+| Tests/test_rose_des_vents.py | CREE | J5 |
+| pytest.ini | CREE | J5 |
+| render.yaml | MODIFIE | J5 |
+| requirements.txt | MODIFIE | J5 |
+| models/tarif590.py | MODIFIE | J5 |
+| docs/005_deploy_checklist.md | CREE | J5 |
 
 ## API Contract Registry
 
@@ -172,6 +186,11 @@
 - J4: Tore sessions = CRUD historique avec before/after snapshots (JSONB) + rendement_delta compute
 - J4: tore_sessions complemente /tore/push et /tore/pull existants (Make.com sync)
 - J4: main.py updated to v2.3.0, 3 new routers (chromo, auth, tore_session)
+- J5: 39 tests pytest (17 model validation + 22 integration via TestClient)
+- J5: Fix tarif590.py Pydantic 2.12 / Python 3.14 compat (date field name clash with type annotation)
+- J5: render.yaml augmente avec SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY, MAKE_WEBHOOK_TWINT_URL
+- J5: pytest.ini avec import-mode=importlib (requis macOS case-insensitive + Tests dir)
+- J5: Deploy checklist complete dans docs/005_deploy_checklist.md
 
 ## Blockers / Questions ouvertes
 
