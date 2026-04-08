@@ -2,5 +2,10 @@ fastapi==0.115.6
 uvicorn[standard]==0.32.1
 httpx==0.28.1
 pydantic>=2.9,<3
+pydantic[email]
 python-dotenv==1.0.1
 fastapi-mcp>=0.3.4
+# --- iTherapeut 6.0 J1 additions ---
+supabase>=2.0.0
+qrbill>=1.1.0
+reportlab>=4.0
