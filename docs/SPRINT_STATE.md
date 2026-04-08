@@ -11,7 +11,7 @@
 | J1 — Fondations (DB + API + QR-facture) | DONE | 2026-04-08 |
 | J2 — Tarif 590 + Scores + Rose des Vents | DONE | 2026-04-08 |
 | J3 — Finition plan 59 + debut plan 179 | DONE | 2026-04-08 |
-| J4 — Tore Couplages + Chromo + Auth | EN ATTENTE | |
+| J4 — Tore Couplages + Chromo + Auth | DONE | 2026-04-08 |
 | J5 — Deploy + tests + mobile | EN ATTENTE | |
 
 ## Branche Git
@@ -51,6 +51,14 @@
 | routers/pipeline.py | CREE | J3 |
 | docs/003_j3_tables.sql | CREE | J3 |
 | main.py | MODIFIE | J3 |
+| models/chromo.py | CREE | J4 |
+| routers/chromo.py | CREE | J4 |
+| models/auth.py | CREE | J4 |
+| routers/auth.py | CREE | J4 |
+| models/tore_session.py | CREE | J4 |
+| routers/tore_session.py | CREE | J4 |
+| docs/004_j4_tables.sql | CREE | J4 |
+| main.py | MODIFIE | J4 |
 
 ## API Contract Registry
 
@@ -108,8 +116,20 @@
 | `GET /pipeline/leads/{id}` | GET | PipelineLead | routers/pipeline.py | 179 | J3 | DONE |
 | `PUT /pipeline/leads/{id}` | PUT | PipelineLead | routers/pipeline.py | 179 | J3 | DONE |
 | `DELETE /pipeline/leads/{id}` | DELETE | — | routers/pipeline.py | 179 | J3 | DONE |
-| `POST /auth/register` | POST | — | Supabase Auth | tous | J4 | TODO |
-| `POST /auth/magic-link` | POST | — | Supabase Auth | tous | J4 | TODO |
+| `POST /auth/register` | POST | RegisterResponse | routers/auth.py | tous | J4 | DONE |
+| `POST /auth/login` | POST | LoginResponse | routers/auth.py | tous | J4 | DONE |
+| `POST /auth/magic-link` | POST | MagicLinkResponse | routers/auth.py | tous | J4 | DONE |
+| `POST /auth/refresh` | POST | LoginResponse | routers/auth.py | tous | J4 | DONE |
+| `GET /auth/me` | GET | TokenVerifyResponse | routers/auth.py | tous | J4 | DONE |
+| `POST /chromo` | POST | ChromoSession | routers/chromo.py | 59/179 | J4 | DONE |
+| `GET /chromo` | GET | ChromoSessionList | routers/chromo.py | 59/179 | J4 | DONE |
+| `GET /chromo/{id}` | GET | ChromoSession | routers/chromo.py | 59/179 | J4 | DONE |
+| `PUT /chromo/{id}` | PUT | ChromoSession | routers/chromo.py | 59/179 | J4 | DONE |
+| `GET /chromo/reference` | GET | ChromoReferenceResponse | routers/chromo.py | 59/179 | J4 | DONE |
+| `POST /tore-sessions` | POST | ToreSession | routers/tore_session.py | 179 | J4 | DONE |
+| `GET /tore-sessions` | GET | ToreSessionList | routers/tore_session.py | 179 | J4 | DONE |
+| `GET /tore-sessions/{id}` | GET | ToreSession | routers/tore_session.py | 179 | J4 | DONE |
+| `PUT /tore-sessions/{id}` | PUT | ToreSession | routers/tore_session.py | 179 | J4 | DONE |
 
 ## Decisions prises en cours de sprint
 
@@ -141,6 +161,17 @@
 - J3: Pipeline GET retourne stage_counts pour affichage kanban board
 - J3: Twint router monte sur /invoices/{id}/twint (sous-ressource de invoice, pas nouveau prefix)
 - J3: main.py updated to v2.2.0, 3 new routers (stats, twint, pipeline)
+- J4: Chromo model = 12 Color Gels Dinshah × 14 meridiens MTC × 5 Elements, mapping tonify/sedate/neutral
+- J4: MERIDIEN_ELEMENT_MAP dict statique dans models/chromo.py — reference pour frontend prescription UI
+- J4: GET /chromo/reference retourne la table complete (14 meridiens + 12 gels + 5 elements)
+- J4: Prescriptions chromo stockees en JSONB (array de ChromoPrescriptionItem) — flexible pour N items/session
+- J4: protocol_source enum: 5_elements | hdom | spectro_chrome | custom
+- J4: Auth via Supabase GoTrue (anon key) — register, login, magic-link, refresh, me
+- J4: Auth router SANS verify_token (public endpoints) — utilise Bearer token pour /auth/me
+- J4: _get_anon_client() separe du get_supabase() service key — RLS-compatible
+- J4: Tore sessions = CRUD historique avec before/after snapshots (JSONB) + rendement_delta compute
+- J4: tore_sessions complemente /tore/push et /tore/pull existants (Make.com sync)
+- J4: main.py updated to v2.3.0, 3 new routers (chromo, auth, tore_session)
 
 ## Blockers / Questions ouvertes
 
@@ -152,6 +183,8 @@
 - [ ] Migration 002_j2_tables.sql: a executer dans Supabase SQL Editor
 - [ ] Migration 003_j3_tables.sql: a executer dans Supabase SQL Editor
 - [ ] MAKE_WEBHOOK_TWINT_URL: a configurer dans Make.com pour envoi WhatsApp Twint
+- [ ] Migration 004_j4_tables.sql: a executer dans Supabase SQL Editor
+- [ ] SUPABASE_ANON_KEY: a configurer dans .env pour auth endpoints (fallback sur SERVICE_KEY)
 
 ## Fin de session — Checklist handover
 
