@@ -18,6 +18,10 @@
 - **Make.com webhooks** : voir .env.example (MAKE_WEBHOOK_PUSH_URL, MAKE_WEBHOOK_PULL_URL)
 - **VLBH_TOKEN** : token d'auth pour les clients iOS/Android
 - **Render.com** : deploy auto depuis GitHub (render.yaml)
+  - API Key : `rnd_1OXpUMdq8pV8DtmLrpsufJd6eS9f`
+  - Service ID : `srv-d750u0oule4c73fb254g`
+  - URL : `https://vlbh-energy-mcp.onrender.com`
+  - Setup : `python deploy_render.py setup rnd_1OXpUMdq8pV8DtmLrpsufJd6eS9f`
 
 ## Comportement attendu de l'agent
 

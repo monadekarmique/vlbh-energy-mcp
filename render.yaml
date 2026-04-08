@@ -11,6 +11,8 @@ services:
         sync: false
       - key: MAKE_WEBHOOK_PULL_URL
         sync: false
+      - key: MAKE_WEBHOOK_BILLING_LIST_URL
+        sync: false
       - key: VLBH_TOKEN
         sync: false
       - key: PYTHON_VERSION
