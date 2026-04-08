@@ -45,11 +45,34 @@ class InvoiceBase(BaseModel):
     creditor_city: str = Field(..., max_length=100)
     creditor_country: str = Field(default="CH", max_length=2)
     creditor_iban: str = Field(..., max_length=34)
+    # Practitioner reference
+    practitioner_id: Optional[UUID] = Field(None,
+                                             description="Auto-fills creditor info from practitioner profile")
 
 
-class InvoiceCreate(InvoiceBase):
-    """Body for POST /invoices."""
-    pass
+class InvoiceCreate(BaseModel):
+    """Body for POST /invoices.
+
+    If practitioner_id is provided, creditor fields are auto-filled
+    from the practitioner profile (can still be overridden).
+    """
+    patient_id: UUID
+    therapy_session_ids: list[UUID] = Field(default_factory=list)
+    invoice_date: date = Field(default_factory=date.today)
+    due_date: Optional[date] = None
+    line_items: list[InvoiceLineItem] = Field(..., min_length=1)
+    notes: Optional[str] = None
+    # Practitioner ID — if set, creditor fields are auto-filled
+    practitioner_id: Optional[UUID] = Field(None,
+                                             description="Auto-fills creditor info from practitioner profile")
+    # Creditor info — optional when practitioner_id is set
+    creditor_name: Optional[str] = Field(None, max_length=200)
+    creditor_street: Optional[str] = Field(None, max_length=150)
+    creditor_house_number: Optional[str] = Field(None, max_length=20)
+    creditor_postal_code: Optional[str] = Field(None, max_length=10)
+    creditor_city: Optional[str] = Field(None, max_length=100)
+    creditor_country: str = Field(default="CH", max_length=2)
+    creditor_iban: Optional[str] = Field(None, max_length=34)
 
 
 class Invoice(InvoiceBase):

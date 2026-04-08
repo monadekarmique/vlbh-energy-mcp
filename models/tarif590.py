@@ -133,8 +133,13 @@ class Tarif590Request(BaseModel):
     """Request body for POST /tarif590/generate.
 
     Generates an official Tarif 590 PDF.
+    If practitioner_id is provided, therapeute info is auto-filled
+    from the practitioner profile (therapeute field becomes optional).
     """
-    therapeute: Tarif590Therapeute
+    practitioner_id: Optional[UUID] = Field(None,
+                                             description="Auto-fills therapeute from practitioner profile")
+    therapeute: Optional[Tarif590Therapeute] = Field(None,
+                                                      description="Required if practitioner_id is not set")
     patient: Tarif590Patient
     prestations: list[Tarif590Prestation] = Field(..., min_length=1, max_length=50)
     invoice_date: _dt.date = Field(default_factory=_dt.date.today)

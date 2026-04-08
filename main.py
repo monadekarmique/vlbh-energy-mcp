@@ -18,6 +18,8 @@ from routers import tarif590, scores, rose_des_vents
 from routers import stats, twint, pipeline
 # --- NEW J4 routers ---
 from routers import chromo, auth, tore_session
+# --- NEW: Practitioner multi-praticien ---
+from routers import practitioner
 from services.make_service import MakeService
 from fastapi_mcp import FastApiMCP
 
@@ -34,7 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="VLBH Energy MCP",
     description="MCP server for SVLBHPanel — Scores de Lumière sync via Make.com + iTherapeut 6.0",
-    version="2.3.0",
+    version="2.4.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url=None,
@@ -68,6 +70,9 @@ app.include_router(pipeline.router)
 app.include_router(chromo.router)
 app.include_router(auth.router)
 app.include_router(tore_session.router)
+
+# NEW: Practitioner multi-praticien
+app.include_router(practitioner.router)
 
 mcp = FastApiMCP(app)
 mcp.mount()

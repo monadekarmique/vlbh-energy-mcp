@@ -13,6 +13,7 @@
 | J3 — Finition plan 59 + debut plan 179 | DONE | 2026-04-08 |
 | J4 — Tore Couplages + Chromo + Auth | DONE | 2026-04-08 |
 | J5 — Deploy + tests + mobile | DONE | 2026-04-08 |
+| POST-SPRINT — Multi-praticien | DONE | 2026-04-08 |
 
 ## Branche Git
 
@@ -73,6 +74,14 @@
 | requirements.txt | MODIFIE | J5 |
 | models/tarif590.py | MODIFIE | J5 |
 | docs/005_deploy_checklist.md | CREE | J5 |
+| models/practitioner.py | CREE | POST-SPRINT |
+| routers/practitioner.py | CREE | POST-SPRINT |
+| docs/006_practitioners.sql | CREE | POST-SPRINT |
+| main.py | MODIFIE | POST-SPRINT (v2.4.0) |
+| models/invoice.py | MODIFIE | POST-SPRINT (practitioner_id) |
+| models/tarif590.py | MODIFIE | POST-SPRINT (practitioner_id) |
+| routers/invoice.py | MODIFIE | POST-SPRINT (auto-fill creditor) |
+| routers/tarif590.py | MODIFIE | POST-SPRINT (auto-fill therapeute) |
 
 ## API Contract Registry
 
@@ -144,6 +153,10 @@
 | `GET /tore-sessions` | GET | ToreSessionList | routers/tore_session.py | 179 | J4 | DONE |
 | `GET /tore-sessions/{id}` | GET | ToreSession | routers/tore_session.py | 179 | J4 | DONE |
 | `PUT /tore-sessions/{id}` | PUT | ToreSession | routers/tore_session.py | 179 | J4 | DONE |
+| `POST /practitioners` | POST | PractitionerCreate | routers/practitioner.py | tous | POST | DONE |
+| `GET /practitioners` | GET | PractitionerList | routers/practitioner.py | tous | POST | DONE |
+| `GET /practitioners/{id}` | GET | Practitioner | routers/practitioner.py | tous | POST | DONE |
+| `PUT /practitioners/{id}` | PUT | PractitionerUpdate | routers/practitioner.py | tous | POST | DONE |
 
 ## Decisions prises en cours de sprint
 
@@ -191,6 +204,11 @@
 - J5: render.yaml augmente avec SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY, MAKE_WEBHOOK_TWINT_URL
 - J5: pytest.ini avec import-mode=importlib (requis macOS case-insensitive + Tests dir)
 - J5: Deploy checklist complete dans docs/005_deploy_checklist.md
+- POST-SPRINT: Table practitioners ajoutee — chaque praticien a son propre profil (RCC, IBAN, adresse, methode)
+- POST-SPRINT: practitioner_id optionnel sur invoices et tarif590 — auto-fill creditor/therapeute depuis le profil
+- POST-SPRINT: Cabinet Pro (Plan 179) supporte multi-praticien via cabinet_id
+- POST-SPRINT: Migration 006_practitioners.sql ajoute aussi practitioner_id FK sur invoices, tarif590_invoices, therapy_sessions, patients
+- POST-SPRINT: main.py updated to v2.4.0, 1 new router (practitioner)
 
 ## Blockers / Questions ouvertes
 
@@ -204,6 +222,7 @@
 - [ ] MAKE_WEBHOOK_TWINT_URL: a configurer dans Make.com pour envoi WhatsApp Twint
 - [ ] Migration 004_j4_tables.sql: a executer dans Supabase SQL Editor
 - [ ] SUPABASE_ANON_KEY: a configurer dans .env pour auth endpoints (fallback sur SERVICE_KEY)
+- [ ] Migration 006_practitioners.sql: a executer dans Supabase SQL Editor
 
 ## Fin de session — Checklist handover
 

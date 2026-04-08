@@ -56,12 +56,50 @@ def _compute_total(line_items: list[dict]) -> Decimal:
     return total
 
 
+def _fetch_practitioner(sb, practitioner_id: str) -> dict:
+    """Fetch practitioner profile for auto-fill."""
+    result = sb.table("practitioners").select("*").eq("id", practitioner_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Practitioner not found")
+    return result.data[0]
+
+
 @router.post("", response_model=Invoice, status_code=status.HTTP_201_CREATED)
 async def create_invoice(body: InvoiceCreate):
-    """Create a new invoice with auto-generated number."""
+    """Create a new invoice with auto-generated number.
+
+    If practitioner_id is provided, creditor fields are auto-filled
+    from the practitioner profile. Manual creditor fields override.
+    """
     sb = get_supabase()
 
     data = body.model_dump(mode="json", exclude_none=True)
+
+    # Auto-fill creditor info from practitioner if provided
+    if body.practitioner_id:
+        prac = _fetch_practitioner(sb, str(body.practitioner_id))
+        creditor_defaults = {
+            "creditor_name": f"{prac['first_name']} {prac['last_name']}",
+            "creditor_street": prac["street"],
+            "creditor_house_number": prac.get("house_number"),
+            "creditor_postal_code": prac["postal_code"],
+            "creditor_city": prac["city"],
+            "creditor_country": prac.get("country", "CH"),
+            "creditor_iban": prac["iban"],
+        }
+        # Only fill missing fields — manual values override
+        for key, value in creditor_defaults.items():
+            if key not in data and value is not None:
+                data[key] = value
+    else:
+        # Without practitioner_id, creditor fields are required
+        for field in ("creditor_name", "creditor_street", "creditor_postal_code",
+                      "creditor_city", "creditor_iban"):
+            if field not in data:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"{field} is required when practitioner_id is not provided",
+                )
 
     # Compute total
     total = _compute_total(data.get("line_items", []))
@@ -83,6 +121,7 @@ async def create_invoice(body: InvoiceCreate):
 @router.get("", response_model=InvoiceList)
 async def list_invoices(
     patient_id: UUID | None = Query(None),
+    practitioner_id: UUID | None = Query(None),
     invoice_status: InvoiceStatus | None = Query(None, alias="status"),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -92,6 +131,8 @@ async def list_invoices(
     query = sb.table(TABLE).select("*", count="exact")
     if patient_id:
         query = query.eq("patient_id", str(patient_id))
+    if practitioner_id:
+        query = query.eq("practitioner_id", str(practitioner_id))
     if invoice_status:
         query = query.eq("status", invoice_status.value)
     query = query.order("invoice_date", desc=True).range(offset, offset + limit - 1)

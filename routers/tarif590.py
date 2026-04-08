@@ -19,6 +19,7 @@ from fastapi.responses import StreamingResponse
 
 from dependencies import verify_token
 from models.tarif590 import (
+    Tarif590Method,
     Tarif590Request,
     Tarif590Response,
     Tarif590Therapeute,
@@ -55,16 +56,53 @@ def _generate_tarif590_number(sb) -> str:
     return f"T590-{year}-{seq:04d}"
 
 
+def _resolve_therapeute(sb, body: Tarif590Request) -> Tarif590Therapeute:
+    """Resolve therapeute info from practitioner_id or request body."""
+    if body.practitioner_id:
+        result = sb.table("practitioners").select("*").eq("id", str(body.practitioner_id)).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Practitioner not found")
+        prac = result.data[0]
+        method = Tarif590Method(prac["therapy_method"]) if prac.get("therapy_method") else Tarif590Method.AUTRE
+        return Tarif590Therapeute(
+            name=f"{prac['first_name']} {prac['last_name']}",
+            street=prac["street"],
+            house_number=prac.get("house_number"),
+            postal_code=prac["postal_code"],
+            city=prac["city"],
+            phone=prac.get("phone"),
+            rcc_number=prac["rcc_number"],
+            nif_number=prac.get("nif_number"),
+            gln_number=prac.get("gln_number"),
+            method=method,
+            method_text=prac.get("therapy_method_text"),
+        )
+    if body.therapeute:
+        return body.therapeute
+    raise HTTPException(
+        status_code=422,
+        detail="Either practitioner_id or therapeute must be provided",
+    )
+
+
 @router.post("/generate", summary="Générer un PDF Tarif 590")
 async def generate_tarif590(body: Tarif590Request):
     """Generate an official Tarif 590 PDF and return it as a download.
 
+    If practitioner_id is provided, therapeute info is auto-filled
+    from the practitioner profile.
     Optionally stores a record in the tarif590_invoices table.
     """
     sb = get_supabase()
 
+    # Resolve therapeute (from practitioner or request body)
+    therapeute = _resolve_therapeute(sb, body)
+
     # Auto-generate invoice number if not provided
     invoice_number = body.invoice_number or _generate_tarif590_number(sb)
+
+    # Inject resolved therapeute into body for PDF rendering
+    body.therapeute = therapeute
 
     # Render the PDF
     pdf_bytes = _render_tarif590_pdf(body, invoice_number)
@@ -73,8 +111,8 @@ async def generate_tarif590(body: Tarif590Request):
     try:
         record = {
             "invoice_number": invoice_number,
-            "therapeute_name": body.therapeute.name,
-            "therapeute_rcc": body.therapeute.rcc_number,
+            "therapeute_name": therapeute.name,
+            "therapeute_rcc": therapeute.rcc_number,
             "patient_name": f"{body.patient.first_name} {body.patient.last_name}",
             "patient_dob": body.patient.date_of_birth.isoformat(),
             "invoice_date": body.invoice_date.isoformat(),
@@ -86,6 +124,8 @@ async def generate_tarif590(body: Tarif590Request):
             record["patient_id"] = str(body.patient_id)
         if body.therapy_session_id:
             record["therapy_session_id"] = str(body.therapy_session_id)
+        if body.practitioner_id:
+            record["practitioner_id"] = str(body.practitioner_id)
         sb.table("tarif590_invoices").insert(record).execute()
     except Exception:
         pass  # Table may not exist yet — PDF generation still works
@@ -104,12 +144,13 @@ async def generate_tarif590(body: Tarif590Request):
 async def generate_tarif590_json(body: Tarif590Request):
     """Return Tarif 590 metadata without PDF (useful for previews)."""
     sb = get_supabase()
+    therapeute = _resolve_therapeute(sb, body)
     invoice_number = body.invoice_number or _generate_tarif590_number(sb)
     return Tarif590Response(
         invoice_number=invoice_number,
         total_amount=body.total_amount or Decimal("0"),
         patient_name=f"{body.patient.first_name} {body.patient.last_name}",
-        therapeute_name=body.therapeute.name,
+        therapeute_name=therapeute.name,
         prestations_count=len(body.prestations),
         generated_at=datetime.utcnow(),
     )
