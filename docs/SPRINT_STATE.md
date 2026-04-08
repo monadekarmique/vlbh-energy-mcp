@@ -10,7 +10,7 @@
 |------|--------|------|
 | J1 — Fondations (DB + API + QR-facture) | DONE | 2026-04-08 |
 | J2 — Tarif 590 + Scores + Rose des Vents | DONE | 2026-04-08 |
-| J3 — Finition plan 59 + debut plan 179 | EN ATTENTE | |
+| J3 — Finition plan 59 + debut plan 179 | DONE | 2026-04-08 |
 | J4 — Tore Couplages + Chromo + Auth | EN ATTENTE | |
 | J5 — Deploy + tests + mobile | EN ATTENTE | |
 
@@ -43,6 +43,14 @@
 | routers/rose_des_vents.py | CREE | J2 |
 | docs/002_j2_tables.sql | CREE | J2 |
 | main.py | MODIFIE | J2 |
+| models/stats.py | CREE | J3 |
+| routers/stats.py | CREE | J3 |
+| models/twint.py | CREE | J3 |
+| routers/twint.py | CREE | J3 |
+| models/pipeline.py | CREE | J3 |
+| routers/pipeline.py | CREE | J3 |
+| docs/003_j3_tables.sql | CREE | J3 |
+| main.py | MODIFIE | J3 |
 
 ## API Contract Registry
 
@@ -93,12 +101,15 @@
 | `GET /rose-des-vents/{id}` | GET | RoseDesVents | routers/rose_des_vents.py | 59 | J2 | DONE |
 | `PUT /rose-des-vents/{id}` | PUT | RoseDesVentsUpdate | routers/rose_des_vents.py | 59 | J2 | DONE |
 | `GET /rose-des-vents/reference` | GET | DirectionReference | routers/rose_des_vents.py | 59 | J2 | DONE |
-| `POST /invoices/{id}/twint` | POST | TwintLink | routers/invoice.py | 179 | J3 | TODO |
-| `GET /stats/dashboard` | GET | DashboardStats | routers/stats.py | 59 | J3 | TODO |
+| `GET /stats/dashboard` | GET | DashboardStats | routers/stats.py | 59 | J3 | DONE |
+| `POST /invoices/{id}/twint` | POST | TwintLink | routers/twint.py | 179 | J3 | DONE |
+| `GET /pipeline/leads` | GET | PipelineView | routers/pipeline.py | 179 | J3 | DONE |
+| `POST /pipeline/leads` | POST | PipelineLead | routers/pipeline.py | 179 | J3 | DONE |
+| `GET /pipeline/leads/{id}` | GET | PipelineLead | routers/pipeline.py | 179 | J3 | DONE |
+| `PUT /pipeline/leads/{id}` | PUT | PipelineLead | routers/pipeline.py | 179 | J3 | DONE |
+| `DELETE /pipeline/leads/{id}` | DELETE | — | routers/pipeline.py | 179 | J3 | DONE |
 | `POST /auth/register` | POST | — | Supabase Auth | tous | J4 | TODO |
 | `POST /auth/magic-link` | POST | — | Supabase Auth | tous | J4 | TODO |
-| `GET /pipeline/leads` | GET | PipelineView | routers/pipeline.py | 179 | J3 | TODO |
-| `PUT /pipeline/leads/{id}` | PUT | PipelineUpdate | routers/pipeline.py | 179 | J3 | TODO |
 
 ## Decisions prises en cours de sprint
 
@@ -120,6 +131,16 @@
 - J2: ScoreSnapshot inclut SLPMO (Score Lumiere Projet Monadique Originel) — ajout vs modele SLM existant
 - J2: Endpoint /scores/trend/{patient_id} pour courbes evolution SLA/SLSA/SLPMO/SLM
 - J2: main.py updated to v2.1.0, 3 new routers (tarif590, scores, rose_des_vents)
+- J3: Dashboard stats = aggregation endpoint (pas de table dediee) — queries patients/sessions/invoices/scores
+- J3: Twint payment links stored in twint_payments table, deep-link format twint://payment?amount=&currency=CHF
+- J3: Twint URL est un deep-link P2P pour l'instant — integration PostFinance e-Commerce prevue J4 si compte dispo
+- J3: Twint links expirent en 48h par defaut
+- J3: WhatsApp delivery via Make.com webhook (MAKE_WEBHOOK_TWINT_URL env var)
+- J3: Pipeline CRM avec 6 stages (new→contacted→scheduled→in_treatment→completed→lost)
+- J3: Pipeline leads supporte sync Close CRM via close_lead_id
+- J3: Pipeline GET retourne stage_counts pour affichage kanban board
+- J3: Twint router monte sur /invoices/{id}/twint (sous-ressource de invoice, pas nouveau prefix)
+- J3: main.py updated to v2.2.0, 3 new routers (stats, twint, pipeline)
 
 ## Blockers / Questions ouvertes
 
@@ -129,6 +150,8 @@
 - [x] Compte Supabase: a creer J1 matin — SUPABASE_URL et SUPABASE_SERVICE_KEY requis dans .env
 - [ ] Numero RCC de Patrick pour Tarif 590 par defaut?
 - [ ] Migration 002_j2_tables.sql: a executer dans Supabase SQL Editor
+- [ ] Migration 003_j3_tables.sql: a executer dans Supabase SQL Editor
+- [ ] MAKE_WEBHOOK_TWINT_URL: a configurer dans Make.com pour envoi WhatsApp Twint
 
 ## Fin de session — Checklist handover
 
