@@ -1,4 +1,4 @@
-"""main.py — updated for iTherapeut 6.0 J1.
+"""main.py — updated for iTherapeut 6.0 J2.
 
 This file shows the ADDITIONS to main.py. Do NOT replace the existing file —
 add the new imports and router includes AFTER the existing ones.
@@ -12,6 +12,8 @@ from fastapi.responses import JSONResponse
 from routers import slm, sla, session, lead, tore, billing
 # --- NEW J1 routers ---
 from routers import patient, therapy_session, invoice, qrbill
+# --- NEW J2 routers ---
+from routers import tarif590, scores, rose_des_vents
 from services.make_service import MakeService
 from fastapi_mcp import FastApiMCP
 
@@ -28,7 +30,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="VLBH Energy MCP",
     description="MCP server for SVLBHPanel — Scores de Lumière sync via Make.com + iTherapeut 6.0",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url=None,
@@ -47,6 +49,11 @@ app.include_router(patient.router)
 app.include_router(therapy_session.router)
 app.include_router(invoice.router)
 app.include_router(qrbill.router)
+
+# NEW iTherapeut 6.0 routers (J2)
+app.include_router(tarif590.router)
+app.include_router(scores.router)
+app.include_router(rose_des_vents.router)
 
 mcp = FastApiMCP(app)
 mcp.mount()

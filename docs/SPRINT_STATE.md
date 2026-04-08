@@ -9,7 +9,7 @@
 | Jour | Statut | Date |
 |------|--------|------|
 | J1 — Fondations (DB + API + QR-facture) | DONE | 2026-04-08 |
-| J2 — Tarif 590 + Scores + Rose des Vents | EN ATTENTE | |
+| J2 — Tarif 590 + Scores + Rose des Vents | DONE | 2026-04-08 |
 | J3 — Finition plan 59 + debut plan 179 | EN ATTENTE | |
 | J4 — Tore Couplages + Chromo + Auth | EN ATTENTE | |
 | J5 — Deploy + tests + mobile | EN ATTENTE | |
@@ -35,6 +35,14 @@
 | docs/001_create_tables.sql | CREE | J1 |
 | main.py | MODIFIE | J1 |
 | requirements.txt | MODIFIE | J1 |
+| models/tarif590.py | CREE | J2 |
+| routers/tarif590.py | CREE | J2 |
+| models/scores.py | CREE | J2 |
+| routers/scores.py | CREE | J2 |
+| models/rose_des_vents.py | CREE | J2 |
+| routers/rose_des_vents.py | CREE | J2 |
+| docs/002_j2_tables.sql | CREE | J2 |
+| main.py | MODIFIE | J2 |
 
 ## API Contract Registry
 
@@ -73,9 +81,20 @@
 | `GET /invoices/{id}` | GET | Invoice | routers/invoice.py | 59 | J1 | DONE |
 | `GET /invoices/{id}/pdf` | GET | PDF binary | routers/invoice.py | 59 | J1 | DONE |
 | `POST /qrbill/generate` | POST | QRBillSVG | routers/qrbill.py | 59 | J1 | DONE |
+| `POST /tarif590/generate` | POST | Tarif590PDF | routers/tarif590.py | 59 | J2 | DONE |
+| `POST /tarif590/generate/json` | POST | Tarif590Response | routers/tarif590.py | 59 | J2 | DONE |
+| `POST /scores` | POST | SessionScoresCreate | routers/scores.py | 59 | J2 | DONE |
+| `GET /scores` | GET | SessionScoresList | routers/scores.py | 59 | J2 | DONE |
+| `GET /scores/{id}` | GET | SessionScores | routers/scores.py | 59 | J2 | DONE |
+| `PUT /scores/{id}` | PUT | SessionScoresUpdate | routers/scores.py | 59 | J2 | DONE |
+| `GET /scores/trend/{patient_id}` | GET | ScoreTrendResponse | routers/scores.py | 59 | J2 | DONE |
+| `POST /rose-des-vents` | POST | RoseDesVentsCreate | routers/rose_des_vents.py | 59 | J2 | DONE |
+| `GET /rose-des-vents` | GET | RoseDesVentsList | routers/rose_des_vents.py | 59 | J2 | DONE |
+| `GET /rose-des-vents/{id}` | GET | RoseDesVents | routers/rose_des_vents.py | 59 | J2 | DONE |
+| `PUT /rose-des-vents/{id}` | PUT | RoseDesVentsUpdate | routers/rose_des_vents.py | 59 | J2 | DONE |
+| `GET /rose-des-vents/reference` | GET | DirectionReference | routers/rose_des_vents.py | 59 | J2 | DONE |
 | `POST /invoices/{id}/twint` | POST | TwintLink | routers/invoice.py | 179 | J3 | TODO |
 | `GET /stats/dashboard` | GET | DashboardStats | routers/stats.py | 59 | J3 | TODO |
-| `POST /tarif590/generate` | POST | Tarif590PDF | routers/tarif590.py | 59 | J2 | TODO |
 | `POST /auth/register` | POST | — | Supabase Auth | tous | J4 | TODO |
 | `POST /auth/magic-link` | POST | — | Supabase Auth | tous | J4 | TODO |
 | `GET /pipeline/leads` | GET | PipelineView | routers/pipeline.py | 179 | J3 | TODO |
@@ -91,6 +110,16 @@
 - J1: main.py updated to v2.0.0, 4 new routers added after existing ones
 - J1: Structured addresses only (SIX v2.4 mandatory since Nov 2025) — no combined address support
 - J1: RLS disabled for now (will be enabled J4 with Supabase Auth)
+- J2: Tarif 590 numbers auto-generated as T590-YYYY-NNNN
+- J2: Tarif 590 PDF via ReportLab (meme lib que invoices) — layout officiel tarif590.ch
+- J2: Tarif 590 metadata stored in tarif590_invoices table (PDF streamed, not stored)
+- J2: Session scores stored as JSONB (patient_scores, therapist_scores) — flexible pour evolution schema
+- J2: Rose des Vents: 12 directions + N(0°) = 13 total, JSONB primary/secondary
+- J2: DIRECTION_MAP static dict dans models/rose_des_vents.py — reference table pour le frontend
+- J2: Endpoint /rose-des-vents/reference retourne la table complete (13 directions avec associations)
+- J2: ScoreSnapshot inclut SLPMO (Score Lumiere Projet Monadique Originel) — ajout vs modele SLM existant
+- J2: Endpoint /scores/trend/{patient_id} pour courbes evolution SLA/SLSA/SLPMO/SLM
+- J2: main.py updated to v2.1.0, 3 new routers (tarif590, scores, rose_des_vents)
 
 ## Blockers / Questions ouvertes
 
@@ -98,6 +127,8 @@
 - [ ] Export CSV depuis FileMaker: Patrick doit le faire manuellement (le Runtime ne supporte pas l'export programmatique)
 - [ ] Domaine final: app.itherapeut.ch ou app.vlbh.energy/itherapeut?
 - [x] Compte Supabase: a creer J1 matin — SUPABASE_URL et SUPABASE_SERVICE_KEY requis dans .env
+- [ ] Numero RCC de Patrick pour Tarif 590 par defaut?
+- [ ] Migration 002_j2_tables.sql: a executer dans Supabase SQL Editor
 
 ## Fin de session — Checklist handover
 
