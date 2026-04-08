@@ -57,6 +57,36 @@
 - Toujours pusher sur la branche designee, jamais directement sur main
 - Creer les PR via les outils GitHub MCP quand disponibles
 
+---
+
+## iTherapeut 6.0 — Sprint 5 jours (avril 2026)
+
+### LIRE EN PREMIER A CHAQUE SESSION
+
+1. Lire `docs/SPRINT_STATE.md` — etat du sprint, endpoints faits/a faire, blockers
+2. Lire `docs/ADR.md` — decisions architecturales verrouillees
+3. Travailler sur la branche `claude/clone-adapt-therapy-app-CNABs`
+4. En fin de session: mettre a jour SPRINT_STATE.md + commit + push
+
+### Contexte iTherapeut 6.0
+
+- **Objectif**: App web/mobile pour therapeutes alternatifs en Suisse
+- **Plans**: Therapeute 59 CHF/mois | Cabinet Pro 179 CHF/mois
+- **Plan 59 (base)**: patients, seances, QR-facture SIX v2.4, Tarif 590, Scores de Lumiere (SLA/SLSA S1-S5/SLM/TotSLM), Rose des Vents, modeles Pydantic existants (SLM, Leads, Sessions, Tores, Sclerose, Glycemie), assistant IA Claude
+- **Plan 179 (pro)**: + agenda Google Cal, WhatsApp, Twint, pipeline Lead->Billing, Tore Couplages avances (scoreCouplage, phaseCouplage, scleroseTissulaire), Chromotherapie
+- **Paiement**: PostFinance Checkout (SDK Python: postfinancecheckout, config: space_id/user_id/secret_key)
+- **DB**: Supabase PostgreSQL (patients/factures/sessions) + Make.com datastore 155674 (syncs VLBH)
+- **Frontend**: React + Tailwind + shadcn (web, fonctionne sur iPad)
+- **Backend**: FastAPI existant sur Render.com — AJOUTER des routers, NE PAS modifier les existants
+- **QR-facture**: librairie Python qrbill (conforme SIX v2.4)
+- **Tarif 590**: ReportLab PDF, XML 5.0 obligatoire juillet 2027
+
+### Regle d'or: ne JAMAIS casser l'existant
+
+Les 6 routers existants (slm, sla, session, lead, tore, billing) et leurs modeles Pydantic sont utilises par l'app iOS SVLBHPanel en production. Tout nouveau code va dans de NOUVEAUX fichiers.
+
+---
+
 ## Validation Checklist (avant push)
 - [ ] Les versions Xcode correspondent aux runners GitHub Actions
 - [ ] Les tests compilent (`swift build` ne doit pas echouer)
