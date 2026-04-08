@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from routers import slm, sla, session, lead, tore, billing
 from services.make_service import MakeService
+from fastapi_mcp import FastApiMCP
 
 
 @asynccontextmanager
@@ -32,6 +33,10 @@ app.include_router(session.router)
 app.include_router(lead.router)
 app.include_router(tore.router)
 app.include_router(billing.router)
+
+
+mcp = FastApiMCP(app)
+mcp.mount()
 
 
 @app.get("/health", tags=["System"], summary="Render health check")
