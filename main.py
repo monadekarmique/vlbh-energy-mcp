@@ -4,7 +4,8 @@ import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from routers import slm, sla, session, lead, tore
+from fastapi.staticfiles import StaticFiles
+from routers import slm, sla, session, lead, tore, dashboard
 from services.make_service import MakeService
 
 
@@ -26,6 +27,8 @@ app = FastAPI(
     redoc_url=None,
 )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(dashboard.router)
 app.include_router(slm.router)
 app.include_router(sla.router)
 app.include_router(session.router)
