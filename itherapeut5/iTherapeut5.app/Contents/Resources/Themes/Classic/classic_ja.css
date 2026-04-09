@@ -1,0 +1,13 @@
+label
+{
+	font-weight: normal;
+}
+
+checkbox_set:normal .self {
+	-fm-baseline-shift: 2pt;
+}
+
+
+radio_set:normal .self {
+	-fm-baseline-shift: 2pt;
+}

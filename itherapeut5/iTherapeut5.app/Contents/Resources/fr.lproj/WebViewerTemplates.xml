@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<WebsiteURLTemplateList  xmlns="http://www.filemaker.com/WebsiteURLTemplate"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema-instance"
+           xsd:noNamespaceSchemaLocation="WebViewerTemplates.xsd">
+
+<!-- Fin d'en-tête, début de liste de modèle : -->
+
+
+ <WebsiteURLTemplate name="MapQuest" baseURL="http://www.mapquest.com/maps/map.adp?" description="Affichez les cartes et obtenez les instructions." parameterIndicator="=" parameterSeparator="&amp;" >
+ 
+   <URLElement type="Literal">formtype=address&amp;</URLElement>
+   <URLElement type="Literal">searchtype=address&amp;</URLElement>
+   <URLElement type="Literal">cid=filemkr&amp;</URLElement>
+ 
+   <URLElement parameterIdentifier="address" type="Parameter" label="Rue" description="Adresse ou intersection de l'emplacement en question." userHint="Requis"  alwaysPresent="True" />
+   <URLElement type="Parameter" label="Ville" userHint="Requis" alwaysPresent="False" parameterIdentifier="city" description="Ville de l'emplacement en question." />
+   <URLElement type="Parameter" label="Pays" userHint="Requis" alwaysPresent="True" parameterIdentifier="country" description="Pays de l'emplacement en question." />
+   <URLElement type="Parameter" label="Code postal" userHint="Facultatif" alwaysPresent="False" parameterIdentifier="zipcode" description="Code postal d'acheminement, s'il est connu." />
+ 
+ 
+ </WebsiteURLTemplate>
+
+
+<!-- modèle prenant en charge les éléments du type "http://www.google.fr/search?q=testing" -->
+
+<WebsiteURLTemplate name="Recherche Web Google" description="Effectuez une recherche sur le Web." baseURL="http://www.google.fr/search?" >
+ 
+ <URLElement parameterIdentifier="q" type="Parameter" label="Requête" userHint="Requis" description="Saisissez les termes de votre recherche ici." />
+ 
+</WebsiteURLTemplate>
+
+
+
+<!-- modèle prenant en charge les éléments du type  "http://local.google.com/maps?q=2%20rue%20Goethe+75116+Paris+France" -->
+
+ <WebsiteURLTemplate name="Cartes Google" baseURL="http://local.google.com/maps?" description="Affichez les cartes et obtenez les instructions.">
+ 
+ <URLElement parameterIdentifier="q" type="Virtual" virtualSeparator="," >   <!-- séparateurVirtuel est facultatif si , -->
+ 
+  <URLVirtualParameter label="Adresse" userHint="Requis" description="Adresse ou intersection de l'emplacement en question." />
+  <URLVirtualParameter label="Ville" userHint="Requis" description="Ville de l'emplacement en question." />
+  <URLVirtualParameter label="Pays/Région" userHint="Facultatif" description="Pays de l'emplacement en question." />
+  <URLVirtualParameter label="Code postal" userHint="Facultatif" description="Code postal d'acheminement, s'il est connu." />
+  <URLVirtualParameter label="Pays" userHint="Requis" description="Pays de l'emplacement en question." />
+ 
+ </URLElement>
+  
+ </WebsiteURLTemplate>
+
+
+
+<!-- Suivi de colis FedEx "http://www.fedex.com/Tracking?cntry_code=fr&tracknumbers=709384470830" -->
+
+
+<WebsiteURLTemplate name="FedEx" baseURL="http://www.fedex.com/Tracking?" description="Suivez les expéditions." >
+ 
+   <URLElement type="Literal">cntry_code=fr&amp;</URLElement>
+   <URLElement parameterIdentifier="tracknumbers" type="Parameter" label="Numéro de suivi" userHint="Requis" description="Saisissez votre numéro de suivi de colis ici." />
+ 
+</WebsiteURLTemplate>
+
+
+
+
+<!-- Recherche Wikipedia "http://fr.wikipedia.org/wiki/Special:Search?search=Français" -->
+
+<WebsiteURLTemplate name="Wikipedia" baseURL="http://fr.wikipedia.org/wiki/Special:Search?" description="Effectuez une recherche dans l'encyclopédie gratuite." >
+ 
+ <URLElement parameterIdentifier="search" type="Parameter" label="Terme à rechercher" userHint="Requis" description="Saisissez les termes de votre recherche ici." />
+ 
+</WebsiteURLTemplate>
+
+
+
+<!-- Recherche Wikinews "http://fr.wikinews.org/wiki/Special:Search?search=Apple" -->
+
+<WebsiteURLTemplate name="Wikinews" baseURL="http://fr.wikinews.org/wiki/Special:Search?" description="Recherchez de nouveaux articles." >
+ 
+ <URLElement parameterIdentifier="search" type="Parameter" label="Terme à rechercher" userHint="Requis" description="Saisissez les termes de votre recherche ici." />
+ 
+</WebsiteURLTemplate>
+
+
+
+<!-- Recherche Wikinews "http://fr.wiktionary.org/wiki/Special:Search?search=Français" -->
+
+<WebsiteURLTemplate name="Wiktionnaire" baseURL="http://fr.wiktionary.org/wiki/Special:Search?" description="Effectuez une recherche dans le dictionnaire à contenu ouvert." >
+ 
+ <URLElement parameterIdentifier="search" type="Parameter" label="Terme à rechercher" userHint="Requis" description="Saisissez les termes de votre recherche ici." />
+ 
+</WebsiteURLTemplate>
+
+
+
+<!-- Recherche Wikinews "http://fr.wikibooks.org/wiki/Special:Search?search=George+Washington" -->
+
+<WebsiteURLTemplate name="Wikilivres" baseURL="http://fr.wikibooks.org/wiki/Special:Search?" description="Effectuez une recherche dans les livres à contenu ouvert." >
+ 
+ <URLElement parameterIdentifier="search" type="Parameter" label="Terme à rechercher" userHint="Requis" description="Saisissez les termes de votre recherche ici." />
+ 
+</WebsiteURLTemplate>
+
+
+
+<!-- Recherche Wikinews "http://fr.wikisource.org/wiki/Special:Search?search=Lincoln" -->
+
+<WebsiteURLTemplate name="Wikisource" baseURL="http://fr.wikisource.org/wiki/Special:Search?" description="Effectuez une recherche dans la bibliothèque libre de textes sources." >
+ 
+ <URLElement parameterIdentifier="search" type="Parameter" label="Terme à rechercher" userHint="Requis" description="Saisissez les termes de votre recherche ici." />
+ 
+</WebsiteURLTemplate>
+
+
+</WebsiteURLTemplateList>

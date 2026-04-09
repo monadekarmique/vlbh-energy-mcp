@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<theme>
+	<id>com.filemaker.theme.classic</id>
+	<version>6</version>
+	<cssfile>classic.css</cssfile>
+	<metadata>
+		<colorpalette>
+            <swatch1>#d6d6d6</swatch1>
+            <swatch2>#b2b2b2</swatch2>
+            <swatch3>#7e7e7e</swatch3>
+            <swatch4>#d78935</swatch4>
+            <swatch5>#ad8b6b</swatch5>
+            <swatch6>#406a85</swatch6>
+            <swatch7>#bc9256</swatch7>
+		</colorpalette>
+		<layoutbuilder>
+			<kBottomNavPartMinSize>19</kBottomNavPartMinSize>
+			<kTopNavPartMinSize>19</kTopNavPartMinSize>
+		</layoutbuilder>
+	</metadata>
+</theme>

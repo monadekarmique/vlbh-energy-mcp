@@ -1,0 +1,30 @@
+
+/* Class = "NSWindow"; title = "Définir la cible"; ObjectID = "1"; */
+"1.title" = "Définir la cible";
+
+/* Class = "NSButtonCell"; title = "OK"; ObjectID = "4"; */
+"4.title" = "OK";
+
+/* Class = "NSButtonCell"; title = "Annuler"; ObjectID = "8"; */
+"8.title" = "Annuler";
+
+/* Class = "NSButtonCell"; title = "Variable"; ObjectID = "0Ti-iQ-nDj"; */
+"0Ti-iQ-nDj.title" = "Variable";
+
+/* Class = "NSTextFieldCell"; title = "Répétition :"; ObjectID = "0zD-U9-dbc"; */
+"0zD-U9-dbc.title" = "Répétition :";
+
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "3j2-HG-NBI"; */
+"3j2-HG-NBI.title" = "Text Cell";
+
+/* Class = "NSMenuItem"; title = "Item 3"; ObjectID = "4YP-W5-LGz"; */
+"4YP-W5-LGz.title" = "Item 3";
+
+/* Class = "NSSearchFieldCell"; placeholderString = "Rechercher rub."; ObjectID = "4v7-5a-RvT"; */
+"4v7-5a-RvT.placeholderString" = "Rechercher rub.";
+
+/* Class = "NSButtonCell"; title = "Rubrique"; ObjectID = "FSG-dU-3Vz"; */
+"FSG-dU-3Vz.title" = "Rubrique";
+
+/* Class = "NSMenuItem"; title = "Item 2"; ObjectID = "zLR-xL-Gth"; */
+"zLR-xL-Gth.title" = "Item 2";

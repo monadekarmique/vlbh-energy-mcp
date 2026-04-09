@@ -1,0 +1,21 @@
+/* Map Image Name to Accessibility Description */
+
+"IDB_SORT_ORDER" = "Trier par ordre croissant";
+"IDB_SORT_ORDER_DISABLED" = "Trier par ordre croissant";
+"IDB_SORT_ORDER_DESCEND" = "Trier par ordre décroissant";
+"IDB_SORT_ORDER_DESCEND_DISABLED" = "Trier par ordre décroissant";
+"IDB_SORT_ORDER_CUSTOM" = "Ordre de tri personnalisé";
+"IDB_SORT_ORDER_CUSTOM_DISABLED" = "Ordre de tri personnalisé";
+"IDBSICN_SORT4" = "Retrier selon rubrique Statistique, par ordre croissant";
+"IDBSICN_SORT5" = "Retrier selon rubrique Statistique, par ordre décroissant";
+"IDB_IMPORT_ARROWS_MAP" = "Importer cette rubrique";
+"IDB_IMPORT_ARROWS_NONE" = "Ne pas importer cette rubrique";
+"IDB_IMPORT_ARROWS_MATCH" = "Enreg. concordants en fonction de cette rubrique";
+"IDB_IMPORT_ARROWS_CANTIMPORT" = "Impossible de recevoir des données dans la rubrique cible";
+"IDB_BREAKPOINT_ON" = "Point d'arrêt activé";
+"IDB_BREAKPOINT_OFF" = "Point d'arrêt désactivé";
+"IDB_DEFINE_SCRIPTS_GROUP" = "Dossier";
+"IDB_DEFINE_SCRIPTS_SCRIPT" = "Script";
+"IDB_SICN_LIST_REORDER" = "Faire glisser pour modifier l'ordre de tri";
+
+

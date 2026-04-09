@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary>
+	
+	
+	<suite name="URL Suite" code="GURL" description="Standard Suite for Uniform Resource Locators">
+		<command name="getURL" code="GURLGURL" description="Open a FileMaker Pro database using a URL specification">
+			<direct-parameter type="text" description="The URL specification for the FileMaker Pro database in the form &quot;[&lt;][URL:]fmp://[[username[:password]@]host]/filename[&gt;]&quot;"/>
+			<parameter name="for accounts" code="pACT" type="gust" optional="yes" description="opens the file for specific privileges"/>
+		</command>
+	</suite>
+	<suite name="Subset of the Core, Table, and Database suites" code="****" description="Subset of Events supported by other Applications">
+		<value-type name="list" code="list" hidden="yes"/>
+		<value-type name="type class info" code="gcli" hidden="yes"/>
+		<value-type name="type event info" code="evin" hidden="yes"/>
+		<command name="class info" code="coreqobj" description="Get information about an object class">
+			<direct-parameter type="type" optional="yes" description="The object class about which information is requested"/>
+			<result type="type class info" description="A record containing the object’s properties and elements"/>
+		</command>
+		<command name="close" code="coreclos" description="Close an object">
+			<direct-parameter type="specifier" description="The object to close"/>
+		</command>
+		<command name="copy" code="misccopy" description="Copy an object to the clipboard"/>
+		<command name="count" code="corecnte" description="Return the number of elements of a particular class within an object">
+			<direct-parameter type="specifier" description="The object whose elements are to be counted"/>
+			<parameter name="class" code="kocl" type="type" description="The class of the elements to be counted"/>
+			<result type="integer" description="The number of elements"/>
+		</command>
+		<command name="create" code="corecrel" description="Create a new element">
+			<parameter name="new" code="kocl" type="type" description="The class of the new element"/>
+			<parameter name="at" code="insh" type="location specifier" optional="yes" description="The location at which to insert the element"/>
+			<parameter name="with data" code="data" type="any" optional="yes" description="The initial data for the element"/><parameter name="with properties" code="prdt" type="record" optional="yes" description="The initial data for the properties of the element"/><result type="specifier" description="To the new object(s)"/>
+		</command>
+		<command name="cut" code="misccut " description="Cut an object to the clipboard"/>
+		<command name="data size" code="coredsiz" description="Return the size in bytes of an object">
+			<direct-parameter type="specifier" description="The object whose data size is to be returned"/>
+			<parameter name="as" code="rtyp" type="type" optional="yes" description="The data type for which the size is calculated"/>
+			<result type="integer" description="The size of the object in bytes"/>
+		</command>
+		<command name="delete" code="coredelo" description="Delete an element from an object">
+			<direct-parameter type="specifier" description="The element to delete"/>
+		</command>
+		<command name="do menu" code="miscmenu" description="Execute a menu command">
+			<direct-parameter type="any" description="This denotes both the menu ID and the menu item"/>
+			<parameter name="menu named" code="menn" type="text" optional="yes" description="The name of the menu item"/>
+			<result type="any" description="Result of menu selection"/>
+		</command>
+		<command name="do script" code="miscdosc" description="Execute a script">
+			<direct-parameter type="text" description="The name or specifier of the FileMaker script to be executed"/>
+			<result type="any" description="The result of the Script"/>
+		</command>
+		<command name="duplicate" code="coreclon" description="Duplicate an object">
+			<direct-parameter type="specifier" description="The object to copy"/>
+			<parameter name="to" code="insh" type="location specifier" optional="yes" description="The new location for the object"/><result type="specifier" description="To the duplicated object(s)"/>
+		</command>
+		<command name="event info" code="coregtei" description="Get information about the Apple events in a suite">
+			<direct-parameter type="type" description="The event class of the Apple events for which to return information"/>
+			<result description="A record containing the events and their parameters">
+				<type type="type event info" list="yes"/>
+			</result>
+		</command>
+		<command name="exists" code="coredoex" description="Tell if an object exists">
+			<direct-parameter type="specifier" description="The object in question"/>
+			<result type="boolean" description="True if it exists, false if not"/>
+		</command>
+		<command name="get data" code="coregetd" description="Get the data for an object">
+			<direct-parameter type="specifier" description="The object whose data is to be returned"/>
+			<parameter name="as" code="rtyp" optional="yes" description="The desired types for the data, in order of preference">
+				<type type="type" list="yes"/>
+			</parameter>
+			<result type="any"/>
+		</command>
+		<command name="open" code="aevtodoc" description="Open an object">
+			<direct-parameter type="specifier" description="The object to open"/>
+			<parameter name="with passwords" code="pPAS" type="text" optional="yes" description="The password to use"/>
+			<parameter name="for Accounts" code="pACT" type="text" optional="yes" description="The account name"/>
+		</command>
+		<command name="paste" code="miscpast" description="Paste an object from the clipboard"/>
+		<command name="print" code="aevtpdoc" description="Print an object">
+			<direct-parameter type="specifier" description="The object to print"/>
+			<parameter name="with password" code="pPAS" type="text" optional="yes" description="The password to use"/>
+			<parameter name="for Accounts" code="pACT" type="text" optional="yes" description="The account name"/>
+			<parameter name="from page" code="StPg" type="integer" optional="yes" description="start page"/>
+			<parameter name="to page" code="NdPg" type="integer" optional="yes" description="end page"/>
+			<parameter name="with copies" code="Cpis" type="integer" optional="yes" description="number of copies"/>
+		</command>
+		<command name="quit" code="aevtquit" description="Perform tasks before termination, then terminate"/>
+		<command name="redo" code="miscredo" description="Reverse the action of the immediately preceding undo"/>
+		<command name="save" code="coresave" description="Save an object">
+			<direct-parameter type="specifier" description="The object to save"/>
+		</command>
+		<command name="set data" code="coresetd" description="Set an object&apos;s data">
+			<direct-parameter type="specifier" description="The object to change"/>
+			<parameter name="to" code="data" type="any" description="The new value"/>
+		</command>
+		<command name="show" code="miscmvis" description="Bring an object into view">
+			<direct-parameter type="specifier" description="The object to be made visible"/>
+		</command>
+		<command name="sort" code="DATASORT" description="Sort the records in a layout">
+			<direct-parameter type="specifier" description="The layout to sort"/>
+			<parameter name="by" code="SRTE" type="specifier" optional="yes" description="The fields to sort by"/>
+			<parameter name="in order" code="SRTT" type="sort" optional="yes" description="The sort type"/>
+		</command>
+		<command name="undo" code="miscundo" description="Undo the action of the previous event or user interaction"/>
+		<class name="application" code="capp" description="The application" plural="applications">
+			<element type="document"/>
+			<element type="window"/>
+			<element type="database"/>
+			<element type="menu"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="frontmost" code="pisf" type="boolean" access="r" description="Is this the frontmost application?"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the application"/>
+			<property name="version" code="vers" type="text" access="r" description="The version of the application"/>
+		</class>
+		<class name="window" code="cwin" description="A FileMaker Pro document window" plural="windows">
+			<element type="layout"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the window"/>
+			<property name="bounds" code="pbnd" type="rectangle" description="The bounding rectangle of the window"/>
+			<property name="visible" code="pvis" type="boolean" description="Is the window visible?"/>
+			<property name="index" code="pidx" type="integer" access="r" description="The number of the window"/>
+			<property name="floating" code="isfl" type="boolean" access="r" description="Does the window float?"/>
+			<property name="zoomable" code="iszm" type="boolean" access="r" description="Is the window zoomable?"/>
+			<property name="zoomed" code="pzum" type="boolean" description="Is the window zoomed?"/>
+			<property name="modal" code="pmod" type="boolean" access="r" description="Is the window modal?"/>
+			<property name="resizable" code="prsz" type="boolean" access="r" description="Is the window resizable?"/>
+			<property name="has close box" code="hclb" type="boolean" access="r" description="Does the window have a close box?"/><property name="has title bar" code="ptit" type="boolean" access="r" description="Does the window have a title bar?"/><property name="current layout" code="pCLY" type="specifier" description="The current layout"/>
+			<property name="current record" code="pCRW" type="specifier" description="The current record"/>
+			<property name="current table" code="pCTB" type="specifier" description="The current table"/>
+			<property name="current cell" code="pCCL" type="specifier" description="The current cell"/>
+		</class>
+		<class name="document" code="docu" description="A FileMaker Pro document" plural="documents">
+			<element type="window"/>
+			<element type="FileMaker script"/>
+			<element type="layout"/>
+			<element type="table"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the document"/>
+			<property name="modified" code="imod" type="boolean" access="r" description="True if the document has been modified"/>
+		</class>
+		<class name="database" code="cDB " description="A FileMaker Pro database" plural="databases">
+			<element type="table"/>
+			<element type="layout"/>
+			<element type="FileMaker script"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the database"/>
+			<property name="multiuser" code="pMUr" type="shar" description="If true, users have access to the database over the network"/>
+		</class>
+		<class name="table" code="cTBL" description="A FileMaker Pro table" plural="tables">
+			<element type="field"/>
+			<element type="record"/>
+			<element type="cell"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the database"/>
+			<property name="lock" code="pLCK" type="lock" access="r" description="The current session&apos;s lock on the database"/>
+			<property name="access" code="pACS" type="accs" access="r" description="The access privileges"/>
+		</class>
+		<class name="FileMaker script" code="cSCP" description="A FileMaker script" plural="FileMaker scripts">
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the FileMaker Script"/>
+			<property name="ID" code="ID  " type="real" access="r" description="The unique ID of the FileMaker Script"/>
+		</class>
+		<class name="layout" code="ctbl" description="A FileMaker Pro layout" plural="layouts">
+			<element type="field"/>
+			<element type="record"/>
+			<element type="cell"/>
+			<element type="request"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the layout"/>
+			<property name="ID" code="ID  " type="real" access="r" description="The unique ID of the layout"/>
+			<property name="access" code="pACS" type="accs" access="r" description="The access privileges of the layout"/>
+			<property name="protection" code="ppro" type="prtn" access="r" description="Indicates whether the formulas of the cells in the layout can be changed"/>
+			<property name="lock" code="pLCK" type="lock" access="r" description="The lock on the layout"/>
+			<property name="kind" code="pKND" type="tblt" access="r" description="The kind of layout (View = FileMaker Pro layout, table = all fields for table)"/>
+			<property name="visible" code="pvis" type="boolean" access="r" description="Is the layout visible in the layouts menu?"/>
+		</class>
+		<class name="field" code="ccol" description="A FileMaker Pro field" plural="fields">
+			<element type="cell"/>
+			<element type="repetition"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="choices" code="pCHS" type="list" access="r" description="The value list for the field"/>
+			<property name="access" code="pACS" type="accs" access="r" description="The access privileges for the field"/>
+			<property name="formula" code="pfor" type="text" access="r" description="The field&apos;s calculation formula"/>
+			<property name="ID" code="ID  " type="real" access="r" description="The unique ID of the field"/>
+			<property name="lock" code="pLCK" type="lock" access="r" description="The lock status of the field"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the field"/>
+			<property name="nulls OK" code="pNLS" type="boolean" access="r" description="Is this field allowed to be empty?"/>
+			<property name="protection" code="ppro" type="prtn" access="r" description="The protection of this field"/>
+			<property name="repeats" code="pRPT" type="erpt" access="r" description="Is this a repeating field?"/>
+			<property name="repeat size" code="pRPS" type="integer" access="r" description="Maximum number of repetitions of the field"/>
+			<property name="unique value" code="pUNQ" type="boolean" access="r" description="Must this field contain unique values?"/>
+			<property name="globalValue" code="pGLL" type="boolean" access="r" description="Is this field a global field?"/>
+		</class>
+		<class name="record" code="reco" description="A FileMaker Pro record" plural="records">
+			<element type="cell"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the record"/>
+			<property name="ID" code="ID  " type="real" access="r" description="The unique ID of the record"/>
+			<property name="lock" code="pLCK" type="lock" access="r" description="The lock for the record"/>
+			<property name="protection" code="ppro" type="prtn" access="r" description="Indicates whether the formulas of the cells in the record can be changed"/>
+			<property name="access" code="pACS" type="accs" access="r" description="Indicates the access privileges for the record"/>
+			<synonym code='crow'/>
+		</class>
+		<class name="cell" code="ccel" description="A field value in a record or request" plural="cells">
+			<element type="repetition"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="choices" code="pCHS" type="list" access="r" description="The value list for the cell"/>
+			<property name="formula" code="pfor" type="text" access="r" description="The cell&apos;s calculation formula"/>
+			<property name="lock" code="pLCK" type="lock" access="r" description="The lock status of the cell"/>
+			<property name="name" code="pnam" type="text" access="r" description="The cell&apos;s name"/>
+			<property name="protection" code="ppro" type="prtn" access="r" description="The protection of this cell"/>
+			<property name="cellValue" code="vlue" type="text" description="The cell value"/>
+			<property name="ID" code="ID  " type="list" access="r" description="The unique ID of the cell (the first element is the record ID, the second element is the cell ID)"/>
+			<property name="repeat size" code="pRPS" type="integer" access="r" description="Number of repetitions of the cell"/>
+			<property name="globalValue" code="pGLL" type="boolean" access="r" description="Is this cell a global cell?"/>
+			<property name="access" code="pACS" type="accs" access="r" description="The access privileges"/>
+		</class>
+		<class name="repetition" code="cREP" description="A repetition value from a cell" plural="repetitions">
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="choices" code="pCHS" type="list" access="r" description="The value list for the cell"/>
+			<property name="formula" code="pfor" type="text" access="r" description="The cell&apos;s calculation formula"/>
+			<property name="lock" code="pLCK" type="lock" access="r" description="The lock status of the cell"/>
+			<property name="name" code="pnam" type="text" access="r" description="The cell&apos;s name"/>
+			<property name="protection" code="ppro" type="prtn" access="r" description="The protection of this cell"/>
+			<property name="cellValue" code="vlue" type="text" description="The cell value"/>
+			<property name="ID" code="ID  " type="list" access="r" description="The unique ID of the cell (the first element is the record ID, the second element is the cell ID)"/>
+			<property name="globalValue" code="pGLL" type="boolean" access="r" description="Is this cell a global cell?"/>
+		</class>
+		<enumeration name="tblt" code="tblt">
+			<enumerator name="table" code="TABL" description="A table"/>
+			<enumerator name="view" code="VIEW" description="A layout or view"/>
+		</enumeration>
+		<enumeration name="prtn" code="prtn">
+			<enumerator name="read only" code="nmod" description="Can&apos;t change values or formulas"/>
+			<enumerator name="formulas protected" code="fpro" description="Can changes values but not formulas"/>
+			<enumerator name="read/write" code="modf" description="Can change values and formulas"/>
+		</enumeration>
+		<enumeration name="accs" code="accs">
+			<enumerator name="no access" code="0x00000000" description="No access"/>
+			<enumerator name="read" code="0x00000001" description="Read only access"/>
+			<enumerator name="write" code="0x00000002" description="Write only access"/>
+			<enumerator name="update" code="0x00000004" description="Update access"/>
+			<enumerator name="create" code="0x00000008" description="Create access"/>
+			<enumerator name="delete" code="0x00000010" description="Delete access"/>
+			<enumerator name="read/write" code="0x00000003" description="Read/Write access"/>
+			<enumerator name="read/update" code="0x00000005" description="Read/Update access"/>
+			<enumerator name="read/create" code="0x00000009" description="Read/Create access"/>
+			<enumerator name="read/delete" code="0x00000011" description="Read/Delete access"/>
+			<enumerator name="write/update" code="0x00000006" description="Write/Update access"/>
+			<enumerator name="write/create" code="0x0000000a" description="Write/Create access"/>
+			<enumerator name="write/delete" code="0x00000012" description="Write/Delete access"/>
+			<enumerator name="update/create" code="0x0000000c" description="Update/Create access"/>
+			<enumerator name="update/delete" code="0x00000014" description="Update/Delete access"/>
+			<enumerator name="write/delete" code="0x00000018" description="Create/Delete access"/>
+			<enumerator name="read/write/update" code="0x00000007" description="Read/Write/Update access"/>
+			<enumerator name="read/write/create" code="0x0000000b" description="Read/Write/Create access"/>
+			<enumerator name="read/write/delete" code="0x00000013" description="Read/Write/Delete access"/>
+			<enumerator name="write/update/create" code="0x0000000e" description="Write/Update/Create access"/>
+			<enumerator name="write/update/delete" code="0x00000016" description="Write/Update/Delete access"/>
+			<enumerator name="update/create/delete" code="0x0000001c" description="Update/Create/Delete access"/>
+			<enumerator name="read/create/delete" code="0x00000019" description="Read/Create/Delete access"/>
+			<enumerator name="read/update/delete" code="0x00000015" description="Read/Update/Delete access"/>
+			<enumerator name="write/create/delete" code="0x0000001a" description="Write/Create/Delete access"/>
+			<enumerator name="read/update/create" code="0x0000000d" description="Read/Update/Create access"/>
+			<enumerator name="no delete" code="0x0000000f" description="No delete access"/>
+			<enumerator name="no create" code="0x00000017" description="no create access"/>
+			<enumerator name="no update" code="0x0000001b" description="No update access"/>
+			<enumerator name="no read" code="0x0000001e" description="No read access"/>
+			<enumerator name="no write" code="0x0000001d" description="No write access"/>
+			<enumerator name="full" code="0x0000001f" description="Full access"/>
+		</enumeration>
+		<enumeration name="sort" code="sort">
+			<enumerator name="ascending" code="0x00000000" description="Ascending sort order"/>
+			<enumerator name="descending" code="0x00000001" description="Descending sort order"/>
+			<enumerator name="custom" code="0x00000004" description="Custom sort order"/>
+		</enumeration>
+		<enumeration name="grup" code="grup">
+			<enumerator name="sum" code="TOTL" description="Summarize sum of elements"/>
+			<enumerator name="count" code="CONT" description="Summarize count of elements"/>
+			<enumerator name="mean" code="MEAN" description="Summarize mean of elements"/>
+			<enumerator name="standard deviation" code="STDV" description="Summarize standard deviation of elements"/>
+			<enumerator name="average" code="AVRG" description="Summarize average of elements"/>
+			<enumerator name="minimum" code="MIN " description="Summarize the minimum of the elements"/>
+			<enumerator name="maximum" code="MAX " description="Summarize the maximum of the elements"/>
+		</enumeration>
+		<enumeration name="lock" code="lock">
+			<enumerator name="unlocked" code="NOLK" description="Not currently locked"/>
+			<enumerator name="shared lock" code="SHLK" description="A multiple reader lock"/>
+			<enumerator name="exclusive lock" code="EXLK" description="A read/write lock"/>
+		</enumeration>
+		<enumeration name="shar" code="shar">
+			<enumerator name="false" code="fals" description="single user"/>
+			<enumerator name="sharing hidden" code="mltH" description="To share this file, but suppress its display in the Hosts dialog"/>
+			<enumerator name="true" code="true" description="To share this file, and display it in the Hosts dialog"/>
+		</enumeration>
+		<enumeration name="erpt" code="erpt">
+			<enumerator name="single" code="rSgl" description="single repetition field"/>
+			<enumerator name="repeated" code="rFxd" description="multiple repeatition field"/>
+		</enumeration>
+		<enumeration name="gust" code="gust">
+			<enumerator name="guest" code="pGST" description="guest account"/>
+		</enumeration>
+	</suite>
+	<suite name="FileMaker Suite" code="FMPR" description="FileMaker Pro-specific events and objects">
+		<command name="go to" code="FMPRGOTO" description="Go to an object">
+			<direct-parameter type="specifier" description="The object to which to go"/>
+		</command>
+		<command name="find" code="FMPRFIND" description="Perform a FileMaker Pro Find given current requests">
+			<direct-parameter type="specifier" description="The window in which to find"/>
+		</command>
+		<command name="get remote URL" code="FMPROPRM" description="Opens a hosted FileMaker Pro database">
+			<result type="text" description="The URL specification for the opened database in the form &quot;[&lt;][URL:]fmp://[[username[:password]@]host]/filename[&gt;]&quot;"/>
+		</command>
+		<class name="request" code="cRQT" description="A FileMaker Pro find request" plural="requests">
+			<element type="cell"/><property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" access="r" description="The name of the find request"/>
+			<property name="ID" code="ID  " type="real" access="r" description="The unique ID of the find request"/>
+			<property name="omitted" code="pOMT" type="boolean" description="True if the request is to be omitted"/>
+		</class>
+		<class name="menu item" code="cmen" description="A menu item" plural="menu items">
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" description="The name of the menu item"/>
+			<property name="enabled" code="enbl" type="boolean" description="Is the menu item enabled?"/>
+			<property name="item number" code="itmn" type="integer" access="r" description="The menu item number"/>
+			<property name="checked" code="pCHK" type="boolean" description="Is the menu item checked?"/>
+		</class>
+		<class name="menu" code="cmnu" description="A menu" plural="menus">
+			<element type="menu item"/>
+			<element type="menu"/>
+			<property name="best type" code="pbst" type="type" access="r" description="The best descriptor type"/>
+			<property name="class" code="pcls" type="type" access="r" description="The class"/>
+			<property name="default type" code="deft" type="type" access="r" description="The default descriptor type"/>
+			<property name="name" code="pnam" type="text" description="The name of the menu"/>
+			<property name="ID" code="ID  " type="integer" access="r" description="The resource ID of the menu"/>
+			<property name="enabled" code="enbl" type="boolean" description="Is the menu enabled?"/>
+		</class>
+		<enumeration name="posi" code="posi">
+			<enumerator name="before" code="befo" description="Before specified object"/>
+			<enumerator name="after" code="afte" description="After specified object"/>
+			<enumerator name="beginning" code="bgng" description="At the beginning of the specified container"/>
+			<enumerator name="end" code="end " description="At the end of the specified container"/>
+			<enumerator name="replace" code="rplc" description="Replacing the specified object"/>
+		</enumeration>
+		<enumeration name="kfrm" code="kfrm">
+			<enumerator name="index" code="indx" description="Keyform designating indexed access"/>
+			<enumerator name="named" code="name" description="Keyform designating named access"/>
+			<enumerator name="ID" code="ID  " description="Keyform designating identifier access"/>
+		</enumeration>
+	</suite>
+</dictionary>
