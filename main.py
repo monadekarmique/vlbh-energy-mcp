@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from routers import slm, sla, session, lead, tore, billing, dashboard
+from routers import slm, sla, session, lead, tore, billing, dashboard, workspace
 from services.make_service import MakeService
 from fastapi_mcp import FastApiMCP
 
@@ -36,6 +36,7 @@ app.include_router(session.router)
 app.include_router(lead.router)
 app.include_router(tore.router)
 app.include_router(billing.router)
+app.include_router(workspace.router)
 
 
 mcp = FastApiMCP(app)
