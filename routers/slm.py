@@ -29,6 +29,11 @@ async def push_slm(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(e)
         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{type(e).__name__}: {e}"
+        )
 
 
 @router.post(
