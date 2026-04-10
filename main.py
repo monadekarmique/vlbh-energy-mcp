@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="VLBH Energy MCP",
-    description="MCP server for SVLBHPanel — Scores de Lumière sync via Make.com + iTherapeut 6.0",
-    version="2.4.0",
+    description="MCP server for SVLBHPanel — Scores de Lumière sync via Make.com + iSVLBHTherapeut 6.1",
+    version="2.5.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url=None,

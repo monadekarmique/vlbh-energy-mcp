@@ -1,10 +1,10 @@
-# SPRINT STATE — iTherapeut 6.0 (5 jours)
+# SPRINT STATE — iSVLBHTherapeut 6.1 (replan, 3 jours)
 
 > **CE FICHIER EST LA SOURCE DE VERITE.**
 > Chaque session Claude DOIT lire ce fichier en premier et le mettre a jour en fin de session.
 > Format: etat actuel + ce qui a ete fait + ce qui reste + decisions prises.
 
-## Etat global
+## Etat global — Sprint v6.0 (archive)
 
 | Jour | Statut | Date |
 |------|--------|------|
@@ -14,6 +14,16 @@
 | J4 — Tore Couplages + Chromo + Auth | DONE | 2026-04-08 |
 | J5 — Deploy + tests + mobile | DONE | 2026-04-08 |
 | POST-SPRINT — Multi-praticien | DONE | 2026-04-08 |
+
+## Etat global — Sprint v6.1 (replan 3 jours)
+
+| Jour | Statut | Date | Focus |
+|------|--------|------|-------|
+| J1 v6.1 — Apple Sign In `/auth/apple-native` | DONE | 2026-04-09 | iOS auth |
+| J2 v6.1 — Multi-praticien + schema FileMaker | DONE | 2026-04-09 | practitioners router |
+| J3 v6.1 — Consolidation CNABs = main + v2.5.0 | DONE | 2026-04-10 | merge, bump, tests, deploy |
+| J4 v6.1 — iOS client Swift (OpenAPI codegen) | TODO | 2026-04-11 | PatientService, ScoresService, ChromoService |
+| J5 v6.1 — Polish, import CSV, TestFlight v6.1.0 | TODO | 2026-04-12 | handover + TF release |
 
 ## Branche Git
 
@@ -210,19 +220,33 @@
 - POST-SPRINT: Migration 006_practitioners.sql ajoute aussi practitioner_id FK sur invoices, tarif590_invoices, therapy_sessions, patients
 - POST-SPRINT: main.py updated to v2.4.0, 1 new router (practitioner)
 
+### Sprint v6.1 — J3 (2026-04-10)
+
+- J3v6.1: Replan confirme avec Patrick apres constat que v6.0 J1-J5 + POST-SPRINT sont DONE
+- J3v6.1: Fast-forward merge `main` -> `claude/clone-adapt-therapy-app-CNABs` (5cceede..6d5c1bc) — aucune divergence a resoudre
+- J3v6.1: CNABs contient maintenant tout: 21 routers, practitioner, apple-native, schema FileMaker
+- J3v6.1: Bump main.py a v2.5.0 — titre iSVLBHTherapeut 6.1 (rebrand interne)
+- J3v6.1: 39/39 tests pytest passent (aucune regression apres merge)
+- J3v6.1: Render env vars verifies — SUPABASE_URL/ANON_KEY/SERVICE_KEY OK, MAKE_WEBHOOK_TWINT_URL absent mais twint.py degrade proprement (retourne False)
+- J3v6.1: Migrations SQL 001 a 006 confirmees EXECUTEES par Patrick (hors repo)
+- J3v6.1: v2.5.0 balance tracking / Barzahlung / KVG-VVG-UVG-IVG-MVG reste isolee sur branche `claude/prepare-conversation-context-BIJbE` — NON mergee v6.1, a decider plus tard si on l'integre
+- J3v6.1: Plan J4 = iOS client Swift via OpenAPI codegen (PatientService, ScoresService, ChromoService, RoseDesVentsService)
+- J3v6.1: Plan J5 = import CSV FileMaker (manuel) + TestFlight v6.1.0 pour 6 testeurs (Flavia, Cornelia, Anne, Patrick x2, Chloe)
+
 ## Blockers / Questions ouvertes
 
-- [ ] Patrick a-t-il un compte PostFinance e-Commerce? (necessaire J4)
-- [ ] Export CSV depuis FileMaker: Patrick doit le faire manuellement (le Runtime ne supporte pas l'export programmatique)
-- [ ] Domaine final: app.itherapeut.ch ou app.vlbh.energy/itherapeut?
+- [ ] Patrick a-t-il un compte PostFinance e-Commerce? (decale post-v6.1)
+- [ ] Export CSV depuis FileMaker: Patrick doit le faire manuellement (le Runtime ne supporte pas l'export programmatique) — J5v6.1
+- [ ] Domaine final: app.itherapeut.ch ou app.vlbh.energy/itherapeut? — a lock J5v6.1 sur `app.vlbh.energy/itherapeut`
 - [x] Compte Supabase: a creer J1 matin — SUPABASE_URL et SUPABASE_SERVICE_KEY requis dans .env
 - [ ] Numero RCC de Patrick pour Tarif 590 par defaut?
-- [ ] Migration 002_j2_tables.sql: a executer dans Supabase SQL Editor
-- [ ] Migration 003_j3_tables.sql: a executer dans Supabase SQL Editor
-- [ ] MAKE_WEBHOOK_TWINT_URL: a configurer dans Make.com pour envoi WhatsApp Twint
-- [ ] Migration 004_j4_tables.sql: a executer dans Supabase SQL Editor
-- [ ] SUPABASE_ANON_KEY: a configurer dans .env pour auth endpoints (fallback sur SERVICE_KEY)
-- [ ] Migration 006_practitioners.sql: a executer dans Supabase SQL Editor
+- [x] Migration 002_j2_tables.sql: EXECUTEE (confirme par Patrick J3v6.1)
+- [x] Migration 003_j3_tables.sql: EXECUTEE (confirme par Patrick J3v6.1)
+- [ ] MAKE_WEBHOOK_TWINT_URL: a configurer dans Make.com pour envoi WhatsApp Twint (degrade, non-bloquant)
+- [x] Migration 004_j4_tables.sql: EXECUTEE (confirme par Patrick J3v6.1)
+- [x] SUPABASE_ANON_KEY: configure sur Render (confirme J3v6.1)
+- [x] Migration 006_practitioners.sql: EXECUTEE (confirme par Patrick J3v6.1)
+- [ ] Decider integration v2.5.0 balance/Barzahlung dans v6.1 ou v6.2 (branche prepare-conversation-context-BIJbE)
 
 ## Fin de session — Checklist handover
 
