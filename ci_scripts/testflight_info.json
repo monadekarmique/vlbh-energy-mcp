@@ -1,0 +1,31 @@
+{
+  "_comment": "Contenu du 'Test Information' pour TestFlight — Groupe externe SVLBH Bash 3 a 5. Edite ce fichier puis lance le workflow 'testflight-info' (ou ci_scripts/update_testflight_info.py). Locale: fr-FR.",
+
+  "bundle_id": "energy.vlbh.SVLBHPanel",
+  "app_id_override": null,
+
+  "beta_group_name": "SVLBH Bash 3 a 5 externe",
+
+  "locale": "fr-FR",
+
+  "beta_app_localization": {
+    "feedback_email": "patrick@vlbh.energy",
+    "marketing_url": "https://vlbh.energy",
+    "privacy_policy_url": "https://vlbh.energy/privacy",
+    "tos_url": "https://vlbh.energy/terms",
+    "description": "SVLBH Panel — Compagnon de travail pour les Shamanes certifiees du Groupe Femmes Bash 3 a 5.\n\nVisualisez vos Scores de Lumiere (SLA, SLSA S1->S5, SLM, TotSLM), naviguez la Rose des Vents, consultez les badges 'Soins en attente' par shamane, synchronisez votre Passeport 4D et le Tore Couplages avec la base hDOM (Make.com EU2).\n\nFonctions principales:\n- saisie et sync des sessions (PUSH/PULL svlbh-v2)\n- lecture du Passeport 4D et des Ratios\n- vue d'ensemble des shamanes avec badges 'en attente'\n- partage securise via token X-VLBH-Token\n\nContact: patrick@vlbh.energy"
+  },
+
+  "beta_app_review_detail": {
+    "contact_first_name": "Patrick",
+    "contact_last_name": "Bays",
+    "contact_email": "patrick@vlbh.energy",
+    "contact_phone": "+41 79 000 00 00",
+    "demo_account_name": "",
+    "demo_account_password": "",
+    "demo_account_required": false,
+    "notes": "Application reservee aux Shamanes certifiees du Groupe Femmes Bash 3 a 5. Codes d'acces fournis par le superviseur (Patrick Bays, code 455000). Aucune donnee personnelle externe n'est collectee. Backend: FastAPI sur Render.com, datastore Make.com EU2."
+  },
+
+  "beta_build_localization_what_to_test": "Groupe Bash 3 a 5 — points a verifier:\n\n1. Connexion avec votre code shamane (0300 Cornelia, 0301 Flavia, 0302 Anne, 0303 Chloe)\n2. Vue d'ensemble 'Soins en attente' — les badges numeriques doivent s'afficher a cote de chaque shamane\n3. Saisie d'une session Tore Couplages et PUSH vers Make.com\n4. PULL d'une session par sessionKey (lecture svlbh-v2)\n5. Affichage des Scores de Lumiere S1->S5 + TotSLM\n6. Passeport 4D (Ratio4D): edition et synchronisation\n7. Rose des Vents — rotation et lecture\n\nMerci Yvette et Daphne pour vos retours ! Signalez tout blocage via le bouton Feedback ou a patrick@vlbh.energy"
+}

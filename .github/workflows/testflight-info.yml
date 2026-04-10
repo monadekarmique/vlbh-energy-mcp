@@ -1,0 +1,51 @@
+name: TestFlight — Update Test Information
+
+# Remplit / met a jour la section "Test Information" TestFlight pour SVLBH Panel
+# via l'App Store Connect API (groupe externe "SVLBH Bash 3 a 5 externe").
+#
+# Secrets requis (Settings > Secrets and variables > Actions):
+#   APP_STORE_CONNECT_KEY_ID      - Key ID de la cle .p8
+#   APP_STORE_CONNECT_ISSUER_ID   - Issuer ID de l'App Store Connect team
+#   APP_STORE_CONNECT_PRIVATE_KEY - Contenu complet du .p8 (BEGIN/END PRIVATE KEY)
+#
+# Declenchement: manuel via "Run workflow" dans l'onglet Actions.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Afficher le contenu sans appeler l'API (debug)"
+        type: boolean
+        default: false
+
+jobs:
+  update-test-info:
+    name: Update TestFlight Test Information
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyjwt cryptography requests
+
+      - name: Show config (debug)
+        run: |
+          echo "=== ci_scripts/testflight_info.json ==="
+          python -c "import json; print(json.dumps(json.load(open('ci_scripts/testflight_info.json')), indent=2, ensure_ascii=False))"
+
+      - name: Dry run (skip API call)
+        if: ${{ inputs.dry_run == true }}
+        run: echo "Dry run active — pas d'appel API."
+
+      - name: Update TestFlight Test Information
+        if: ${{ inputs.dry_run != true }}
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: python ci_scripts/update_testflight_info.py

@@ -205,6 +205,37 @@
 - [ ] Migration 004_j4_tables.sql: a executer dans Supabase SQL Editor
 - [ ] SUPABASE_ANON_KEY: a configurer dans .env pour auth endpoints (fallback sur SERVICE_KEY)
 
+## TestFlight — Test Information (groupe "SVLBH Bash 3 a 5 externe")
+
+Contexte: Yvette et Daphne ne peuvent pas utiliser l'app parce que la "Test
+Information" TestFlight n'est pas remplie pour le groupe externe. Apple exige
+cette section pour valider le build pour les testeurs externes.
+
+Automatisation creee (branche `claude/fill-test-information-l34LW`):
+
+| Fichier | Role |
+|---------|------|
+| `ci_scripts/testflight_info.json` | Contenu editable (fr-FR): description, feedback email, URLs, contact Beta Review, What to Test |
+| `ci_scripts/update_testflight_info.py` | Script Python qui appelle l'App Store Connect API (JWT ES256) pour creer/mettre a jour `betaAppLocalizations`, `betaAppReviewDetails`, et `betaBuildLocalizations.whatToTest` sur le build le plus recent du groupe |
+| `.github/workflows/testflight-info.yml` | Workflow `workflow_dispatch` qui installe `pyjwt cryptography requests` et lance le script (support dry_run) |
+
+A faire par Patrick pour declencher la mise a jour:
+
+1. Ajouter 3 secrets dans `Settings > Secrets and variables > Actions`:
+   - `APP_STORE_CONNECT_KEY_ID`
+   - `APP_STORE_CONNECT_ISSUER_ID`
+   - `APP_STORE_CONNECT_PRIVATE_KEY` (contenu complet du .p8, avec BEGIN/END)
+2. Verifier / editer `ci_scripts/testflight_info.json` — notamment:
+   - `bundle_id` (actuellement `energy.vlbh.SVLBHPanel`)
+   - `contact_phone` (actuellement placeholder `+41 79 000 00 00`)
+   - `privacy_policy_url` / `tos_url` si les URLs reelles different
+3. Lancer le workflow `TestFlight — Update Test Information` via GitHub
+   Actions (bouton "Run workflow", option `dry_run` pour tester sans appel
+   API).
+
+Apres un lancement reussi, le groupe externe passe en Beta App Review chez
+Apple (~24h) puis devient disponible pour Yvette et Daphne.
+
 ## Fin de session — Checklist handover
 
 A faire a CHAQUE fin de session Claude:
