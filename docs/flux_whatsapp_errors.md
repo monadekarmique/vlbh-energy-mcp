@@ -24,9 +24,9 @@ Provisionnement: voir `tools/whatsapp-bridge-kit/` (install.sh + templates mcp.j
 |-----|--------|-------------------|-------------|--------------|
 | z1  | OK     | actif             | actif       | actif        |
 | z2  | OK     | actif             | actif       | actif        |
-| z3  | OK     | **inactif**       | **absent**  | **absent**   |
+| z3  | **KO** | **inactif**       | **absent**  | **absent**   |
 
-z3 est pairé avec +41799138200 (session preservee en SQLite) mais volontairement non charge dans launchd. Procedure de bascule vers "actif" : voir `docs/whatsapp-bridge-z3-activation.md`.
+z3 n'est **pas pairé** (store vide) et volontairement non active. Procedure complete (pair + launchd + cloudflared + Make) : voir `docs/whatsapp-bridge-z3-activation.md`.
 
 ### Re-pair checklist (si `whatsmeow_device` est vide ou `/api/health` renvoie `connected: false`)
 

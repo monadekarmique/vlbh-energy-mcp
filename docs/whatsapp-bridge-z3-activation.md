@@ -3,31 +3,34 @@
 ## Etat actuel
 
 - **Numero** : +41799138200
-- **Pair WhatsApp** : **oui** (session crypto persistee dans `~/whatsapp-bridges/z3-41799138200/whatsapp-bridge/store/whatsapp.db`)
+- **Pair WhatsApp** : **non** (store vide, pas de DB whatsmeow persistee)
 - **Process bridge** : **arrete** (pas de LaunchAgent charge)
 - **Cloudflared ingress** : **absent** pour `z3.svlbhgroup.net`
 - **Webhook Make.com** : **absent** dans router #8944541 (pas de route `?bridge=41799138200`)
 - **MCP client Claude Code** : entree `whatsapp-z3-certifiees-pro` presente dans `mcp.json.template` — commentable tant que z3 inactif
 
-Les dossiers et la DB sont preserves pour que la session WhatsApp survive et evite un re-pair.
+Le dossier `~/whatsapp-bridges/z3-41799138200/` et le binaire Go sont en place. Seul le pairing WhatsApp reste a faire au moment de l'activation.
 
 ## Activation — checklist
 
 Executer sur le Mac en user `patricktest`. Prerequis : z1 et z2 deja actifs.
 
-### 1. Sanity check — la session z3 est-elle toujours valide ?
+### 1. Pair WhatsApp (mandatory — z3 n'est pas pre-paire)
+
+```bash
+cd ~/whatsapp-bridges/z3-41799138200/whatsapp-bridge
+DISABLE_AUTH_CHECK=true PORT=8082 ./whatsapp-bridge 2>&1 | tee /tmp/z3.log
+```
+
+Scanner le QR ASCII affiche avec **+41799138200** (WhatsApp -> Appareils lies -> Lier un appareil). Attendre le message `Successfully paired` / `Logged in` / `[SYNC] Completed`, puis `ctrl+c`.
+
+Valider :
 
 ```bash
 sqlite3 ~/whatsapp-bridges/z3-41799138200/whatsapp-bridge/store/whatsapp.db \
   "SELECT jid, push_name FROM whatsmeow_device;"
 ```
-Doit retourner un JID commencant par `41799138200`. Si vide → re-pair necessaire :
-
-```bash
-cd ~/whatsapp-bridges/z3-41799138200/whatsapp-bridge
-DISABLE_AUTH_CHECK=true PORT=8082 ./whatsapp-bridge 2>&1 | tee /tmp/z3.log
-# scan QR avec +41799138200, ctrl+c une fois "Successfully paired" logge
-```
+JID doit commencer par `41799138200`.
 
 ### 2. Charger le LaunchAgent
 
