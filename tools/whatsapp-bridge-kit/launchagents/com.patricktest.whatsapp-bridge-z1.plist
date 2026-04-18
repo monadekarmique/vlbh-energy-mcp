@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.patricktest.whatsapp-bridge-z1</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/patricktest/whatsapp-bridges/z1-41798131926/whatsapp-bridge/whatsapp-bridge</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/patricktest/whatsapp-bridges/z1-41798131926/whatsapp-bridge</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DISABLE_AUTH_CHECK</key>
+        <string>true</string>
+        <key>PORT</key>
+        <string>8080</string>
+        <key>BRIDGE_ID</key>
+        <string>z1</string>
+        <key>BRIDGE_PHONE</key>
+        <string>41798131926</string>
+        <key>BRIDGE_ZONE</key>
+        <string>visiteuses</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/patricktest/whatsapp-bridges/z1-41798131926/whatsapp-bridge/bridge.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/patricktest/whatsapp-bridges/z1-41798131926/whatsapp-bridge/bridge.err.log</string>
+</dict>
+</plist>

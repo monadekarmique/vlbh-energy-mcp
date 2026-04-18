@@ -7,17 +7,19 @@ tunnel: <TUNNEL_UUID>
 credentials-file: /Users/patricktest/.cloudflared/<TUNNEL_UUID>.json
 
 ingress:
-  # z1 — visiteuses — WhatsApp account 41798131926
+  # z1 — visiteuses — WhatsApp account 41798131926 — ACTIVE
   - hostname: z1.svlbhgroup.net
     service: http://localhost:8080
 
-  # z2 — shamanes en formation + certifiees non-pro — WhatsApp account 41792168200
+  # z2 — shamanes en formation + certifiees non-pro — WhatsApp account 41792168200 — ACTIVE
   - hostname: z2.svlbhgroup.net
     service: http://localhost:8081
 
   # z3 — shamanes certifiees pro — WhatsApp account 41799138200
-  - hostname: z3.svlbhgroup.net
-    service: http://localhost:8082
+  # CURRENTLY DISABLED: bridge paired but launchd + ingress not activated.
+  # To activate, uncomment the block below and follow docs/whatsapp-bridge-z3-activation.md
+  # - hostname: z3.svlbhgroup.net
+  #   service: http://localhost:8082
 
   # required catch-all
   - service: http_status:404
@@ -25,6 +27,7 @@ ingress:
 # After editing, create DNS routes once per hostname:
 #   cloudflared tunnel route dns <TUNNEL_UUID> z1.svlbhgroup.net
 #   cloudflared tunnel route dns <TUNNEL_UUID> z2.svlbhgroup.net
-#   cloudflared tunnel route dns <TUNNEL_UUID> z3.svlbhgroup.net
+#   # z3 postponed — run only when activating z3:
+#   # cloudflared tunnel route dns <TUNNEL_UUID> z3.svlbhgroup.net
 # Then reload cloudflared:
 #   sudo launchctl kickstart -k system/com.cloudflare.cloudflared

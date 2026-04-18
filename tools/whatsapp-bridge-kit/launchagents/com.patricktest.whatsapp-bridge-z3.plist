@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  z3 (shamanes certifiees pro) — +41799138200 — port 8082
+  Currently PAIRED but NOT loaded into launchd. To activate, see
+  docs/whatsapp-bridge-z3-activation.md.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.patricktest.whatsapp-bridge-z3</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/patricktest/whatsapp-bridges/z3-41799138200/whatsapp-bridge/whatsapp-bridge</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/patricktest/whatsapp-bridges/z3-41799138200/whatsapp-bridge</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DISABLE_AUTH_CHECK</key>
+        <string>true</string>
+        <key>PORT</key>
+        <string>8082</string>
+        <key>BRIDGE_ID</key>
+        <string>z3</string>
+        <key>BRIDGE_PHONE</key>
+        <string>41799138200</string>
+        <key>BRIDGE_ZONE</key>
+        <string>certifiees-pro</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/patricktest/whatsapp-bridges/z3-41799138200/whatsapp-bridge/bridge.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/patricktest/whatsapp-bridges/z3-41799138200/whatsapp-bridge/bridge.err.log</string>
+</dict>
+</plist>

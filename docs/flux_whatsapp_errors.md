@@ -16,7 +16,17 @@ Hote: Mac de Patrick, user macOS `patricktest`. Dossier racine `~/whatsapp-bridg
 
 "patricktest" designe ici **l'user macOS** ET le label du compte WhatsApp Business sur lequel les 3 numeros ont ete migres depuis l'user `patrickbays` (migration avril 2026).
 
-Provisionnement: voir `tools/whatsapp-bridge-kit/` (install.sh + templates mcp.json/cloudflared.yml).
+Provisionnement: voir `tools/whatsapp-bridge-kit/` (install.sh + templates mcp.json/cloudflared.yml + plists LaunchAgents).
+
+### Etat operationnel actuel (avril 2026)
+
+| id  | pair   | process / launchd | cloudflared | webhook Make |
+|-----|--------|-------------------|-------------|--------------|
+| z1  | OK     | actif             | actif       | actif        |
+| z2  | OK     | actif             | actif       | actif        |
+| z3  | OK     | **inactif**       | **absent**  | **absent**   |
+
+z3 est pairé avec +41799138200 (session preservee en SQLite) mais volontairement non charge dans launchd. Procedure de bascule vers "actif" : voir `docs/whatsapp-bridge-z3-activation.md`.
 
 ### Re-pair checklist (si `whatsmeow_device` est vide ou `/api/health` renvoie `connected: false`)
 
