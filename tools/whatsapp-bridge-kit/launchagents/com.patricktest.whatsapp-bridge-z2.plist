@@ -14,7 +14,7 @@
     <dict>
         <key>DISABLE_AUTH_CHECK</key>
         <string>true</string>
-        <key>PORT</key>
+        <key>API_PORT</key>
         <string>8081</string>
         <key>BRIDGE_ID</key>
         <string>z2</string>
