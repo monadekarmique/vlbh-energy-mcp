@@ -61,8 +61,8 @@ cat <<EOF
 ==========================================================================
 Next manual steps:
 
-  1. Build each Go bridge:
-       for d in "$ROOT"/*/whatsapp-bridge; do (cd "\$d" && go build); done
+  1. Build each Go bridge (explicit -o avoids './...' producing no binary):
+       for d in "$ROOT"/*/whatsapp-bridge; do (cd "\$d" && go build -o whatsapp-bridge .); done
 
   2. Merge cloudflared ingress rules:
        cp -i $KIT_DIR/cloudflared.yml.template ~/.cloudflared/config.yml.new
