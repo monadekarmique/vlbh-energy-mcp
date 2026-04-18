@@ -1,29 +1,5 @@
 # Erreurs connues — Flux WhatsApp ROUTER #8944541
 
-## 0. Bridge mapping (numero WhatsApp <-> bridge MCP)
-
-Le routeur Make.com utilise la cle composite `{bridge}-{phone}` dans le datastore 157329 (contacts WhatsApp). `bridge` = numero E.164 sans le `+` du compte WhatsApp appaire sur ce bridge.
-
-Architecture: 1 DB whatsmeow = 1 device_jid = 1 numero WhatsApp. Donc 1 bridge par numero.
-
-| id  | numero       | port local | hostname public         | webhook param        |
-|-----|--------------|------------|-------------------------|----------------------|
-| b1  | 41792168200  | 8080       | wa1.svlbhgroup.net      | `?bridge=41792168200`|
-| b2  | 41798131926  | 8081       | wa2.svlbhgroup.net      | `?bridge=41798131926`|
-
-Les 2 bridges tournent sur le Mac de Patrick (user macOS `patrickbays`) sous `~/whatsapp-bridges/`. Les comptes WhatsApp eux-memes sont nommes "patricktest" cote WhatsApp Business — c'est juste un label, pas un user macOS.
-
-Provisionnement: voir `tools/whatsapp-bridge-kit/` (install.sh + templates mcp.json/cloudflared.yml).
-
-### Re-pair checklist (a refaire si `whatsmeow_device` est vide ou `/api/health` renvoie `connected: false`)
-
-1. `curl -s http://localhost:<PORT>/api/health` — confirmer l'etat
-2. Stop le process Go: `pkill -f "whatsapp-bridge.*<PORT>"`
-3. Relancer: `cd ~/whatsapp-bridges/<id>-<phone>/whatsapp-bridge && PORT=<PORT> ./whatsapp-bridge`
-4. Scanner le QR avec **le bon numero** (b1 -> 41792168200, b2 -> 41798131926). Un mauvais appairage corrompt le mapping `bridge=` cote Make.
-5. Verifier: `sqlite3 ~/whatsapp-bridges/<id>-<phone>/whatsapp-bridge/store/whatsapp.db "SELECT jid FROM whatsmeow_device;"` doit retourner le JID attendu.
-6. Tester un message entrant -> verifier qu'il arrive dans le scenario Make avec le bon `bridge=` en query string.
-
 ## 1. DataError: Duplicate key error
 
 - **Module**: `datastore:AddRecord` (datastore 157329 — contacts WhatsApp)
