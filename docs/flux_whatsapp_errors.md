@@ -1,5 +1,32 @@
 # Erreurs connues — Flux WhatsApp ROUTER #8944541
 
+## 0. Bridge mapping (zones de securite <-> numero WhatsApp)
+
+Le routeur Make.com utilise la cle composite `{bridge}-{phone}` dans le datastore 157329 (contacts WhatsApp). `bridge` = numero E.164 sans le `+` du compte WhatsApp appaire sur ce bridge.
+
+Architecture: 1 DB whatsmeow = 1 device_jid = 1 numero WhatsApp → **1 bridge par zone de securite**.
+
+| id  | zone                        | population cible                                 | numero        | port | hostname public     |
+|-----|-----------------------------|--------------------------------------------------|---------------|------|---------------------|
+| z1  | visiteuses                  | visiteuses                                       | +41798131926  | 8080 | z1.svlbhgroup.net   |
+| z2  | formation + certifiees non-pro | shamanes en formation + certifiees non-pro    | +41792168200  | 8081 | z2.svlbhgroup.net   |
+| z3  | certifiees pro              | shamanes certifiees pro                          | +41799138200  | 8082 | z3.svlbhgroup.net   |
+
+Hote: Mac de Patrick, user macOS `patricktest`. Dossier racine `~/whatsapp-bridges/{z1,z2,z3}-<phone>/`.
+
+"patricktest" designe ici **l'user macOS** ET le label du compte WhatsApp Business sur lequel les 3 numeros ont ete migres depuis l'user `patrickbays` (migration avril 2026).
+
+Provisionnement: voir `tools/whatsapp-bridge-kit/` (install.sh + templates mcp.json/cloudflared.yml).
+
+### Re-pair checklist (si `whatsmeow_device` est vide ou `/api/health` renvoie `connected: false`)
+
+1. `curl -s http://localhost:<PORT>/api/health` — confirmer l'etat de chaque bridge
+2. Stop le process Go concerne: `pkill -f "whatsapp-bridge.*<PORT>"`
+3. Relancer: `cd ~/whatsapp-bridges/<id>-<phone>/whatsapp-bridge && PORT=<PORT> ./whatsapp-bridge`
+4. Scanner le QR avec **le bon numero de la zone** (z1 → +41798131926, z2 → +41792168200, z3 → +41799138200). Un mauvais appairage corrompt le mapping `bridge=` cote Make et melange les zones de securite.
+5. Verifier: `sqlite3 ~/whatsapp-bridges/<id>-<phone>/whatsapp-bridge/store/whatsapp.db "SELECT jid FROM whatsmeow_device;"` doit retourner le JID attendu.
+6. Tester un message entrant → verifier qu'il arrive dans le scenario Make #8944541 avec le bon `bridge=` en query string.
+
 ## 1. DataError: Duplicate key error
 
 - **Module**: `datastore:AddRecord` (datastore 157329 — contacts WhatsApp)

@@ -1,0 +1,30 @@
+# Merge into ~/.cloudflared/config.yml on patricktest.
+# Replace <TUNNEL_UUID> with the existing tunnel id (find via:
+#   cloudflared tunnel list)
+# The tunnel must already be authenticated to svlbhgroup.net.
+
+tunnel: <TUNNEL_UUID>
+credentials-file: /Users/patricktest/.cloudflared/<TUNNEL_UUID>.json
+
+ingress:
+  # z1 — visiteuses — WhatsApp account 41798131926
+  - hostname: z1.svlbhgroup.net
+    service: http://localhost:8080
+
+  # z2 — shamanes en formation + certifiees non-pro — WhatsApp account 41792168200
+  - hostname: z2.svlbhgroup.net
+    service: http://localhost:8081
+
+  # z3 — shamanes certifiees pro — WhatsApp account 41799138200
+  - hostname: z3.svlbhgroup.net
+    service: http://localhost:8082
+
+  # required catch-all
+  - service: http_status:404
+
+# After editing, create DNS routes once per hostname:
+#   cloudflared tunnel route dns <TUNNEL_UUID> z1.svlbhgroup.net
+#   cloudflared tunnel route dns <TUNNEL_UUID> z2.svlbhgroup.net
+#   cloudflared tunnel route dns <TUNNEL_UUID> z3.svlbhgroup.net
+# Then reload cloudflared:
+#   sudo launchctl kickstart -k system/com.cloudflare.cloudflared

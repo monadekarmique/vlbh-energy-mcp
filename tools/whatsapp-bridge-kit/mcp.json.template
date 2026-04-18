@@ -1,0 +1,50 @@
+{
+  "_comment": "Template for ~/.claude/.mcp.json on user patricktest. Verify WHATSAPP_BRIDGE_URL is the env var name used by FelixIsaac/whatsapp-mcp-extended (check whatsapp-mcp-server/main.py).",
+  "mcpServers": {
+    "whatsapp-z1-visiteuses": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/patricktest/whatsapp-bridges/z1-41798131926/whatsapp-mcp-server",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "WHATSAPP_BRIDGE_URL": "http://localhost:8080",
+        "BRIDGE_ID": "z1",
+        "BRIDGE_PHONE": "41798131926",
+        "BRIDGE_ZONE": "visiteuses"
+      }
+    },
+    "whatsapp-z2-formation-non-pro": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/patricktest/whatsapp-bridges/z2-41792168200/whatsapp-mcp-server",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "WHATSAPP_BRIDGE_URL": "http://localhost:8081",
+        "BRIDGE_ID": "z2",
+        "BRIDGE_PHONE": "41792168200",
+        "BRIDGE_ZONE": "formation-non-pro"
+      }
+    },
+    "whatsapp-z3-certifiees-pro": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/patricktest/whatsapp-bridges/z3-41799138200/whatsapp-mcp-server",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "WHATSAPP_BRIDGE_URL": "http://localhost:8082",
+        "BRIDGE_ID": "z3",
+        "BRIDGE_PHONE": "41799138200",
+        "BRIDGE_ZONE": "certifiees-pro"
+      }
+    }
+  }
+}
