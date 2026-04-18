@@ -53,7 +53,18 @@ BRIDGE_ZONE=$zone
 WEBHOOK_BRIDGE_PARAM=$phone
 EOF
 
-  echo "[$id] cloned."
+  # Upgrade whatsmeow to latest before first build — WhatsApp servers reject
+  # outdated clients with HTTP 405 "Client outdated". The FelixIsaac fork's
+  # pinned version is frequently stale.
+  echo "[$id] upgrading whatsmeow + building Go bridge..."
+  (
+    cd "$dir/whatsapp-bridge"
+    go get -u go.mau.fi/whatsmeow@latest
+    go mod tidy
+    go build -o whatsapp-bridge .
+  )
+
+  echo "[$id] cloned + built."
 done
 
 cat <<EOF
@@ -61,8 +72,12 @@ cat <<EOF
 ==========================================================================
 Next manual steps:
 
-  1. Build each Go bridge (explicit -o avoids './...' producing no binary):
-       for d in "$ROOT"/*/whatsapp-bridge; do (cd "\$d" && go build -o whatsapp-bridge .); done
+  1. Bridges are already built by this script (whatsmeow upgraded to latest).
+     To rebuild later (e.g. after another WhatsApp protocol bump returning 405):
+       for d in "$ROOT"/*/whatsapp-bridge; do
+         (cd "\$d" && go get -u go.mau.fi/whatsmeow@latest && go mod tidy \\
+          && go build -o whatsapp-bridge .)
+       done
 
   2. Merge cloudflared ingress rules:
        cp -i $KIT_DIR/cloudflared.yml.template ~/.cloudflared/config.yml.new
