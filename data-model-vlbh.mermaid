@@ -1,0 +1,49 @@
+---
+title: Data Model vlbh-energy v0.2 — trois zones + data residency géo-fragmentée
+---
+flowchart TB
+    DIR[("<b>svlbh_residency_directory</b><br/>Suisse neutre<br/>svlbh_id → région (CH/EU/CA)")]:::dir
+    ID[("<b>SVLBH_Identifier</b><br/>pivot UUID opaque<br/>identifiant global")]:::pivot
+
+    subgraph Z1 ["<b>ZONE 1 — Visiteuses</b> · UE Supabase Francfort · monorégion · volume millions"]
+        V["<b>visitor_contact</b><br/>whatsapp_id · prénom · LID"]:::z1
+        AI["<b>apple_identity</b> (Z1bis)<br/>email · Apple/Google ID"]:::z1
+    end
+
+    subgraph Z2 ["<b>ZONE 2 — Étudiantes 15 mois</b> · pédagogique · PAS art. 9 · géo-fragmentée"]
+        direction LR
+        Z2CH["<b>Z2-CH</b> Infomaniak / Exoscale<br/>student_profile · ancestors · signatures · billing<br/><i>étudiantes résidant en Suisse</i>"]:::ch
+        Z2EU["<b>Z2-EU</b> Supabase Francfort<br/>student_profile · ancestors · signatures · billing<br/><i>étudiantes résidant en UE</i>"]:::eu
+        Z2CA["<b>Z2-CA</b> Supabase Toronto / OVH CA<br/>student_profile · ancestors · signatures · billing<br/><i>étudiantes résidant au Canada (Loi 25 QC)</i>"]:::ca
+    end
+
+    subgraph Z3 ["<b>ZONE 3 — Praticiennes + Patientes</b> · ART. 9 · 2FA · DPIA · résidence = patiente"]
+        direction LR
+        Z3CH["<b>Z3-CH</b> Infomaniak / Exoscale<br/>praticienne · billing · patient_record · vibrational<br/><i>patientes résidant en Suisse</i>"]:::chs
+        Z3EU["<b>Z3-EU</b> Supabase Francfort<br/>praticienne · billing · patient_record · vibrational<br/><i>patientes résidant en UE</i>"]:::eus
+        Z3CA["<b>Z3-CA</b> Supabase Toronto / OVH CA<br/>praticienne · billing · patient_record · vibrational<br/><i>patientes résidant au Canada</i>"]:::cas
+    end
+
+    DIR -.->|routage| ID
+    ID ==> V
+    ID ==> AI
+    ID ==> Z2CH
+    ID ==> Z2EU
+    ID ==> Z2CA
+    ID ==> Z3CH
+    ID ==> Z3EU
+    ID ==> Z3CA
+
+    Z2CH -.->|certification| Z3CH
+    Z2EU -.->|certification| Z3EU
+    Z2CA -.->|certification| Z3CA
+
+    classDef dir fill:#d1c4e9,stroke:#4527a0,stroke-width:3px,color:#000
+    classDef pivot fill:#bbdefb,stroke:#0d47a1,stroke-width:3px,color:#000
+    classDef z1 fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef ch fill:#fff9c4,stroke:#d84315,stroke-width:2px,color:#000
+    classDef eu fill:#fff9c4,stroke:#1565c0,stroke-width:2px,color:#000
+    classDef ca fill:#fff9c4,stroke:#c62828,stroke-width:2px,color:#000
+    classDef chs fill:#ffcdd2,stroke:#d84315,stroke-width:3px,color:#000
+    classDef eus fill:#ffcdd2,stroke:#1565c0,stroke-width:3px,color:#000
+    classDef cas fill:#ffcdd2,stroke:#c62828,stroke-width:3px,color:#000

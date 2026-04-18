@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>energy.vlbh.wa-bridge-za</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/patricktest/whatsapp-bridges/bridge-za/bin/bridge</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/patricktest/whatsapp-bridges/bridge-za</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>BRIDGE_ID</key>
+        <string>za</string>
+        <key>BRIDGE_PHONE</key>
+        <string>+41799138200</string>
+        <key>DB_PATH</key>
+        <string>/Users/patricktest/whatsapp-bridges/bridge-za/data/store/whatsapp.db</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/patricktest/whatsapp-bridges/bridge-za/logs/bridge.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/patricktest/whatsapp-bridges/bridge-za/logs/bridge.err</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

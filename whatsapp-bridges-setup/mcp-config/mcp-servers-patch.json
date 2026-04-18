@@ -1,0 +1,41 @@
+{
+  "_comment": "Patch à merger dans le .mcp.json Cowork. 3 entrées à préfixes distincts pour les 3 bridges WhatsApp VLBH.",
+  "mcpServers": {
+    "wa_z1": {
+      "command": "/Users/patricktest/whatsapp-bridges/bridge-z1/mcp-server/venv/bin/python",
+      "args": [
+        "/Users/patricktest/whatsapp-bridges/bridge-z1/mcp-server/main.py"
+      ],
+      "env": {
+        "WHATSAPP_DB_PATH": "/Users/patricktest/whatsapp-bridges/bridge-z1/data/store/whatsapp.db",
+        "BRIDGE_ID": "z1",
+        "BRIDGE_PHONE": "+41798131926",
+        "BRIDGE_AUDIENCE": "visiteuses-Z1-Z1b"
+      }
+    },
+    "wa_z2et3": {
+      "command": "/Users/patricktest/whatsapp-bridges/bridge-z2et3/mcp-server/venv/bin/python",
+      "args": [
+        "/Users/patricktest/whatsapp-bridges/bridge-z2et3/mcp-server/main.py"
+      ],
+      "env": {
+        "WHATSAPP_DB_PATH": "/Users/patricktest/whatsapp-bridges/bridge-z2et3/data/store/whatsapp.db",
+        "BRIDGE_ID": "z2et3",
+        "BRIDGE_PHONE": "+41792168200",
+        "BRIDGE_AUDIENCE": "shamanes-formation-certifiees"
+      }
+    },
+    "wa_za": {
+      "command": "/Users/patricktest/whatsapp-bridges/bridge-za/mcp-server/venv/bin/python",
+      "args": [
+        "/Users/patricktest/whatsapp-bridges/bridge-za/mcp-server/main.py"
+      ],
+      "env": {
+        "WHATSAPP_DB_PATH": "/Users/patricktest/whatsapp-bridges/bridge-za/data/store/whatsapp.db",
+        "BRIDGE_ID": "za",
+        "BRIDGE_PHONE": "+41799138200",
+        "BRIDGE_AUDIENCE": "shamanes-certifiees-Pro"
+      }
+    }
+  }
+}
