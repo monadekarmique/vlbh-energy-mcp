@@ -122,3 +122,12 @@ Les 6 routers existants (slm, sla, session, lead, tore, billing) et leurs modele
 - `czxefyiqxgpstdtydnfl` — DM-v03-P3 Middleware WhatsApp — Zurich eu-central-2
   - Plan `free` actuel → doit passer Pro avant go-live (PITR, SSL, Network restrictions, no auto-pause)
   - Traite données personnelles standard — **pas Art. 9** (RSK-6, data-model v0.6 §3.3)
+
+### Registre de traitements RGPD art.30 + nLPD art.12
+
+- **Fichier canonique** : `legal/registre-rgpd/registre-rgpd-vlbh.xlsx` (v1.0, 2026-04-19)
+- **Script de (re)génération** : `/sessions/eager-keen-cori/scripts/build_registre_rgpd.py` (Cowork scratchpad — à porter dans ce repo si besoin)
+- **Contenu** : 5 feuilles — Organisation, Traitements (TR-01 à TR-06), Sous-traitants (9), Droits des personnes, Notes méthodologiques (RSK-6 cité)
+- **DPIA obligatoire** : uniquement TR-05 Tier 4 (Pro + patientes) et TR-06 Middleware DM-v03-P3
+- **Revue annuelle** : 2027-04-19 (anniversaire signature DPA Supabase)
+- **Asana** : AP-004 GID `1214145145513377` avec xlsx attaché (attachment GID `1214130460688466`)
