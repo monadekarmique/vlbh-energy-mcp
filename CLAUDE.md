@@ -131,3 +131,10 @@ Les 6 routers existants (slm, sla, session, lead, tore, billing) et leurs modele
 - **DPIA obligatoire** : uniquement TR-05 Tier 4 (Pro + patientes) et TR-06 Middleware DM-v03-P3
 - **Revue annuelle** : 2027-04-19 (anniversaire signature DPA Supabase)
 - **Asana** : AP-004 GID `1214145145513377` avec xlsx attaché (attachment GID `1214130460688466`)
+
+### Hub Notion cross-client (DPA + Registre + RSK-6)
+
+- **Page miroir** : https://www.notion.so/3479cafd5ef0811c9ecac7931b48b55b
+- **Titre** : "🛡️ Legal & Compliance Hub VLBH — DPA Supabase + Registre RGPD art.30"
+- **Parent** : PO-09 · RGPD — Agent Memory (teamspace SVLBH Release Train)
+- **Usage** : seul store visible depuis Claude.ai web / mobile / Claude in Chrome via connecteur Notion. Source de vérité = ce repo + Asana. Mettre à jour la page manuellement ou via MCP Notion lors de chaque modif substantielle.
