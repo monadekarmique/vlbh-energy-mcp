@@ -88,3 +88,37 @@ Les 6 routers existants (slm, sla, session, lead, tore, billing) et leurs modele
 - [ ] Les tests compilent (`swift build` ne doit pas echouer)
 - [ ] Les imports Python sont valides (`python -c "from main import app"`)
 - [ ] Pas de secrets (.env, tokens) dans les fichiers commites
+
+---
+
+## Legal & Compliance
+
+### Supabase — Data Processing Addendum (DPA)
+
+- **Status** : Signé 2026-04-19 — 2 écarts mineurs Part 1 à corriger (AP-003)
+- **Document ref** : `KSDVA-YIVUJ-O2BST-TAMAY`
+- **Version DPA** : 5 août 2025
+- **Signataire** : Patrick Bays, Owner, Le Chandon 4, 1580 Avenches
+- **Contact contractuel** : `monade.karmique@gmail.com` (à corriger vers `pb@vlbh.energy`)
+- **Org Supabase** : `whvkcgjdxcwqzhiiyxvb` — Patrick Bays (plan `free`)
+- **Archive locale** : `legal/dpa-supabase/Supabase-DPA-signed-2026-04-19-KSDVA-YIVUJ-O2BST-TAMAY.pdf`
+
+**Special categories = "None" → CORRECT** selon RSK-6 et data-model v0.6 §3.3 : les données radiesthésiques (signatures vibratoires VLBH, Rose des Vents, Scores de Lumière, hDOM, Sephiroth, Phantom Matrix) sont **hors Art. 9 RGPD**. Le DPA standard suffit (v0.6 §7). Pas de re-signature nécessaire pour ce point.
+
+**Écarts mineurs Part 1** (non bloquants go-live) :
+
+1. Supervisory authority EU only = blank — préciser FDPIC Suisse + CNIL France si patientes UE
+2. Customer contact = `monade.karmique@gmail.com` — à migrer vers `pb@vlbh.energy` lors prochaine re-signature
+
+**Suivi Asana** :
+- AP-002 — Décisions Patrick — GID `1214127345358134` (parent Epic)
+- PO-09 Signature — GID `1214127345365143` (comment écarts du 2026-04-19 + correction 2026-04-19)
+- AP-003 Written Instruction amendment (scope réduit) — GID `1214145145508395`
+- AP-004 Registre RGPD art.30 — GID `1214145145513377`
+- PO-07 Upgrade Pro — GID `1214130459219524` (bloquant go-live)
+
+### Supabase Projects
+
+- `czxefyiqxgpstdtydnfl` — DM-v03-P3 Middleware WhatsApp — Zurich eu-central-2
+  - Plan `free` actuel → doit passer Pro avant go-live (PITR, SSL, Network restrictions, no auto-pause)
+  - Traite données personnelles standard — **pas Art. 9** (RSK-6, data-model v0.6 §3.3)
