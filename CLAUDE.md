@@ -138,3 +138,45 @@ Les 6 routers existants (slm, sla, session, lead, tore, billing) et leurs modele
 - **Titre** : "🛡️ Legal & Compliance Hub VLBH — DPA Supabase + Registre RGPD art.30"
 - **Parent** : PO-09 · RGPD — Agent Memory (teamspace SVLBH Release Train)
 - **Usage** : seul store visible depuis Claude.ai web / mobile / Claude in Chrome via connecteur Notion. Source de vérité = ce repo + Asana. Mettre à jour la page manuellement ou via MCP Notion lors de chaque modif substantielle.
+
+## VIFA — Symbol Translator (T3 Formation)
+
+- **Codename** : `VIFA` (Vibration Fréquences Accumulation Intervalle)
+- **Spec canonique** : `docs/specs/vifa-v0.1-spec.md` (v0.1 validée Patrick 2026-04-20, score confiance 89%)
+- **Tier** : T3 Formation (app pour MyShaMan / MyShamanFamily, résidentes CH uniquement v0.1)
+- **Architecture** : webhook Make `vifa` (filtre `#symbole` sur 3 bridges WhatsApp) → Supabase Storage Zurich `symbols-private` → Mistral Pixtral Large (fallback Claude Sonnet 4.7) → mapping Rose des Vents + Phantom Matrix → triple sortie (JSON, draft WhatsApp FR, Markdown anonymisé)
+- **Identifiants** : `consultante_hash = pg_hashids(SVLBH_Identifier)` — UUID pivot Blueprint §4
+- **Régime** : contrat formation pédagogique. Pas DPIA, pas art. 26. Données radiesthésiques hors Art. 9 (RSK-6). Rétention 10 ans métadonnées / 90j image source.
+- **Bloquant** : PO-07 Pro upgrade Supabase (tâche GID `1214130459219524`) avant fin S2 (mar 28 avril 2026)
+- **Sprints** : S3 (mer 29 avr → mar 12 mai 2026) exécution F1-F9 ; S4 (mer 13 → mar 26 mai 2026) pilotes F10-F11 (Flavia Guift + Anne Grangier Brito)
+- **Pilotes** : Flavia Guift, Anne Grangier Brito (T3 CH)
+- **Modèle Vision** : Mistral Pixtral Large primaire (~0.0015 $/image, UE), Claude Sonnet 4.7 fallback via config Make `vision_model`
+- **Sub-processors** : Make.com (DPA Celonis 2026-04-20) → Mistral AI 🇫🇷 (natif UE) + Anthropic 🇺🇸 (DPF Swiss-US à vérifier F9)
+
+### Asana — GIDs VIFA
+
+- Epic VIFA Symbol Translator v0.1 : `1214137738579246` (parent dans projet PO-06 VIFA Essentielles)
+- Projet PO-06 VIFA Essentielles : `1214033516441793`
+- F1 Migration Supabase : `1214146804332281` (multi-home PO-07, PO-09 ; bloqué par `1214130459219524`)
+- F2 Vault secrets : `1214137738999256` (multi-home PO-07, PO-09)
+- F3 Scénario Make VIFA-9099001 : `1214146804072645` (multi-home PO-07, PO-08)
+- F4 Prompt Vision + pack 30 images : `1214137607937621` (multi-home PO-03, PO-08)
+- F5 Mapping engine RDV + Phantom Matrix : `1214146698645056` (multi-home PO-03)
+- F6 Templates WhatsApp + Markdown : `1214137608036336` (multi-home PO-03, PO-10)
+- F7 Inscription TR-07 registre RGPD : `1214146698653833` (PO-09)
+- F8 Mention consent caption : `1214146804723141` (multi-home PO-09, PO-11)
+- F9 Confirmation chaîne sub-processor : `1214137607807391` (PO-09)
+- F10 Tests pilotes Flavia + Anne : `1214146804107353` (multi-home PO-08, PO-11, PO-01)
+- F11 Hub Notion + commit + propagation : `1214146805019961` (PO-09)
+
+### Make.com — VIFA-9099001
+
+- Scenario à créer (F3) : webhook custom gen2 `vifa` filtrant keyword `#symbole` sur les 3 bridges existants (wa_z1, wa_z2et3, wa_za)
+- Pas de bridge dédié `wa_symtrans` (tranché 2026-04-20)
+
+### Open Questions résiduelles v0.2+
+
+- Geo-sharding UE/CA (v0.1 = CH monorégion uniquement)
+- pgvector embeddings : NON v0.1 (évite réidentification indirecte)
+- hDOM : ajout planifié v0.3
+- Sephiroth : hors scope sans date
