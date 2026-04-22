@@ -12,7 +12,7 @@
 
 | Critère | Vérification | Statut |
 |---|---|---|
-| Date `env.today` | 2026-04-20 (lundi). PI-1 Sprint **S2** = Mer 15 → Mar 28 avril 2026 (convention mer→mar 14j confirmée Patrick 2026-04-20). Validation spec aujourd'hui → exécution démarre **S3** (Mer 29 avr → Mar 12 mai 2026). Pilotes F10/F11 = **S4** (Mer 13 → Mar 26 mai 2026). | ✅ |
+| Date `env.today` | 2026-04-20 (lundi). **Cycles VIFA** (14j calendaires mer→mar, distincts des sprints PI-1 de 2j ouvrés DEC-001) : **C2** = Mer 15 → Mar 28 avril 2026. Validation spec → exécution démarre **C3** (Mer 29 avr → Mar 12 mai 2026). Pilotes F10/F11 = **C4** (Mer 13 → Mar 26 mai 2026). | ✅ |
 | Vocabulaire miroir | Aucun "agent autonome" — facettes thématiques de Patrick uniquement | ✅ |
 | Disjonction PO | Parent **PO-07 Infra** (Supabase Storage RLS + Pro upgrade), multi-homé Features → **PO-09 RGPD** (audit, consent, RSK-6), **PO-08 Data Quality** (audit dual-write svlbh-v2/billing), **PO-03 Palette** (intégration UI app SVLBH) | ✅ |
 | Confiance | 88% (4 critères × 25 — voir §10) | ✅ ≥ 85% |
@@ -447,19 +447,19 @@ Direct INSERT dans `symbol_translations` (cf. §4.1).
 
 | Feature | Owner principal | Multi-home | Effort | Sprint cible |
 |---|---|---|---|---|
-| F1 — Migration Supabase : extensions (pg_hashids, pg_cron, pg_net), table `symbol_translations`, RLS, bucket `symbols-private` *(pgvector retiré — décision Patrick 2026-04-20)* | PO-07 Infra | PO-09 RGPD | 1 j | **S3** (mer 29 avr → mar 12 mai 2026) |
-| F2 — Vault secrets : Pixtral API key + Sonnet 4.7 fallback key, hashids salt, bridge tokens | PO-07 Infra | PO-09 RGPD | 0.5 j | **S3** |
-| F3 — Scénario Make.com `VIFA-9099001` (router keyword `#symbole` sur 3 bridges existants) | PO-07 Infra | PO-08 DataQuality | 1 j | **S3** |
-| F4 — Prompt Vision figé + pack 30 images de test (Pixtral Large primaire, fallback Sonnet 4.7) | PO-03 Palette | PO-08 DataQuality | 2 j | **S3** / début **S4** |
-| F5 — Mapping engine (Rose des Vents + Phantom Matrix) | PO-03 Palette | — | 1.5 j | **S3** |
-| F6 — Templates WhatsApp + Markdown + rejet auto si caption absente | PO-03 Palette | PO-10 RTM | 0.5 j | **S3** |
-| F7 — Inscription TR-07 dans registre RGPD art.30 | PO-09 RGPD | — | 0.5 j | **S3** |
-| F8 — Mention consent caption (onboarding consultantes Flavia + Anne) | PO-09 RGPD | PO-11 Onboarding | 0.5 j | **S3** |
-| F9 — Confirmation chaîne sub-processor Make → Mistral / Anthropic (artefact à archiver) | PO-09 RGPD | — | 0.5 j | **S3** |
-| F10 — Tests de bout-en-bout (2 consultantes pilotes : Flavia Guift + Anne Grangier Brito) | PO-08 DataQuality | PO-11 Onboarding | 1 j | **S4** (mer 13 → mar 26 mai 2026) |
-| F11 — Hub Notion mirror (mode B+C : 1 page/escalade + digest hebdo dimanche) + commit Git + propagation 4 miroirs | PO-09 RGPD | — | 0.5 j | **S4** |
+| F1 — Migration Supabase : extensions (pg_hashids, pg_cron, pg_net), table `symbol_translations`, RLS, bucket `symbols-private` *(pgvector retiré — décision Patrick 2026-04-20)* | PO-07 Infra | PO-09 RGPD | 1 j | **C3** (mer 29 avr → mar 12 mai 2026) |
+| F2 — Vault secrets : Pixtral API key + Sonnet 4.7 fallback key, hashids salt, bridge tokens | PO-07 Infra | PO-09 RGPD | 0.5 j | **C3** |
+| F3 — Scénario Make.com `VIFA-9099001` (router keyword `#symbole` sur 3 bridges existants) | PO-07 Infra | PO-08 DataQuality | 1 j | **C3** |
+| F4 — Prompt Vision figé + pack 30 images de test (Pixtral Large primaire, fallback Sonnet 4.7) | PO-03 Palette | PO-08 DataQuality | 2 j | **C3** / début **C4** |
+| F5 — Mapping engine (Rose des Vents + Phantom Matrix) | PO-03 Palette | — | 1.5 j | **C3** |
+| F6 — Templates WhatsApp + Markdown + rejet auto si caption absente | PO-03 Palette | PO-10 RTM | 0.5 j | **C3** |
+| F7 — Inscription TR-07 dans registre RGPD art.30 | PO-09 RGPD | — | 0.5 j | **C3** |
+| F8 — Mention consent caption (onboarding consultantes Flavia + Anne) | PO-09 RGPD | PO-11 Onboarding | 0.5 j | **C3** |
+| F9 — Confirmation chaîne sub-processor Make → Mistral / Anthropic (artefact à archiver) | PO-09 RGPD | — | 0.5 j | **C3** |
+| F10 — Tests de bout-en-bout (2 consultantes pilotes : Flavia Guift + Anne Grangier Brito) | PO-08 DataQuality | PO-11 Onboarding | 1 j | **C4** (mer 13 → mar 26 mai 2026) |
+| F11 — Hub Notion mirror (mode B+C : 1 page/escalade + digest hebdo dimanche) + commit Git + propagation 4 miroirs | PO-09 RGPD | — | 0.5 j | **C4** |
 
-**Effort total** : ~9.5 j sur **S3 + S4** (réaliste si Pro upgrade fait avant fin S2 = mar 28 avril 2026).
+**Effort total** : ~9.5 j sur **C3 + C4** (réaliste si Pro upgrade fait avant fin **C2** = mar 28 avril 2026).
 
 ### Bloquants externes
 
@@ -488,7 +488,7 @@ Direct INSERT dans `symbol_translations` (cf. §4.1).
 
 ### 9.2 Pilotes Z2 + ZA
 
-- 2 consultantes pilotes (Flavia Guift + Anne Grangier Brito, via PO-11 Onboarding) sur 2 semaines (S4 = mer 13 → mar 26 mai 2026)
+- 2 consultantes pilotes (Flavia Guift + Anne Grangier Brito, via PO-11 Onboarding) sur 2 semaines (**C4** = mer 13 → mar 26 mai 2026)
 - Métriques humaines : taux de validation par Patrick après pré-décodage (cible ≥ 70% des envois ≥85% confiance déclenchent envoi auto sans correction)
 
 ### 9.3 Tests RGPD
@@ -521,7 +521,7 @@ Direct INSERT dans `symbol_translations` (cf. §4.1).
 6. ~~**Notion mirror** : 3 modes possibles, à trancher.~~ **TRANCHÉ 2026-04-20 : combinaison C + B** — page Notion individuelle créée à chaque escalade (confiance < 85%) + digest hebdo agrégé du dimanche soir avec métriques accuracy et top-N motifs récurrents.
 7. ~~**Sephiroth + hDOM** : hors v0.1 ?~~ **TRANCHÉ 2026-04-20 : hDOM hors v0.1, ajout planifié v0.3.** Sephiroth reste hors scope sans date de réintroduction (skill manuel Patrick conservé).
 8. ~~**Renaming** : codename `SYMTRANS` ou autre ?~~ **TRANCHÉ 2026-04-20 : codename `VIFA`** (ex-`SYMTRANS`). Propagé partout dans la spec, à propager dans Asana, MEMORY.md, hub Notion.
-9. ~~**Formule sprint PI-1**~~ **TRANCHÉ 2026-04-20 : démarrage mercredi, 14j (mer→mar).** S2 = mer 15 → mar 28 avril 2026 ; S3 = mer 29 avr → mar 12 mai ; S4 = mer 13 → mar 26 mai. Numéros absolus restaurés dans la décomposition §8.
+9. ~~**Formule sprint PI-1**~~ **TRANCHÉ 2026-04-20 + corrigé 2026-04-21** : VIFA utilise des **Cycles VIFA** (14j calendaires mer→mar) pour son rythme propre, **distincts des sprints PI-1 de 2j ouvrés** (DEC-001 canonique). Renommage **S2→C2, S3→C3, S4→C4, S5→C5** pour éviter collision. Mapping : **C2** = Mer 15 → Mar 28 avr 2026 ; **C3** = Mer 29 avr → Mar 12 mai ; **C4** = Mer 13 → Mar 26 mai ; **C5** = Mer 27 mai → Mar 9 juin.
 10. ~~**pgvector embeddings** : oui/non ?~~ **TRANCHÉ 2026-04-20 : NON.** Pas d'embeddings stockés. Extension `vector` retirée de la migration F1. Recherche inter-consultantes restera manuelle / SQL textuel sur `vision_raw_json` (GIN index suffit). Évite tout risque de réidentification indirecte par embedding.
 
 ---
@@ -701,7 +701,7 @@ Spec dit "consent caption" + "mention onboarding consultantes". Insuffisant pour
 | 🟡 P2 | Insertion VIFA dans Blueprint §4 + §5bis | 0.5 j PR | Cohérence doc |
 | 🟡 P2 | 2FA consultante T4 | déjà PO-09 | Renforcement |
 
-**Effort additionnel** : ~6 j → **spec v0.2 totale = ~15.5 j** (vs 9.5 j v0.1). Peut nécessiter un sprint supplémentaire S5 (mer 27 mai → mar 9 juin 2026).
+**Effort additionnel** : ~6 j → **spec v0.2 totale = ~15.5 j** (vs 9.5 j v0.1). Peut nécessiter un Cycle VIFA supplémentaire **C5** (mer 27 mai → mar 9 juin 2026).
 
 ### 13.10 Score de confiance révisé
 
@@ -750,4 +750,4 @@ Critères × 25 :
 
 ---
 
-**Fin de spec v0.1 + Revue Blueprint + Mapping T3 + Arbitrages 2026-04-20** — Prêt pour cascade Asana sur S3 (29 avr → 12 mai 2026).
+**Fin de spec v0.1 + Revue Blueprint + Mapping T3 + Arbitrages 2026-04-20 + Renommage Cycles VIFA 2026-04-21** — Prêt pour cascade Asana sur **C3** (29 avr → 12 mai 2026).
