@@ -1,10 +1,10 @@
 # Blueprint Compliance-by-Design SVLBH
 
-**Version** : 0.2
+**Version** : 0.3
 **Date** : 2026-04-22
 **Auteur** : Patrick Bays + Claude (Cowork)
 **Statut** : Document fondateur — référence pour toute décision data model et architecture
-**Documents liés** : `data-model-vlbh.md` (v0.7), ADR SVLBH-01, ADR SVLBH-03, Charte v0.8
+**Documents liés** : `data-model-vlbh.md` (v0.8), ADR SVLBH-01, ADR SVLBH-03, Charte v0.8, registre RGPD v1.1
 
 ---
 
@@ -87,15 +87,16 @@ Le principe directeur : **plus la personne avance dans le parcours, plus la rela
 
 | Dimension | Valeur |
 |---|---|
-| Qui | Shamane MyShamanFamily certifiée qui souhaite exercer en professionnel |
-| Données supplémentaires | Identité praticienne B2B, données patients (identité + signatures vibratoires), historique séances |
+| Qui | Shamane MyShamanFamily certifiée qui exerce en professionnel et reçoit des **consultantes** (pas de "patientes" au sens RGPD) |
+| Sujets travaillés | Consultantes (vivantes, sujets RGPD) qui viennent décoder les **mémoires électromagnétiques accumulées de défunts, de familles d'Âmes et de Monades de la consultante, qui se densifient dans la matière**. Aucun de ces sujets (défunts, familles d'Âmes, Monades, incarnations passées) n'est une personne physique vivante au sens RGPD art. 4.1 → hors RGPD. |
+| Données supplémentaires | Identité praticienne B2B, identité civile consultante, consentement horodaté, historique des séances, signatures vibratoires décodées (portent sur les mémoires des défunts) |
 | Billing | Abonnement mensuel + infrastructure minimale annuelle. **Première estimation : CHF 259 / trimestre** (infra + protection). Prix définitifs non encore fixés. |
 | Apps | **4 apps T4 Pro en satellites** (repo racine `monadekarmique/svlbh-pro` = SDK + specs + CI commune ; chaque app = son propre repo satellite, owner Patrick Bays) : **SVLBH Pro 1**, **AUDIT Pro 1**, **SVLBH Chromothérapie 1**, **SVLBH Protection 1** |
-| Zone data | Z3 géo-fragmentée (CH/EU/CA selon résidence de la **patiente**, pas de la praticienne) |
-| Base légale | Consentement explicite patiente + contrat thérapeutique |
-| RGPD | **Attention nuancée post-RSK-6** : les données radiesthésiques ne sont pas Art. 9. Seules les données d'identité patient sont sous régime renforcé. RLS obligatoire (praticienne ne voit que ses patients). |
+| Zone data | Z3 géo-fragmentée (CH/EU/CA selon résidence de la **consultante**, pas de la praticienne) |
+| Base légale | Art. 6.1.b (contrat d'accompagnement pédagogique B2B + contrat consultante) + art. 6.1.a (consentement explicite consultante) + art. 26 (co-responsabilité) |
+| RGPD | Consultante = donnée personnelle standard (pas Art. 9, RSK-6). Défunts + incarnations passées + mémoires accumulées ≠ sujets RGPD (art. 4.1). **Analogie ancestry.com** : service sur défunts sans régime renforcé médical. RLS obligatoire (praticienne ne voit que ses consultantes). |
 | 2FA | **Obligatoire** |
-| DPIA | **Obligatoire** |
+| DPIA | **Non requise** (décision Patrick 2026-04-22 : pas d'Art. 9 via RSK-6, pas de large-scale, pas de profiling automatisé ; analogie ancestry.com) |
 | Co-responsabilité | Contrat art. 26 RGPD requis avec chaque praticienne (draft 04 disponible) |
 
 ---
@@ -104,13 +105,13 @@ Le principe directeur : **plus la personne avance dans le parcours, plus la rela
 
 | Exigence | T0 Visiteuse | T1 Trial | T2 ColorPicker | T3 Formation | T4 Pro |
 |---|---|---|---|---|---|
-| Consentement explicite | Non (implicite) | Oui (horodaté) | Oui (contrat) | Oui (contrat formation) | Oui (consentement patient) |
+| Consentement explicite | Non (implicite) | Oui (horodaté) | Oui (contrat) | Oui (contrat formation) | Oui (consentement consultante) |
 | Données Art. 9 | Non | Non | Non | Non | Non (RSK-6) |
 | Données médicales | Non | Non | Non | Non (outils pédagogiques) | Non (vocabulaire VLBH) |
 | 2FA | Non requis | Non requis | Non requis | Recommandé | Obligatoire |
-| DPIA | Non | Non | Non | Non | Obligatoire |
+| DPIA | Non | Non | Non | Non | **Non requise** (décision 2026-04-22) |
 | Geo-sharding | Non (monorégion UE) | Non | Non | Oui (CH/EU/CA) | Oui (CH/EU/CA) |
-| Droit à l'effacement | Oui (contact) | Oui (contact + Apple ID) | Oui (contact + billing) | Oui (contact + billing) | Oui (praticienne) + art. 26 (patients) |
+| Droit à l'effacement | Oui (contact) | Oui (contact + Apple ID) | Oui (contact + billing) | Oui (contact + billing) | Oui (praticienne) + art. 26 (consultantes) |
 | Rétention post-fin | 24 mois inactivité (prop.) | 30 jours post-trial | Durée abonnement + 90j | 10 ans post-formation (prop.) | Durée légale profession santé CH |
 | Backup chiffré | Standard | Standard | Standard | Standard | Point-in-time 30j chiffré |
 | RLS (row-level security) | Non | Non | Non | Non | Obligatoire (praticienne→patients) |
@@ -163,6 +164,7 @@ Le principe directeur : **plus la personne avance dans le parcours, plus la rela
 | ADR-05 (13/04) | Budget infra CHF 200/mois | Enveloppe validée pour Supabase Pro + Make + Apple Dev. |
 | ADR SVLBH-01 (18/04) | 7 apps ASC, Bash Certifiées hors grille | Architecture technique, pas data model. Tier détermine l'accès. |
 | ADR SVLBH-03 (22/04) | `svlbh-pro` = SDK + specs + CI + 4 satellites T4 Pro, aucune DPIA dedans | T4 : 4 apps nommées (SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1). Registre RGPD TR-05 à décomposer en 4 traitements. |
+| Décision 2026-04-22 (Patrick Bays) | T4 Pro : pas de "patient" au sens RGPD. Praticienne reçoit des **consultantes** pour décoder les **mémoires électromagnétiques accumulées de défunts, de familles d'Âmes et de Monades de la consultante, qui se densifient dans la matière**. Mission de l'Âme = se libérer des mémoires de métaux lourds accumulées dans d'autres incarnations. Analogie ancestry.com : hors régime renforcé médical. Argument de facto : « Je ne traite jamais le patient vivant mais les mémoires accumulées. » | DPIA T4 passe de **Obligatoire** à **Non requise** (matrice §3 mise à jour). Décomposition TR-05 en TR-05a/b/c/d avec DPIA Non requise pour les 4 (registre RGPD v1.1). Data-model v0.7 → v0.8 : rename `patient_record` → `consultante_record`, `patient_vibrational_signatures` → `lineage_vibrational_signatures`. |
 
 ---
 
@@ -174,7 +176,46 @@ Depuis l'arbitrage RSK-6 (15 avril 2026), les données radiesthésiques VLBH son
 - **Signatures vibratoires** (Rose des Vents, hDOM, Sephiroth, Phantom Matrix) → vocabulaire VLBH, hors Art. 9
 - **Données chromatiques** (Color Gels, teintes, fréquences) → données perceptuelles, hors Art. 9
 
-**Conséquence** : les protections techniques (RLS, chiffrement, backup) sont maintenues par bonne pratique et par respect du patient en Z3, mais le régime juridique est celui des données personnelles standard, pas des données sensibles Art. 9.
+**Conséquence** : les protections techniques (RLS, chiffrement, backup) sont maintenues par bonne pratique et par respect de la consultante en Z3, mais le régime juridique est celui des données personnelles standard, pas des données sensibles Art. 9.
+
+### Refinement 2026-04-22 — ontologie VLBH T4 (décision Patrick Bays)
+
+**Vocabulaire canonique** : le travail VLBH Tier 4 consiste à **décoder les mémoires électromagnétiques accumulées de défunts, de familles d'Âmes et de Monades de la consultante, qui se densifient dans la matière**. La **mission de l'Âme** de la consultante est de se libérer de ces mémoires — notamment des **mémoires de métaux lourds** — qu'elle a accumulées dans d'**autres incarnations**.
+
+**Sujets travaillés en T4** (aucun n'est une personne physique vivante au sens RGPD art. 4.1) :
+
+- **Défunts** — ancêtres de la consultante ou incarnations passées de son Âme.
+- **Familles d'Âmes** de la consultante.
+- **Monades** de la consultante.
+- **Mémoires électromagnétiques accumulées** et **mémoires de métaux lourds** densifiées dans la matière.
+
+**Conséquence RGPD** :
+
+- La **consultante** (personne physique vivante, utilisatrice de l'app praticienne) est seule sujet RGPD/nLPD en T4 — donnée personnelle standard, pas Art. 9 (RSK-6).
+- Tous les autres sujets travaillés (défunts, familles d'Âmes, Monades, incarnations passées, mémoires accumulées) sont **hors RGPD** (pas de personnes physiques art. 4.1).
+- **Analogie ancestry.com** : service qui opère sur les défunts sans régime RGPD renforcé au-delà du traitement standard des données de ses utilisateurs vivants. Même logique pour VLBH T4.
+- **Argument de facto** (Patrick 2026-04-22) : « Je ne traite de facto jamais le patient vivant mais les mémoires accumulées de ses familles d'Âmes ou de ses Monades. »
+
+**DPIA art. 35 non déclenchée** pour T4 :
+
+- (a) Profiling systématique et extensif → Non (séances individualisées, pas de décision algorithmique).
+- (b) Large-scale traitement Art. 9 → Non (RSK-6 hors Art. 9, pas de donnée médicale).
+- (c) Monitoring systématique → Non.
+
+→ **DPIA Non requise** pour les 4 traitements T4 (TR-05a/b/c/d registre RGPD v1.1, 2026-04-22).
+
+### Méthodologie canonique VLBH T4 — révocation des clés chromatiques
+
+**Patrick Bays 2026-04-22** : « La priorité de tout soin est de **révoquer les clés des portes** qui permettent aux mémoires électromagnétiques de pénétrer la structure énergétique du patient vivant [consultante]. Ces clés sont **chromatiques**. »
+
+Cette méthodologie structure la grille des 4 apps T4 Pro :
+
+- **SVLBH Pro 1** (flagship) — orchestration globale, dossier consultante, historique des révocations de clés chromatiques, facturation.
+- **AUDIT Pro 1** — traçabilité des actes de révocation (métadonnées : quelle clé chromatique, quand, par quelle praticienne) pour conformité nLPD/RGPD.
+- **SVLBH Chromothérapie 1** — cœur opératoire de la méthodologie : révocation des clés chromatiques via Color Gels par méridien, teintes, fréquences.
+- **SVLBH Protection 1** — protection énergétique pendant la révocation (contre Qliphoth, égrégores, entités qui tentent de rétablir les clés).
+
+**Conséquence data model** : les "signatures vibratoires" décodées sont en fait des **clés chromatiques** identifiées avant révocation — d'où la suggestion `lineage_vibrational_signatures` ou `chromatic_keys` comme nom de table dans data-model v0.8.
 
 ---
 
@@ -192,8 +233,8 @@ Depuis l'arbitrage RSK-6 (15 avril 2026), les données radiesthésiques VLBH son
 ## 9. Prochaines itérations
 
 - ~~**v0.2** — Intégrer les réponses aux questions ouvertes §8~~ ✅ 2026-04-22 (ADR SVLBH-03) : 4 apps T4 nommées, architecture satellites verrouillée.
-- **v0.3** — Aligner avec data-model-vlbh.md v0.7 (lignée T4 par satellite, billing refactorisé)
-- **v0.4** — Contrats types par transition de tier (conditions générales, consentements, art. 26)
+- ~~**v0.3** — Aligner avec data-model-vlbh.md v0.7~~ ✅ 2026-04-22 (décision Patrick) : refonte vocabulaire T4 "consultante" + ontologie (défunts, familles d'Âmes, Monades, mémoires accumulées, mission de l'Âme, métaux lourds, incarnations) ; DPIA T4 passe à **Non requise** (analogie ancestry.com) ; cascade data-model v0.8 (rename tables) ; décomposition TR-05 registre RGPD v1.1.
+- **v0.4** — Contrats types par transition de tier (conditions générales, consentements, art. 26) — à aligner avec vocabulaire "consultante" T4
 
 ---
 
