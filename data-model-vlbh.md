@@ -1,10 +1,10 @@
 # Data Model vlbh-energy
 
-**Version** : 0.6
-**Date** : 2026-04-18
+**Version** : 0.7
+**Date** : 2026-04-22
 **Auteur** : Patrick Bays + Claude (Cowork)
-**Statut** : Draft consolidé — intègre toutes les décisions projet au 18/04/2026
-**Documents liés** : `blueprint-compliance-by-design.md` (v0.1), ADR SVLBH-01, Charte v0.8
+**Statut** : Draft consolidé — intègre les décisions au 22/04/2026 (ADR SVLBH-03 apps T4 nommées + architecture satellites)
+**Documents liés** : `blueprint-compliance-by-design.md` (v0.2), ADR SVLBH-01, ADR SVLBH-03, Charte v0.8
 
 ---
 
@@ -15,6 +15,7 @@
 | 0.1 | 2026-04-17 | PB + Claude | Première synthèse : trois zones, SVLBH_Identifier pivot, classification juridique, cadre pédagogique, protocole incident |
 | 0.2 | 2026-04-17 | PB + Claude | Ajout data residency géo-fragmentée (CH/EU/CA). Table svlbh_residency_directory. |
 | 0.6 | 2026-04-18 | PB + Claude | **Refonte majeure** : (1) suppression ancestors_registry — pas d'arbre généalogique transmis, outils pédagogiques uniquement ; (2) reclassification RSK-6 — données radiesthésiques hors Art. 9 RGPD ; (3) modèle de progression 5 tiers remplaçant le modèle monolithique ; (4) funnel billing par tier aligné sur le blueprint compliance-by-design ; (5) alignement ADR SVLBH-01 architecture multi-app ; (6) suppression DPA spécial Supabase |
+| 0.7 | 2026-04-22 | PB + Claude | **Apps T4 nommées (ADR SVLBH-03)** : SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1 en satellites de `monadekarmique/svlbh-pro`. Owner Patrick Bays. Stack première app prioritaire SVLBH Pro 1 = FastAPI + React/Next + Swift Package. Registre RGPD TR-05 à décomposer en 4 traitements T4. DPIA par satellite, aucune dans `svlbh-pro`. |
 
 ---
 
@@ -88,7 +89,7 @@ Chaque tier implique des exigences distinctes en matière de protection des donn
 | Sujet | MyShamanFamily certifiée exerçant avec ses propres patientes |
 | Données collectées | Identité praticienne B2B, identité patientes, signatures vibratoires patientes, historique séances |
 | Billing | Abonnement mensuel + infra annuelle. Estimation : **CHF 259 / trimestre** (prix non définitifs) |
-| Apps | **4 apps SVLBH Pro** |
+| Apps | **4 apps T4 Pro en satellites** : **SVLBH Pro 1** (flagship), **AUDIT Pro 1**, **SVLBH Chromothérapie 1**, **SVLBH Protection 1**. Repo racine `monadekarmique/svlbh-pro` = SDK + specs + CI commune ; chaque app = son propre repo satellite GitHub. Owner Patrick Bays. |
 | Qualification juridique | Données d'identité patient sous régime renforcé. Données radiesthésiques hors Art. 9 (RSK-6). |
 | Base légale | Consentement explicite patiente + contrat thérapeutique |
 | Hébergement | Géo-fragmenté selon résidence de la **patiente** (pas de la praticienne) |
@@ -257,7 +258,7 @@ billing_praticien
   plan                  : enum(quarterly_259, ...)  -- pricing non définitif
   amount_chf            : number
   billing_period        : string
-  includes              : array of string  -- 4 apps Pro incluses
+  includes              : array of string  -- 4 apps Pro : SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1
 
 patient_record
   patient_id            : UUID (PK)
@@ -309,7 +310,7 @@ Les formulaires (UI back-office, Colorpicker, Formation) n'offrent **aucun champ
 | T1 | SVLBH Colorpicker (trial) | Z1bis→Z2 | PO-05 |
 | T2 | 1 des 5 ColorPicker | Z2 | PO-05 |
 | T3 | SVLBH Formation | Z2 | PO-01 |
-| T4 | 4 apps SVLBH Pro | Z3 | PO-02/03/04/06 + Patrick (Bash Certifiées hors grille) |
+| T4 | SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1 (satellites de `svlbh-pro`) | Z3 | Patrick Bays |
 
 Le tier détermine les droits d'accès aux données, pas l'app. L'ADR SVLBH-01 (7 apps ASC) concerne l'architecture technique App Store, pas le data model.
 
@@ -368,7 +369,7 @@ Désactivation du backup iCloud/Google Drive de WhatsApp sur les appareils recev
 ## 9. Questions ouvertes
 
 1. **5 apps ColorPicker** : quels sont les 5 thèmes exacts ? (Glycémie, Sommeil, ... ?)
-2. **4 apps SVLBH Pro** : quelles sont les 4 apps exactes pour les certifiées ?
+2. ~~**4 apps SVLBH Pro** : quelles sont les 4 apps exactes pour les certifiées ?~~ **Résolu 2026-04-22 (ADR SVLBH-03)** : SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1 — chacune en repo satellite GitHub de `monadekarmique/svlbh-pro`.
 3. **Pricing Pro définitif** : CHF 259/trimestre est une estimation. Quand sera-t-il fixé ?
 4. **Multi-ColorPicker** : une consultante peut-elle souscrire à plusieurs ColorPicker simultanément ?
 5. **Hard paywall J14** (DEC-006) : que se passe-t-il avec les données trial si la personne ne souscrit pas ?
@@ -384,7 +385,7 @@ Désactivation du backup iCloud/Google Drive de WhatsApp sur les appareils recev
 
 ## 10. Prochaines itérations
 
-- **v0.7** — Réponses aux questions ouvertes §9 (arbitrages Patrick)
+- ~~**v0.7** — Réponses aux questions ouvertes §9 (arbitrages Patrick)~~ ✅ 2026-04-22 : question 2 résolue (apps T4 nommées, ADR SVLBH-03). Questions restantes §9 à arbitrer dans v0.8.
 - **v0.8** — DDL SQL concret Supabase (schéma + RLS + policies)
 - **v0.9** — Contenu juridique des contrats par tier (clauses, consentements)
 - **v1.0** — Version de référence validée pour mise en production

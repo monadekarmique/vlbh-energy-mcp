@@ -1,10 +1,10 @@
 # Blueprint Compliance-by-Design SVLBH
 
-**Version** : 0.1
-**Date** : 2026-04-18
+**Version** : 0.2
+**Date** : 2026-04-22
 **Auteur** : Patrick Bays + Claude (Cowork)
 **Statut** : Document fondateur — référence pour toute décision data model et architecture
-**Documents liés** : `data-model-vlbh.md` (v0.2), ADR SVLBH-01, Charte v0.8
+**Documents liés** : `data-model-vlbh.md` (v0.7), ADR SVLBH-01, ADR SVLBH-03, Charte v0.8
 
 ---
 
@@ -90,7 +90,7 @@ Le principe directeur : **plus la personne avance dans le parcours, plus la rela
 | Qui | Shamane MyShamanFamily certifiée qui souhaite exercer en professionnel |
 | Données supplémentaires | Identité praticienne B2B, données patients (identité + signatures vibratoires), historique séances |
 | Billing | Abonnement mensuel + infrastructure minimale annuelle. **Première estimation : CHF 259 / trimestre** (infra + protection). Prix définitifs non encore fixés. |
-| Apps | **4 apps SVLBH Pro** (Panel, MyShamanFamily, Palette de Lumière, + 1 à préciser) |
+| Apps | **4 apps T4 Pro en satellites** (repo racine `monadekarmique/svlbh-pro` = SDK + specs + CI commune ; chaque app = son propre repo satellite, owner Patrick Bays) : **SVLBH Pro 1**, **AUDIT Pro 1**, **SVLBH Chromothérapie 1**, **SVLBH Protection 1** |
 | Zone data | Z3 géo-fragmentée (CH/EU/CA selon résidence de la **patiente**, pas de la praticienne) |
 | Base légale | Consentement explicite patiente + contrat thérapeutique |
 | RGPD | **Attention nuancée post-RSK-6** : les données radiesthésiques ne sont pas Art. 9. Seules les données d'identité patient sont sous régime renforcé. RLS obligatoire (praticienne ne voit que ses patients). |
@@ -144,7 +144,7 @@ Le principe directeur : **plus la personne avance dans le parcours, plus la rela
 | T1 | SVLBH Colorpicker (trial) | À définir | Z1bis→Z2 | PO-05 |
 | T2 | 1 des 5 ColorPicker (Glycémie, Sommeil, etc.) | À définir ×5 | Z2 | PO-05 |
 | T3 | SVLBH Formation | M100-LS100-DM85.SVLBH-Panel (actuel) | Z2 | PO-01 |
-| T4 | 4 apps SVLBH Pro | À définir ×4 | Z3 | PO-02/03/04/06 + Patrick (Bash Certifiées) |
+| T4 | SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1 (satellites de `svlbh-pro`) | À définir ×4 | Z3 | Patrick Bays |
 
 **Note ADR SVLBH-01** : le split en 7 apps ASC concerne l'architecture technique App Store (review Apple, TestFlight, CI/CD). Côté data model et parcours utilisateur, c'est le tier qui détermine les droits d'accès aux données, pas l'app.
 
@@ -162,6 +162,7 @@ Le principe directeur : **plus la personne avance dans le parcours, plus la rela
 | ADR-01 (13/04, confirmé 15/04) | Données hDOM hors Art. 9 | Confirme RSK-6. |
 | ADR-05 (13/04) | Budget infra CHF 200/mois | Enveloppe validée pour Supabase Pro + Make + Apple Dev. |
 | ADR SVLBH-01 (18/04) | 7 apps ASC, Bash Certifiées hors grille | Architecture technique, pas data model. Tier détermine l'accès. |
+| ADR SVLBH-03 (22/04) | `svlbh-pro` = SDK + specs + CI + 4 satellites T4 Pro, aucune DPIA dedans | T4 : 4 apps nommées (SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1). Registre RGPD TR-05 à décomposer en 4 traitements. |
 
 ---
 
@@ -180,7 +181,7 @@ Depuis l'arbitrage RSK-6 (15 avril 2026), les données radiesthésiques VLBH son
 ## 8. Questions ouvertes spécifiques au blueprint
 
 1. **5 apps ColorPicker** : quels sont les 5 thèmes exacts ? (Glycémie, Sommeil, ... ?)
-2. **4 apps SVLBH Pro** : quelles sont les 4 apps exactes reçues par les certifiées Pro ?
+2. ~~**4 apps SVLBH Pro** : quelles sont les 4 apps exactes reçues par les certifiées Pro ?~~ **Résolu 2026-04-22 (ADR SVLBH-03)** : SVLBH Pro 1, AUDIT Pro 1, SVLBH Chromothérapie 1, SVLBH Protection 1 — satellites GitHub de `monadekarmique/svlbh-pro`.
 3. **Pricing Pro définitif** : CHF 259/trimestre est une première estimation. Quand sera-t-il fixé ?
 4. **Transition T2 → T3** : une consultante ColorPicker peut-elle s'inscrire directement en formation, ou faut-il repasser par une séance découverte ?
 5. **Multi-ColorPicker** : une consultante peut-elle souscrire à plusieurs ColorPicker simultanément ?
@@ -190,8 +191,8 @@ Depuis l'arbitrage RSK-6 (15 avril 2026), les données radiesthésiques VLBH son
 
 ## 9. Prochaines itérations
 
-- **v0.2** — Intégrer les réponses aux questions ouvertes §8
-- **v0.3** — Aligner avec data-model-vlbh.md v0.3 (tables billing refactorisées par tier)
+- ~~**v0.2** — Intégrer les réponses aux questions ouvertes §8~~ ✅ 2026-04-22 (ADR SVLBH-03) : 4 apps T4 nommées, architecture satellites verrouillée.
+- **v0.3** — Aligner avec data-model-vlbh.md v0.7 (lignée T4 par satellite, billing refactorisé)
 - **v0.4** — Contrats types par transition de tier (conditions générales, consentements, art. 26)
 
 ---
