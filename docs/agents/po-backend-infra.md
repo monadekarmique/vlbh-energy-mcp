@@ -164,7 +164,6 @@ Dans l'UI Claude Projects, uploader ces fichiers du repo comme "Project knowledg
 | `docs/ADR.md` | Decisions architecturales verrouillees — source de verite |
 | `docs/SPRINT_STATE.md` | Etat sprint en cours, endpoints DONE/TODO, blockers |
 | `docs/005_deploy_checklist.md` | Environnement Render.com + secrets |
-| `docs/flux_whatsapp_errors.md` | Pattern d'erreur Make.com (pieges a eviter) |
 | `render.yaml` | Config deploy + env vars requises |
 | `requirements.txt` | Stack Python (versions pinnees) |
 | `runtime.txt` | Version Python (3.11.9) |

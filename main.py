@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from routers import slm, sla, session, lead, tore, billing, dashboard, workspace, flux_whatsapp
+from routers import slm, sla, session, lead, tore, billing, dashboard, workspace
 # --- iTherapeut 6.0 routers ---
 from routers import patient, therapy_session, invoice, qrbill
 from routers import tarif590, scores, rose_des_vents
@@ -46,7 +46,6 @@ app.include_router(lead.router)
 app.include_router(tore.router)
 app.include_router(billing.router)
 app.include_router(workspace.router)
-app.include_router(flux_whatsapp.router)
 
 # iTherapeut 6.0 routers (J1)
 app.include_router(patient.router)
