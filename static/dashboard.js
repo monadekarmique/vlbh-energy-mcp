@@ -8,9 +8,9 @@ const DEFAULT_SPRINT = {
   startDate: '2026-05-22',
   endDate: '2026-06-04',
   team: [
-    { name: 'Patrick', role: 'Lead / Shaman', availableDays: 8, totalDays: 10, allocation: 20, notes: 'UX arbitrage + Supabase upgrade + decisions' },
-    { name: 'Claude', role: 'AI Engineer', availableDays: 10, totalDays: 10, allocation: 45, notes: 'Implementation + CI/CD + backend' },
-    { name: 'RTM Bot', role: 'Release Train', availableDays: 10, totalDays: 10, allocation: 10, notes: 'Ceremonies + monitoring' },
+    { name: 'Patrick', role: 'Lead / Shaman', availableDays: 8, totalDays: 10, allocation: 45, notes: 'UX arbitrage + Supabase upgrade + decisions' },
+    { name: 'Les Claudes', role: 'AI Engineers', availableDays: 10, totalDays: 10, allocation: 135, notes: 'Implementation + CI/CD + backend' },
+    { name: 'RTM Bot', role: 'Release Train', availableDays: 10, totalDays: 10, allocation: 0, notes: 'Ceremonies + monitoring' },
   ],
   backlog: [
     { id: 1, priority: 'P0', title: 'PWA Apple Sign-In loop — fix middleware rate-limit + Supabase GoTrue 429', estimate: 8, owner: 'Claude', status: 'todo', deps: 'None' },
