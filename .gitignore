@@ -9,3 +9,5 @@ __pycache__/
 .env
 .render_key
 user/downloads/
+
+.build/
