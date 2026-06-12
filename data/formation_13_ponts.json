@@ -1,7 +1,7 @@
 {
   "meta": {
     "nom": "Formation digiSha — Les 13 ponts",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "date": "2026-06-12",
     "temps_capsule": ["identifier", "relier", "s'approprier", "intégrer", "terre"],
     "source": "SYNTH·S7·AKASH·Dette-Karmique-Mémoires-Akashiques.md",
@@ -21,6 +21,68 @@
       "bonne": 1
     }
   },
+  "tronc_commun": [
+    {
+      "id": "m1-metrologie",
+      "titre": "M1 — Métrologie VLBH",
+      "parcours": "praticien",
+      "prerequis_de": "ponts",
+      "resume": "L'analogue de la théorie de la mesure : les 4 scores (SLA, SLSA — peut dépasser 100 % jusqu'à 50 000 %, SLPMO, SLM), le système de coordonnées 7 régions × 9 dimensions, les instruments de localisation et de datation (Anatomy 12D, Linggui Bafa, V quadrants). Et le point que la psychologie n'a pas : l'instrument central, c'est le praticien — calibration de soi avant calibration de la mesure.",
+      "points": ["Les 4 scores et ce que chacun opérationnalise", "7 régions (où) × 9 dimensions (à quelle profondeur)", "Anatomy 12D, Linggui Bafa, V quadrants", "État de base, seuil de perceptibilité, terrain dense, décharge post-séance"],
+      "exercice": "Établir sa fiche de calibration personnelle — état de base mesuré 3 jours de suite, même heure, même lieu.",
+      "quiz": {
+        "question": "Quel est l'instrument central de la mesure VLBH ?",
+        "choix": ["Le pendule seul", "Le praticien calibré", "La table de scores"],
+        "bonne": 1
+      },
+      "terre": "Mesure ton état de base maintenant et note-le avec l'heure : c'est le premier point de ta fiche de calibration."
+    },
+    {
+      "id": "m2-fiabilite",
+      "titre": "M2 — Fiabilité",
+      "parcours": "praticien",
+      "prerequis_de": "ponts",
+      "resume": "L'analogue de la fidélité/validité des tests — le module le plus différenciant. Trois exercices systématiques : test-retest (re-mesurer le même patient à froid et quantifier son écart), mesure à l'aveugle (mesurer sur le nom/hash AVANT de connaître l'histoire — l'antidote au biais de suggestion), accord inter-praticiens (deux mesures indépendantes du même cas, écart documenté sans réconciliation artificielle). Le tout consigné dans le carnet de calibration : le praticien connaît ses propres barres d'erreur.",
+      "points": ["Test-retest : quantifier son écart à 24–48 h", "Mesure à l'aveugle : la mesure précède le récit, toujours", "Accord inter-praticiens : comparer sans lisser", "Carnet de calibration : l'analogue profond des statistiques"],
+      "exercice": "Sur un cas déjà connu : une mesure à l'aveugle (nom seul), puis comparaison avec la mesure informée. Consigner l'écart.",
+      "quiz": {
+        "question": "Pourquoi mesurer à l'aveugle, avant le récit du patient ?",
+        "choix": ["Pour gagner du temps en séance", "Pour neutraliser le biais de suggestion", "Pour impressionner le patient"],
+        "bonne": 1
+      },
+      "terre": "Choisis un cas déjà mesuré et re-mesure-le à froid, maintenant : note l'écart sans le corriger."
+    },
+    {
+      "id": "m3-methodologie-donnees",
+      "titre": "M3 — Méthodologie de séance & données",
+      "parcours": "praticien",
+      "prerequis_de": "ponts",
+      "resume": "L'analogue du plan expérimental : le protocole S7 lu comme un design pré/post (la re-mesure SLA/SLPMO de l'étape 6 n'est pas une formalité, c'est la donnée), les variables confondantes à consigner (état du praticien, lieu, parasitage, moment), la fiche de cas standardisée (GUI/LIB/SYNTH + INDEX, anonymisation), et la statistique descriptive sur le corpus vivant du SVLBH Panel (sessions, patients, scores).",
+      "points": ["Protocole S7 = plan intra-sujet : mesure pré → intervention → mesure post", "Variables confondantes : état du praticien, lieu, parasitage, moment", "Fiche de cas GUI/LIB/SYNTH, anonymisation systématique", "Distributions, évolutions pré/post, agrégats par région sur données réelles"],
+      "exercice": "Sur 10 séances anonymisées du Panel, calculer l'évolution pré/post moyenne d'un score et la commenter.",
+      "quiz": {
+        "question": "Que constitue la re-mesure SLA/SLPMO de l'étape 6 du protocole ?",
+        "choix": ["Une formalité de clôture", "La donnée du plan pré/post", "Un geste réservé aux cas difficiles"],
+        "bonne": 1
+      },
+      "terre": "Ouvre ta dernière fiche de cas : vérifie qu'elle porte une mesure pré ET une mesure post. S'il en manque une, complète le gabarit maintenant."
+    },
+    {
+      "id": "m4-epistemologie-ethique",
+      "titre": "M4 — Épistémologie & éthique",
+      "parcours": "praticien",
+      "prerequis_de": "ponts",
+      "resume": "L'analogue de la lecture critique d'articles : le cadre « Seul ce qui est vérifiable est vrai » — distinguer mesure / analogie / preuve (exercice type : le pont épigénétique, analogie structurelle jamais preuve) ; les biais du praticien (confirmation, effet d'attente, suggestion, lecture à froid) ; les 3 statuts ; et le positionnement vis-à-vis des professions réglementées avec les 4 règles du praticien (aucun diagnostic, aucune interférence avec un traitement, orientation active, ponts = tables de traduction ≠ équivalences de compétence).",
+      "points": ["Mesure / analogie / preuve : trois statuts épistémiques distincts", "Biais : confirmation, attente, suggestion, lecture à froid", "Ce que le titre n'est pas : psychologue (LPsy), psychothérapeute, médecin", "Les 4 règles du praticien VLBH"],
+      "exercice": "Jeu de rôle : accueillir un « patient » qui demande d'arrêter son traitement ; dérouler la règle 2 et l'orientation active.",
+      "quiz": {
+        "question": "Le pont épigénétique se présente au patient comme…",
+        "choix": ["Une preuve scientifique du modèle VLBH", "Une analogie structurelle, jamais une preuve", "Un argument à garder pour les sceptiques"],
+        "bonne": 1
+      },
+      "terre": "Formule à voix haute, en une phrase, la différence entre une mesure et une analogie — comme si un sceptique venait de te la demander."
+    }
+  ],
   "ponts": [
     {
       "id": "jung",
@@ -341,6 +403,7 @@
   ],
   "journal_version": [
     {"version": "0.1.0", "date": "2026-06-12", "modifications": "Création initiale — socle Grof, 13 ponts, protocole S7 avec ponts d'appui"},
-    {"version": "0.2.0", "date": "2026-06-12", "modifications": "5e temps maïeutique Terre : champ terre (micro-pratique d'ancrage) sur le socle et les 13 ponts ; temps_capsule en meta"}
+    {"version": "0.2.0", "date": "2026-06-12", "modifications": "5e temps maïeutique Terre : champ terre (micro-pratique d'ancrage) sur le socle et les 13 ponts ; temps_capsule en meta"},
+    {"version": "0.3.0", "date": "2026-06-12", "modifications": "Section tronc_commun : 4 capsules prérequis du parcours Praticien (M1 métrologie, M2 fiabilité, M3 méthodologie & données, M4 épistémologie & éthique), source tronc-commun-metrologie-vlbh-v0.1.0.md"}
   ]
 }
