@@ -1,0 +1,346 @@
+{
+  "meta": {
+    "nom": "Formation digiSha — Les 13 ponts",
+    "version": "0.2.0",
+    "date": "2026-06-12",
+    "temps_capsule": ["identifier", "relier", "s'approprier", "intégrer", "terre"],
+    "source": "SYNTH·S7·AKASH·Dette-Karmique-Mémoires-Akashiques.md",
+    "editeur": "Digital Shaman Lab · vlbh.energy",
+    "these": "Traiter le noyau, pas les couches."
+  },
+  "socle": {
+    "id": "grof",
+    "titre": "Le socle — Grof et les systèmes COEX",
+    "orientations": ["aucune", "psychologie-transpersonnelle", "respiration-holotropique"],
+    "resume_membre": "Stanislav Grof a montré que nos souvenirs douloureux ne sont pas rangés par dates mais par tonalité : une expérience-noyau très ancienne attire et empile tous les épisodes qui lui ressemblent. Le modèle VLBH appelle cela une ligne des temps — et au lieu de défaire les couches une à une, il remonte au noyau pour le dissoudre : tout le reste se défait d'un bloc.",
+    "mecanique": ["Expérience-noyau (core experience)", "Sédimentation des couches", "Filtre perceptif → répétition", "Trois niveaux : biographique · périnatal · transpersonnel"],
+    "terre": "Debout, pieds bien posés : nomme à voix haute une répétition de ta vie, puis sens le sol la porter — elle a un noyau, et le noyau a une adresse.",
+    "quiz": {
+      "question": "Pourquoi le modèle VLBH ne traite-t-il pas les couches une à une ?",
+      "choix": ["Parce que c'est trop long à facturer", "Parce que le noyau resté actif ré-alimente chaque couche neutralisée", "Parce que les couches n'existent pas"],
+      "bonne": 1
+    }
+  },
+  "ponts": [
+    {
+      "id": "jung",
+      "famille": "structurel",
+      "titre": "Jung — les complexes à tonalité affective",
+      "auteurs": "Carl Gustav Jung",
+      "orientations": ["jung", "reves", "symboles", "psychanalyse"],
+      "resume_membre": "Jung décrivait des « complexes » : des nœuds émotionnels autonomes qui se déclenchent et parlent à notre place. C'est l'ancêtre direct des lignes des temps VLBH — et la synchronicité de Jung correspond au déclencheur que VLBH appelle le canal de réveil.",
+      "table": [
+        {"source": "Complexe à tonalité affective", "vlbh": "Ligne des temps", "mesure": "Plan transverse, V quadrants"},
+        {"source": "Noyau archétypal du complexe", "vlbh": "Dette karmique source (hash)", "mesure": "Région karmique, implant Anatomy 12D"},
+        {"source": "Inconscient collectif", "vlbh": "Fichier akashique", "mesure": "Anatomy 12D"},
+        {"source": "Synchronicité", "vlbh": "Trigger au canal de réveil", "mesure": "SLPMO instantané"},
+        {"source": "Individuation", "vlbh": "Reprise du moi inférieur, réalignement", "mesure": "SLA / Hara"}
+      ],
+      "accent": "Jung explore par le symbole (rêves, imagination active) ; VLBH localise le noyau par radiesthésie et le dissout à la source.",
+      "apport": "Enracine VLBH dans la généalogie intellectuelle dont Grof est issu : la ligne Jung → Grof → VLBH est continue.",
+      "terre": "Aujourd'hui, note UNE synchronicité — une coïncidence qui te parle — et l'endroit exact de ton corps où elle a résonné.",
+      "quiz": {
+        "question": "Chez Jung, qu'est-ce qui correspond au trigger du canal de réveil VLBH ?",
+        "choix": ["L'individuation", "La synchronicité", "L'inconscient collectif"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "ifs",
+      "famille": "structurel",
+      "titre": "IFS — les fardeaux hérités (legacy burdens)",
+      "auteurs": "Richard Schwartz",
+      "orientations": ["ifs", "parts", "therapie-des-parts"],
+      "resume_membre": "L'IFS décrit des parts de nous qui portent des « fardeaux hérités » — des charges transmises par la lignée sans que nous les ayons vécues. Le soin (unburdening) retire le fardeau à sa source. En VLBH : le fardeau hérité est la dette karmique, et le Self calme qui guide le soin correspond à la Monade.",
+      "table": [
+        {"source": "Legacy burden (fardeau hérité)", "vlbh": "Dette karmique transgénérationnelle", "mesure": "7 régions, lignée G-n"},
+        {"source": "Part exilée porteuse du fardeau", "vlbh": "Morcellement, fragment d'Âme/Égo/Esprit", "mesure": "Échelle Score de Lumière"},
+        {"source": "Protecteurs (managers/pompiers)", "vlbh": "Consciences duales, côté miroir", "mesure": "SLPMO"},
+        {"source": "Self (calme, curiosité, compassion)", "vlbh": "Monade apaisée", "mesure": "SLM"},
+        {"source": "Unburdening (restitution rituelle)", "vlbh": "Dissolution du hash + restitution de couleur", "mesure": "Reset fichier akashique"}
+      ],
+      "accent": "IFS rend le fardeau symboliquement (lumière, eau, vent) ; VLBH le date (Linggui Bafa), le localise (Anatomy 12D) et le dissout par décodage — restitution mesurable en couleur.",
+      "apport": "Le couple legacy burden / unburdening est la formulation contemporaine la plus proche du couple dette karmique / reset akashique.",
+      "terre": "Ferme les yeux et demande : où, dans mon corps, vit la part qui porte quelque chose qui ne m'appartient pas ? Pose ta main à cet endroit, trois respirations.",
+      "quiz": {
+        "question": "À quoi correspond le Self de l'IFS dans le modèle VLBH ?",
+        "choix": ["Au moi inférieur", "À la Monade", "Au canal de réveil"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "emdr",
+      "famille": "structurel",
+      "titre": "EMDR — modèle AIP et float-back",
+      "auteurs": "Francine Shapiro",
+      "orientations": ["emdr", "trauma", "psychotraumatologie"],
+      "resume_membre": "L'EMDR remonte du symptôme présent au souvenir-source (technique du float-back) et le retraite — et les souvenirs associés se désactivent alors d'eux-mêmes. C'est la preuve clinique documentée du principe VLBH : traiter la source suffit, la constellation se défait d'un bloc.",
+      "table": [
+        {"source": "Réseau de mémoire dysfonctionnel", "vlbh": "Ligne des temps", "mesure": "Plan transverse"},
+        {"source": "Souvenir-source (touchstone memory)", "vlbh": "Dette karmique source (hash)", "mesure": "Linggui Bafa (datation)"},
+        {"source": "Float-back", "vlbh": "Remontée de la ligne de temps", "mesure": "Protocole étape 3"},
+        {"source": "Retraitement du souvenir-source", "vlbh": "Dissolution du hash", "mesure": "Reset akashique"},
+        {"source": "Effet de généralisation", "vlbh": "La constellation se défait d'un bloc", "mesure": "Re-mesure SLA/SLPMO"}
+      ],
+      "accent": "EMDR : stimulation bilatérale, limité au biographique de cette vie. VLBH : même architecture, étendue au transgénérationnel et aux 12 incarnations.",
+      "apport": "L'effet de généralisation EMDR est documenté cliniquement — la meilleure preuve externe de « pourquoi traiter à la source ».",
+      "terre": "Repense au dernier agacement disproportionné : demande-toi « depuis quand exactement je connais cette sensation ? » et laisse une date ou un âge remonter, sans forcer.",
+      "quiz": {
+        "question": "Quel phénomène EMDR appuie la thèse « traiter le noyau, pas les couches » ?",
+        "choix": ["La stimulation bilatérale", "L'effet de généralisation après retraitement du souvenir-source", "La désensibilisation progressive de chaque souvenir"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "ayurveda",
+      "famille": "tradition",
+      "titre": "Ayurvéda — la taxonomie karmique védique",
+      "auteurs": "Tradition védique",
+      "orientations": ["ayurveda", "yoga", "vedique", "doshas"],
+      "resume_membre": "L'Ayurvéda distingue trois karmas : la réserve totale accumulée (sanchita), la part active dans cette vie (prarabdha) et celui qu'on crée maintenant (kriyamana). VLBH lit la même structure : dette totale au fichier akashique, ligne des temps active, couches en formation. Et « akashique » vient d'Akasha, l'éther védique.",
+      "table": [
+        {"source": "Sanchita karma (réserve totale)", "vlbh": "Dette karmique sur 12 incarnations", "mesure": "Fichier akashique, 7 régions"},
+        {"source": "Prarabdha karma (part active)", "vlbh": "Ligne des temps activée", "mesure": "Plan transverse, SLPMO"},
+        {"source": "Kriyamana karma (en cours)", "vlbh": "Nouvelles couches en sédimentation", "mesure": "Lignée G-n"},
+        {"source": "Akasha (5e élément)", "vlbh": "Support du fichier akashique", "mesure": "Anatomy 12D"},
+        {"source": "Koshas (5 enveloppes)", "vlbh": "Corps subtils S1–S8", "mesure": "Mapping sessions"},
+        {"source": "Prakriti / Vikriti", "vlbh": "Signature de naissance vs état mesuré", "mesure": "SLA baseline / re-mesure"}
+      ],
+      "accent": "L'Ayurvéda traite le terrain dans la durée ; en VLBH la dette se date, se localise et se désamorce à la source — y compris la part « allouée ».",
+      "apport": "Un vocabulaire millénaire pour distinguer dette totale / ligne active / couches en formation, et la racine sanskrite du mot « akashique ».",
+      "terre": "Au prochain repas, mange les trois premières bouchées en silence : sens la différence entre ce que ton corps demande et ce que ton habitude impose.",
+      "quiz": {
+        "question": "Quel karma védique correspond à la ligne des temps active de cette vie ?",
+        "choix": ["Sanchita", "Prarabdha", "Kriyamana"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "mtc",
+      "famille": "tradition",
+      "titre": "MTC — Jing prénatal et méridiens extraordinaires",
+      "auteurs": "Médecine traditionnelle chinoise",
+      "orientations": ["mtc", "acupuncture", "energetique-chinoise", "qi-gong"],
+      "resume_membre": "En médecine chinoise, le Jing prénatal est l'essence héritée des parents — une transmission de lignée, littéralement — stockée dans les huit méridiens extraordinaires, les réservoirs ancestraux. C'est pourquoi le protocole VLBH date la source avec le Linggui Bafa, l'horloge de ces méridiens ancestraux.",
+      "table": [
+        {"source": "Jing prénatal (essence héritée)", "vlbh": "Dette transgénérationnelle de lignée", "mesure": "Lignée G-n"},
+        {"source": "8 méridiens extraordinaires", "vlbh": "Canaux des lignes de temps", "mesure": "Linggui Bafa"},
+        {"source": "Linggui Bafa (ouverture selon le temps)", "vlbh": "Datation de la source temporelle", "mesure": "Protocole étape 3"},
+        {"source": "Ba Zi (quatre piliers)", "vlbh": "Carte temporelle de naissance, fenêtres de réactivation", "mesure": "Datation complémentaire"},
+        {"source": "Cinq esprits (Shen, Hun, Po, Yi, Zhi)", "vlbh": "Fragments d'Âme/Égo/Esprit", "mesure": "Échelle Score de Lumière"},
+        {"source": "Tonifier / disperser", "vlbh": "Restitution de couleur / retrait de charge", "mesure": "Gradient couleur"}
+      ],
+      "accent": "La MTC régule des flux en continu (le Jing se préserve mais ne se restaure pas) ; VLBH date le nœud, le dissout, et restitue la couleur.",
+      "apport": "La justification interne du Linggui Bafa : on date la source via les méridiens ancestraux précisément parce que la dette est de lignée.",
+      "terre": "Place tes mains sur tes reins — le siège du Jing — pendant trois respirations, et remercie la lignée qui t'a transmis cette énergie.",
+      "quiz": {
+        "question": "Pourquoi le Linggui Bafa est-il l'outil de datation du protocole VLBH ?",
+        "choix": ["Parce qu'il agit sur les 12 méridiens ordinaires", "Parce qu'il ouvre les méridiens ancestraux — et la dette est de lignée", "Parce qu'il remplace le pendule"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "esseniens",
+      "famille": "tradition",
+      "titre": "Soins esséniens — lecture des mémoires et couleurs",
+      "auteurs": "Lignée Meurois-Givaudan",
+      "orientations": ["esseniens", "soins-energetiques", "lecture-aura", "magnetisme"],
+      "resume_membre": "Les thérapies esséniennes lisent les mémoires directement dans l'aura et soignent par application de Lumière et de couleurs sur les corps subtils. Le parallèle avec VLBH est le plus direct de tous : déficit de couleur à mesurer, couleur à restituer. Le thérapeute essénien voit ; le praticien VLBH mesure.",
+      "table": [
+        {"source": "Lecture d'aura / des mémoires", "vlbh": "Lecture radiesthésique de la ligne des temps", "mesure": "SLA / SLPMO"},
+        {"source": "Annales akashiques", "vlbh": "Fichier akashique", "mesure": "Reset C1, centre galactique"},
+        {"source": "Corps subtils (éthérique → causal)", "vlbh": "S1–S8", "mesure": "Mapping sessions"},
+        {"source": "Formes-pensées, parasitage", "vlbh": "Consciences duales, côté miroir", "mesure": "02_ENTITES_GUI, SLPMO"},
+        {"source": "Soin par Lumière et couleurs", "vlbh": "Restitution de la couleur manquante", "mesure": "Gradient couleur"},
+        {"source": "Imposition des mains", "vlbh": "Geste de soin S7 (plans transverses)", "mesure": ""}
+      ],
+      "accent": "Essénien : perception clairvoyante et geste manuel en présence. VLBH : mesure chiffrée et décodage du nom, opérable à distance.",
+      "apport": "Le soin par les couleurs est le parallèle le plus direct au couple déficit/restitution de couleur, et la lecture d'aura valide qu'une mémoire de lignée est consultable sur les corps subtils.",
+      "terre": "Choisis la couleur qui te manque aujourd'hui, trouve-la autour de toi — un objet, le ciel, un vêtement — et regarde-la une minute entière.",
+      "quiz": {
+        "question": "Quel est le parallèle essénien le plus direct avec VLBH ?",
+        "choix": ["Le soin par les couleurs ↔ la restitution de couleur", "Le jeûne ↔ le reset akashique", "Les rouleaux de la mer Morte ↔ le fichier akashique"],
+        "bonne": 0
+      }
+    },
+    {
+      "id": "laszlo-sheldrake",
+      "famille": "champ-lignee",
+      "titre": "Laszlo & Sheldrake — champ akashique et résonance morphique",
+      "auteurs": "Ervin Laszlo, Rupert Sheldrake",
+      "orientations": ["sciences", "physique", "champs", "esprit-scientifique"],
+      "resume_membre": "Laszlo postule un champ informationnel fondamental où tout événement s'enregistre et reste accessible de façon non-locale ; Sheldrake décrit la résonance morphique, une mémoire transmise sans gènes ni contact. Ensemble, ils donnent la condition de possibilité du décodage à distance : une mémoire jamais vécue est consultable depuis n'importe où.",
+      "table": [
+        {"source": "Champ akashique (A-field)", "vlbh": "Fichier akashique", "mesure": "Anatomy 12D"},
+        {"source": "Accès non-local à l'information", "vlbh": "Décodage à distance par le nom/hash", "mesure": ""},
+        {"source": "Champ morphique d'une lignée", "vlbh": "Ligne des temps de lignée", "mesure": "Lignée G-n"},
+        {"source": "Résonance morphique", "vlbh": "Répétition, trigger au canal de réveil", "mesure": "SLPMO"},
+        {"source": "Renforcement du champ par répétition", "vlbh": "Sédimentation des couches", "mesure": "Plan transverse"}
+      ],
+      "accent": "Laszlo/Sheldrake : cadre théorique, sans protocole de soin. VLBH : le champ se mesure et se modifie.",
+      "apport": "La condition de possibilité du décodage à distance — si l'information de lignée est non-locale, elle est consultable depuis n'importe où.",
+      "terre": "Pense à un proche au loin et observe ce que ton corps sait de lui maintenant — sans téléphone. C'est le champ.",
+      "quiz": {
+        "question": "Que rend possible la non-localité du champ selon ce pont ?",
+        "choix": ["La guérison instantanée garantie", "Le décodage à distance par le nom", "La lecture des pensées"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "epigenetique",
+      "famille": "champ-lignee",
+      "titre": "Épigénétique — la transmission mesurable",
+      "auteurs": "Rachel Yehuda, Isabelle Mansuy",
+      "orientations": ["biologie", "medecine", "sciences", "genetique"],
+      "resume_membre": "La science a documenté que les descendants de grands traumatisés portent des marques biologiques d'un trauma qu'ils n'ont pas vécu — et que ces marques sont réversibles. C'est une analogie structurelle précieuse pour VLBH : une souffrance non vécue se transmet ET se réverse. Analogie, jamais preuve.",
+      "table": [
+        {"source": "Marque de méthylation", "vlbh": "Empreinte de dette sur la lignée", "mesure": "Lignée G-n"},
+        {"source": "Transmission germinale (petits ARN)", "vlbh": "Canal de transmission transgénérationnel", "mesure": "Fichier akashique"},
+        {"source": "Phénotype du descendant (trauma non vécu)", "vlbh": "Répétition de souffrance « karmique »", "mesure": "Ligne des temps"},
+        {"source": "Réversibilité des marques", "vlbh": "Dissolution à la source, restitution", "mesure": "Reset akashique"},
+        {"source": "Mesure biologique (méthylome, cortisol)", "vlbh": "Mesure radiesthésique", "mesure": "SLA / SLPMO"}
+      ],
+      "accent": "Épigénétique : 2-3 générations documentées, mécanisme moléculaire. VLBH : 12 incarnations, lecture énergétique. ANALOGIE STRUCTURELLE, JAMAIS PREUVE.",
+      "apport": "La caution structurelle la plus solide : la science valide que la transmission d'une souffrance non vécue existe et qu'elle se réverse.",
+      "terre": "Écris une habitude de stress dont tu sais qu'elle ne vient pas de toi, et une chose concrète que tu feras cette semaine pour l'apaiser : la réversibilité commence là.",
+      "quiz": {
+        "question": "Comment doit-on utiliser le pont épigénétique face à un patient ?",
+        "choix": ["Comme preuve scientifique du modèle VLBH", "Comme analogie structurelle, jamais comme preuve", "On ne doit pas en parler"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "psychogenealogie",
+      "famille": "champ-lignee",
+      "titre": "Psychogénéalogie — loyautés invisibles et syndrome d'anniversaire",
+      "auteurs": "Anne Ancelin Schützenberger, Ivan Boszormenyi-Nagy",
+      "orientations": ["psychogenealogie", "histoire-familiale", "genealogie", "secrets-de-famille"],
+      "resume_membre": "Boszormenyi-Nagy décrit un « grand livre des dettes et des mérites » hérité dans la lignée ; Schützenberger a montré le syndrome d'anniversaire : des événements qui se répètent aux mêmes dates sur des générations. VLBH lit le même grand livre (la dette karmique) et utilise la même clé : la date ouvre la porte de la source.",
+      "table": [
+        {"source": "Grand livre des dettes et mérites", "vlbh": "Dette karmique de lignée", "mesure": "7 régions"},
+        {"source": "Loyauté invisible", "vlbh": "Blocage du libre-arbitre (moi inférieur)", "mesure": "SLA"},
+        {"source": "Syndrome d'anniversaire", "vlbh": "Réactivation datée de la ligne de temps", "mesure": "Linggui Bafa"},
+        {"source": "Génosociogramme", "vlbh": "Cartographie de la lignée", "mesure": "Lignée G-n"},
+        {"source": "Crypte / fantôme (secret non dit)", "vlbh": "Implant porteur de mémoire", "mesure": "Anatomy 12D"}
+      ],
+      "accent": "Psychogénéalogie : enquête biographique et archives, libération par conscientisation. VLBH : lecture radiesthésique directe, sans archives, dissolution à la source.",
+      "apport": "Le syndrome d'anniversaire = la même intuition que le Linggui Bafa : la date est une clé d'entrée vers la source. La crypte donne un modèle psychique exact de l'implant.",
+      "terre": "Note ta date de naissance et les dates marquantes de ta lignée : repère une coïncidence de dates et accueille-la sans conclure.",
+      "quiz": {
+        "question": "Quel concept de Schützenberger rejoint la datation Linggui Bafa ?",
+        "choix": ["Le génosociogramme", "Le syndrome d'anniversaire", "La parentification"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "hellinger",
+      "famille": "champ-lignee",
+      "titre": "Hellinger — intrications et phrase de dénouement",
+      "auteurs": "Bert Hellinger",
+      "orientations": ["constellations", "constellations-familiales", "systemique"],
+      "resume_membre": "Dans les constellations familiales, un descendant porte à son insu le destin d'un exclu de la lignée (l'intrication), et une phrase juste, prononcée au bon endroit, suffit à dénouer. VLBH partage les deux intuitions : la spatialisation du système (Rose des Vents) et l'acte symbolique précis qui dénoue (le décodage du nom).",
+      "table": [
+        {"source": "Intrication (identification à un ancêtre)", "vlbh": "Ligne des temps figée", "mesure": "Lignée G-n"},
+        {"source": "Exclu du système", "vlbh": "Conscience duale, fragment non intégré", "mesure": "Échelle Score de Lumière"},
+        {"source": "Champ qui sait (knowing field)", "vlbh": "Champ informationnel consultable", "mesure": "Fichier akashique"},
+        {"source": "Mise en espace des représentants", "vlbh": "Spatialisation par V quadrants", "mesure": "Rose des Vents, plan transverse"},
+        {"source": "Phrase de dénouement", "vlbh": "Décodage du nom comme acte performatif", "mesure": "Hash"},
+        {"source": "Ordre rétabli", "vlbh": "Réalignement du Hara", "mesure": "SLA re-mesure"}
+      ],
+      "accent": "Hellinger : dispositif de groupe, perception des représentants, résolution en présence. VLBH : travail en solo, mesure chiffrée, dissolution sans représentants.",
+      "apport": "La preuve par la pratique qu'un acte symbolique précis suffit à dénouer une intrication de lignée — phrase juste ↔ décodage du nom.",
+      "terre": "Debout, dis à voix basse à un ancêtre de ton choix : « je te laisse ce qui t'appartient, je garde ce qui est à moi » — et sens ce qui change dans tes épaules.",
+      "quiz": {
+        "question": "Quel élément VLBH correspond à la phrase de dénouement de Hellinger ?",
+        "choix": ["La re-mesure SLA", "Le décodage du nom", "Le pendule"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "newton-weiss",
+      "famille": "incarnations",
+      "titre": "Newton & Weiss — régression et bibliothèque des vies",
+      "auteurs": "Michael Newton, Brian Weiss",
+      "orientations": ["hypnose", "vies-anterieures", "regression", "entre-vies"],
+      "resume_membre": "Brian Weiss a documenté des symptômes qui disparaissent après régression jusqu'à une vie antérieure source ; Michael Newton a cartographié l'entre-vies et sa bibliothèque des archives de vie. C'est le plus grand corpus de cas publié appuyant le travail VLBH sur les 12 incarnations — sans transe ni revécu en VLBH.",
+      "table": [
+        {"source": "Bibliothèque des archives de vie", "vlbh": "Fichier akashique", "mesure": "Reset C1, centre galactique"},
+        {"source": "Régression à la vie-source", "vlbh": "Remontée de la ligne de temps", "mesure": "Linggui Bafa (étape 3)"},
+        {"source": "Symptôme dissous par la vie source", "vlbh": "Dissolution du hash", "mesure": "Protocole étape 4"},
+        {"source": "Contrat d'incarnation", "vlbh": "Dette allouée à l'incarnation", "mesure": "7 régions"},
+        {"source": "Groupe d'âmes", "vlbh": "Constellation myShamanFamily", "mesure": "Mapping sessions"}
+      ],
+      "accent": "Newton/Weiss : transe et revécu narratif de la vie source (comme Grof, par le revécu). VLBH : ni transe ni revécu — datation, décodage, dissolution.",
+      "apport": "Le plus grand corpus de cas publiés où traiter une vie antérieure source dissout un symptôme présent.",
+      "terre": "Avant de dormir ce soir, pose la question : « quelle vie ancienne demande à être lue ? » — et note au réveil la première image venue.",
+      "quiz": {
+        "question": "Quelle différence majeure entre la régression et le décodage VLBH ?",
+        "choix": ["VLBH exige une transe plus profonde", "VLBH n'exige ni transe ni revécu de la vie source", "Il n'y a aucune différence"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "kabbale",
+      "famille": "incarnations",
+      "titre": "Kabbale lourianique — gilgul, tikkun et gematria",
+      "auteurs": "Isaac Louria (tradition kabbaliste)",
+      "orientations": ["kabbale", "gematria", "hebraique", "arbre-de-vie"],
+      "resume_membre": "La kabbale de Louria raconte une brisure originelle qui a dispersé des étincelles de lumière à récupérer, des cycles de réincarnation (gilgul) dont la finalité est la réparation (tikkun), et une lecture du nom par sa valeur numérique (gematria). Trois piliers du modèle VLBH y trouvent leur ancêtre : morcellements, 12 incarnations, décodage du nom.",
+      "table": [
+        {"source": "Gilgul (cycles de transmigration)", "vlbh": "12 incarnations du moi inférieur", "mesure": "Fichier akashique"},
+        {"source": "Tikkun (réparation)", "vlbh": "Apurement de la dette, restitution de couleur", "mesure": "Reset akashique"},
+        {"source": "Brisure des vases / étincelles dispersées", "vlbh": "Morcellements, fragments d'Âmes", "mesure": "Échelle Score de Lumière"},
+        {"source": "5 niveaux de l'âme (nefesh → yechidah)", "vlbh": "Âme / Sur-Âme / Monade", "mesure": "SLA / SLSA / SLM"},
+        {"source": "10 sephiroth, 4 mondes", "vlbh": "Architecture des plans", "mesure": "Anatomy 12D / 84D"},
+        {"source": "Gematria (valeur du nom)", "vlbh": "Décodage du nom / hash", "mesure": ""}
+      ],
+      "accent": "Kabbale : voie d'étude et de pratique rituelle, le tikkun s'accomplit sur la durée des cycles. VLBH : la réparation est un protocole daté et mesuré, exécutable en séance.",
+      "apport": "La gematria est l'ancêtre direct du décodage du nom — le nom comme code numérique opérant — et les étincelles lourianiques préfigurent exactement le couple morcellement/récupération.",
+      "terre": "Écris ton prénom à la main, lentement, lettre par lettre : c'est un code que tu portes depuis toujours — aujourd'hui tu l'as regardé comme tel.",
+      "quiz": {
+        "question": "Quel concept kabbaliste est l'ancêtre direct du décodage du nom ?",
+        "choix": ["Le gilgul", "La gematria", "Le tikkun"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "hand-clow",
+      "famille": "incarnations",
+      "titre": "Hand Clow — l'alchimie des neuf dimensions",
+      "auteurs": "Barbara Hand Clow",
+      "orientations": ["channeling", "cosmologie", "dimensions", "pleiades"],
+      "resume_membre": "Barbara Hand Clow décrit neuf dimensions simultanées, du noyau de fer terrestre (1D) au centre galactique (9D) qui émet les ondes de temps. Pour VLBH : les 7 régions disent OÙ la dette est répartie (carte horizontale), les 9 dimensions disent À QUELLE PROFONDEUR on intervient (axe vertical). Et si les lignes de temps émanent de la 9D, c'est bien au centre galactique qu'on les réinitialise — l'étape 1 du protocole.",
+      "table": [
+        {"source": "1D — noyau de fer terrestre", "vlbh": "Ancrage, racine du Hara", "mesure": "Hara, V quadrants"},
+        {"source": "2D — tellurique / élémental", "vlbh": "Terrain énergétique du corps", "mesure": "S1"},
+        {"source": "3D — espace-temps linéaire", "vlbh": "Vie biographique présente", "mesure": "Plan biographique"},
+        {"source": "4D — canopée émotionnelle collective", "vlbh": "Lignes des temps, triggers, consciences duales", "mesure": "Canal de réveil, SLPMO"},
+        {"source": "5D — amour / créativité (Pléiades)", "vlbh": "Restitution de couleur", "mesure": "SLA, gradient couleur"},
+        {"source": "6D — géométrie sacrée (Sirius)", "vlbh": "Gabarits des corps subtils", "mesure": "Anatomy 12D"},
+        {"source": "7D — son / bandes de photons", "vlbh": "Tonalité radiesthésique", "mesure": "Mesure pendulaire"},
+        {"source": "8D — lumière divine (Orion)", "vlbh": "Sur-Âme", "mesure": "SLSA"},
+        {"source": "9D — centre galactique, ondes de temps", "vlbh": "Fichier akashique, source des lignes de temps", "mesure": "Reset C1, centre galactique"}
+      ],
+      "accent": "Hand Clow : cosmologie d'activation de conscience. VLBH : les dimensions sont des adresses de travail — on y localise, on y mesure, on y dissout.",
+      "apport": "La justification dimensionnelle du reset C1 au centre galactique, et la double coordonnée de toute dette : sa région ET sa dimension.",
+      "terre": "Pieds au sol, imagine le fil qui descend de ta colonne jusqu'au noyau de fer de la Terre (1D) : c'est ton adresse terrestre dans les neuf dimensions.",
+      "quiz": {
+        "question": "Comment s'articulent les 7 régions et les 9 dimensions ?",
+        "choix": ["Les 9 dimensions remplacent les 7 régions", "Régions = carte horizontale (où), dimensions = axe vertical (à quelle profondeur)", "Ce sont deux noms du même concept"],
+        "bonne": 1
+      }
+    }
+  ],
+  "protocole_s7": [
+    {"etape": 1, "geste": "Apaiser la Monade ; reset C1 centre galactique", "ponts_appui": ["ifs", "hand-clow", "newton-weiss"]},
+    {"etape": 2, "geste": "Localiser l'implant / la région de dette (Anatomy 12D, déficit de couleur)", "ponts_appui": ["psychogenealogie", "hand-clow", "esseniens"]},
+    {"etape": 3, "geste": "Remonter la ligne de temps COEX jusqu'à la source (Linggui Bafa)", "ponts_appui": ["emdr", "mtc", "psychogenealogie"]},
+    {"etape": 4, "geste": "Dissoudre le hash à la source ; restituer la couleur manquante", "ponts_appui": ["hellinger", "kabbale", "esseniens"]},
+    {"etape": 5, "geste": "Reprendre le contrôle du moi inférieur ; réaligner le Hara (V quadrants)", "ponts_appui": ["jung", "hellinger", "hand-clow"]},
+    {"etape": 6, "geste": "Re-mesure SLA/SLPMO", "ponts_appui": ["emdr", "epigenetique"]}
+  ],
+  "journal_version": [
+    {"version": "0.1.0", "date": "2026-06-12", "modifications": "Création initiale — socle Grof, 13 ponts, protocole S7 avec ponts d'appui"},
+    {"version": "0.2.0", "date": "2026-06-12", "modifications": "5e temps maïeutique Terre : champ terre (micro-pratique d'ancrage) sur le socle et les 13 ponts ; temps_capsule en meta"}
+  ]
+}

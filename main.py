@@ -15,6 +15,7 @@ from routers import patient, therapy_session, invoice, qrbill
 from routers import tarif590, scores, rose_des_vents
 from routers import stats, twint, pipeline
 from routers import chromo, auth, tore_session
+from routers import digisha
 from services.make_service import MakeService
 from fastapi_mcp import FastApiMCP
 
@@ -68,6 +69,9 @@ app.include_router(pipeline.router)
 app.include_router(chromo.router)
 app.include_router(auth.router)
 app.include_router(tore_session.router)
+
+# digiSha — tuteur formation « Les 13 ponts » (spec v0.2.0, auth X-DigiSha-Token)
+app.include_router(digisha.router)
 
 mcp = FastApiMCP(app)
 mcp.mount()

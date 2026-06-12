@@ -11,3 +11,4 @@ __pycache__/
 user/downloads/
 
 .build/
+.digisha_token_local
