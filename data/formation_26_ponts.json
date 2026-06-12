@@ -1,7 +1,7 @@
 {
   "meta": {
     "nom": "Formation digiSha — Les 26 ponts « Traiter le noyau traite les couches »",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "date": "2026-06-12",
     "temps_capsule": [
       "identifier",
@@ -62,7 +62,12 @@
         "quand_c_est_rate": "L'erreur enseignée positivement : ce qu'on observe quand c'est raté, et la correction"
       }
     },
-    "fil_rouge": "Économie du geste (Hartman : force minimale, spécificité maximale) — on ne se bat pas couche par couche, on place un geste précis au noyau : traiter le noyau traite les couches."
+    "fil_rouge": "Économie du geste (Hartman : force minimale, spécificité maximale) — on ne se bat pas couche par couche, on place un geste précis au noyau : traiter le noyau traite les couches.",
+    "marque": {
+      "nom": "Les 26 ponts « Traiter le noyau traite les couches »",
+      "figee": true,
+      "regle": "Nom propre figé (décision Patrick, 12 juin 2026) : les ponts ajoutés ultérieurement rejoignent le corpus et le graphe digiSha sans changer la marque, les fichiers ni les badges."
+    }
   },
   "socle": {
     "id": "grof",
@@ -5464,6 +5469,11 @@
       "version": "1.0.0",
       "date": "2026-06-12",
       "modifications": "JALON CONTENU COMPLET : les 26 capsules enseignables (socle, 21 ponts, tronc commun M1–M4, transverse égrégore) portent le format v2 + couche Hartman — vignette, leçon 700–1000 mots, table commentée, objections, plan tuteur maïeutique, script de démo commentée, variations, erreurs enseignées. Production : workflow 52 agents (rédaction + relecture garde-fous), pilote IFS rédigé main."
+    },
+    {
+      "version": "1.0.1",
+      "date": "2026-06-12",
+      "modifications": "Marque figée : « Les 26 ponts » devient un nom propre — les ajouts futurs ne renomment plus la formation"
     }
   ],
   "transverses": [
