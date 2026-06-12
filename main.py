@@ -16,6 +16,7 @@ from routers import tarif590, scores, rose_des_vents
 from routers import stats, twint, pipeline
 from routers import chromo, auth, tore_session
 from routers import digisha
+from routers import comms
 from services.make_service import MakeService
 from fastapi_mcp import FastApiMCP
 
@@ -48,6 +49,7 @@ app.include_router(tore.router)
 app.include_router(billing.router)
 app.include_router(workspace.router)
 app.include_router(flux_whatsapp.router)
+app.include_router(comms.router)
 
 # iTherapeut 6.0 routers (J1)
 app.include_router(patient.router)
