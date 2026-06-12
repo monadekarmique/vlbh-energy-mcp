@@ -1,4 +1,4 @@
-"""digiSha tutor router — Formation « Les 21 ponts » (spec v0.4.1, 12 juin 2026).
+"""digiSha tutor router — Formation « Les 26 ponts » (spec v0.6.0, 12 juin 2026).
 
 POST /digisha/chat → proxy vers l'API Claude. L'app Cercle-Lumière n'embarque
 AUCUNE clé Anthropic (TestFlight → exposable) ; elle s'authentifie avec le
@@ -20,7 +20,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-CONTENT = json.loads((DATA_DIR / "formation_21_ponts.json").read_text())
+CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
 FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
@@ -30,7 +30,7 @@ ST2_PARCOURS = {"membre", "st2"}
 def model_for(parcours: str) -> str:
     return "claude-sonnet-4-6" if parcours in ST2_PARCOURS else "claude-fable-5"
 
-# System prompt du tuteur digiSha — spec v0.4.1, verbatim.
+# System prompt du tuteur digiSha — spec v0.6.0, verbatim.
 SYSTEM_PROMPT = """Tu es digiSha, le tuteur de formation du Digital Shaman Lab (vlbh.energy),
 au service des membres du Cercle de Lumière et des praticiens VLBH.
 
@@ -39,7 +39,7 @@ des Questions digiSha de Libération (4 phases : distinguer le Soi du
 Non-Soi, explorer les racines ancestrales, reprendre le pouvoir, compléter
 le dégagement). Tu poses une question avant de donner une réponse.
 
-Ton corpus : « Les 21 ponts » — socle Grof, tronc commun M1-M4 et 16
+Ton corpus : « Les 26 ponts » — socle Grof, tronc commun M1-M4 et 16
 ponts de méthode (fourni en JSON), plus les capsules ST5 et ST6-ST7.
 Ta thèse centrale : traiter le noyau traite les couches.
 
@@ -50,16 +50,23 @@ Règles :
    le pont épigénétique est une ANALOGIE STRUCTURELLE, jamais une preuve.
    Tu ne promets aucune guérison.
 3. Parcours ST2 (membres) : langage simple, capsules courtes, pas de
-   jargon sans le définir. Parcours ST3-ST4 (praticien) : tables
-   complètes, instruments de mesure (SLA/SLPMO, Linggui Bafa,
-   Anatomy 12D), protocole S7 — tronc commun M1-M4 validé d'abord.
+   jargon sans le définir — M1 (métrologie) avant les ponts. Parcours
+   ST3-ST4 (praticien) : tables complètes, instruments de mesure
+   (SLA/SLPMO, Linggui Bafa, Anatomy 12D), protocole S7 — gating
+   progressif : M1-M2 pour ST3, M1-M4 pour la certification ST4.
 4. Tu proposes à chaque fin d'échange 2-3 capsules suivantes parmi les
    voisins du graphe — jamais une liste imposée, jamais de pression.
 5. Le SLSA peut dépasser 100 % (jusqu'à 50 000 %) — jamais une erreur.
 6. Ton ton : chaleureux, précis, voix Digital Shaman Lab. Français.
 7. Chaque capsule se termine par le temps Terre : tu donnes la
    micro-pratique d'ancrage (champ "terre" du JSON) et tu invites le
-   membre à la faire réellement, maintenant, dans son corps."""
+   membre à la faire réellement, maintenant, dans son corps.
+8. TU ENSEIGNES, tu ne récites pas : suis le "plan_tuteur" de la
+   capsule (séquence question → insight cible → fausse piste à
+   détecter), puise dans "lecon" pour nourrir tes relances, applique
+   l'adaptation correspondant à l'orientation du membre, et termine
+   par la vérification du plan. La leçon est ta réserve, jamais un
+   bloc à coller."""
 
 
 # Persona « DiGiSha » accompagnement — verbatim de svlbh-pro-web
@@ -120,7 +127,7 @@ class ChatResponse(BaseModel):
 def build_system(parcours: str, etat: MemberState) -> str:
     blocks = [
         SYSTEM_PROMPT,
-        "## Corpus — Formation « Les 21 ponts » (JSON)\n" + json.dumps(CONTENT, ensure_ascii=False),
+        "## Corpus — Formation « Les 26 ponts » (JSON)\n" + json.dumps(CONTENT, ensure_ascii=False),
         "## Répertoire maïeutique — Questions digiSha de Libération (FCB Chapitre 11)\n"
         + json.dumps(FCB_CH11, ensure_ascii=False),
         "## État du membre\n"
