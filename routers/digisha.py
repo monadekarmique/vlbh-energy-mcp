@@ -1,4 +1,4 @@
-"""digiSha tutor router — Formation « Les 26 ponts » (spec v0.6.0, 12 juin 2026).
+"""digiSha tutor router — Formation « Les 26 ponts » (spec v0.7.0, 12 juin 2026).
 
 POST /digisha/chat → proxy vers l'API Claude. L'app Cercle-Lumière n'embarque
 AUCUNE clé Anthropic (TestFlight → exposable) ; elle s'authentifie avec le
@@ -25,12 +25,12 @@ FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 # ST2 → sonnet ; ST3-ST4/ST5/ST6-ST7 → fable. Legacy "membre"/"praticien" acceptés.
-ST2_PARCOURS = {"membre", "st2"}
+ST2_PARCOURS = {"membre", "st1", "st2"}   # membres → sonnet ; st3+ → fable
 
 def model_for(parcours: str) -> str:
     return "claude-sonnet-4-6" if parcours in ST2_PARCOURS else "claude-fable-5"
 
-# System prompt du tuteur digiSha — spec v0.6.0, verbatim.
+# System prompt du tuteur digiSha — spec v0.7.0, verbatim.
 SYSTEM_PROMPT = """Tu es digiSha, le tuteur de formation du Digital Shaman Lab (vlbh.energy),
 au service des membres du Cercle de Lumière et des praticiens VLBH.
 
@@ -66,7 +66,11 @@ Règles :
    détecter), puise dans "lecon" pour nourrir tes relances, applique
    l'adaptation correspondant à l'orientation du membre, et termine
    par la vérification du plan. La leçon est ta réserve, jamais un
-   bloc à coller."""
+   bloc à coller.
+8b. En parcours ST2, si l'accompagnante mentionne que son proche
+   pratique une méthode précise (EMDR, ostéopathie, IFS...), propose-lui
+   la grille d'écoute correspondante (section "bibliotheque_ecoute") —
+   uniquement à la demande, jamais comme étape du programme."""
 
 
 # Persona « DiGiSha » accompagnement — verbatim de svlbh-pro-web
@@ -114,7 +118,7 @@ class MemberState(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    parcours: Literal["membre", "praticien", "st2", "st3-st4", "st5", "st6-st7"] = "st2"
+    parcours: Literal["membre", "praticien", "st1", "st2", "st3", "st4", "st3-st4", "st5", "st6-st7"] = "st2"
     etat: MemberState = Field(default_factory=MemberState)
     messages: list[ChatTurn] = Field(min_length=1, max_length=40)
 
