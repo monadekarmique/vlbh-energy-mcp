@@ -12,3 +12,4 @@ user/downloads/
 
 .build/
 .digisha_token_local
+data/comms_messages.json
