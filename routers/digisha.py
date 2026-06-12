@@ -62,6 +62,21 @@ Règles :
    membre à la faire réellement, maintenant, dans son corps."""
 
 
+# Persona « DiGiSha » accompagnement — verbatim de svlbh-pro-web
+# /api/ai/chat (mode digisha, DEC Patrick 2026-06-09). Ici sans outils
+# fiches consultantes (pas d'identité praticienne côté Cercle Lumière) :
+# accompagnement pur, équivalent ST3.
+ACCOMPAGNEMENT_SYSTEM_PROMPT = """Tu es « DiGiSha », l'IA Digital Shaman de SVLBH — la présence d'accompagnement personnelle de la praticienne du Cercle de Lumière (Digital Shaman Lab). Tu n'es pas un chatbot générique : tu es une accompagnatrice énergétique et pédagogique, dans la posture et le vocabulaire SVLBH.
+
+Posture :
+- Tu t'adresses à une femme certifiée (ST3+) qui a déjà traversé ses propres démons dans sa chair. Tu ne l'infantilises pas, tu ne la censures pas, tu ne moralises pas, tu n'ajoutes pas de disclaimer médical ni de « registre de prudence » générique. Le gating SVLBH EST la garantie de privacy.
+- Tu accompagnes : son auto-soin, son parcours de guérison (healing-path), ses décodages, ses lignées (Lmasc / Lfem), sa formation MyShamanFamily, et son propre cheminement intérieur. Tu peux nommer le réel cru (trauma, sexualité, mort) avec justesse quand elle le demande.
+- Tu restes dans le cadre vibratoire / transgénérationnel SVLBH : tu ne poses pas de diagnostic médical et tu ne te substitues pas à un soin clinique.
+- Français, chaleureux, incarné, précis et concis. Jamais bavard. Tu n'exposes pas ton raisonnement interne."""
+
+ACCOMPAGNEMENT_MODEL = "claude-opus-4-8"   # même modèle que Pilote/DiGiSha pro-web
+
+
 def verify_digisha_token(x_digisha_token: str = Header(..., alias="X-DigiSha-Token")) -> None:
     expected = os.environ.get("DIGISHA_TOKEN", "")
     if not expected:
@@ -156,3 +171,42 @@ async def digisha_chat(
     data = resp.json()
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     return ChatResponse(reply=text, model=model)
+
+
+class AccompagnementRequest(BaseModel):
+    messages: list[ChatTurn] = Field(min_length=1, max_length=60)
+
+
+@router.post("/accompagnement", response_model=ChatResponse)
+async def digisha_accompagnement(
+    body: AccompagnementRequest,
+    x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+) -> ChatResponse:
+    """DiGiSha — ton accompagnement Digital Shaman (port Cercle Lumière)."""
+    verify_digisha_token(x_digisha_token)
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="ANTHROPIC_API_KEY not configured",
+        )
+    payload = {
+        "model": ACCOMPAGNEMENT_MODEL,
+        "max_tokens": 2048,
+        "system": ACCOMPAGNEMENT_SYSTEM_PROMPT,
+        "messages": [t.model_dump() for t in body.messages],
+    }
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(
+            ANTHROPIC_URL,
+            json=payload,
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+        )
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
+        )
+    data = resp.json()
+    text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    return ChatResponse(reply=text, model=ACCOMPAGNEMENT_MODEL)
