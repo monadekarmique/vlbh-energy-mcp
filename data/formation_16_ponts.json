@@ -1,9 +1,15 @@
 {
   "meta": {
-    "nom": "Formation digiSha — Les 13 ponts",
-    "version": "0.3.0",
+    "nom": "Formation digiSha — Les 16 ponts",
+    "version": "0.4.0",
     "date": "2026-06-12",
     "temps_capsule": ["identifier", "relier", "s'approprier", "intégrer", "terre"],
+    "parcours": [
+      {"id": "st2", "label": "Parcours ST2 — Membres du Cercle de Lumière", "profondeur": "resume_membre + terre + quiz ludique", "gating": "aucun", "badge": "Cercle de Lumière — 16 ponts"},
+      {"id": "st3-st4", "label": "Parcours ST3–ST4 — Praticien (ST4 = stage vibratoire du thérapeute)", "profondeur": "tables complètes + accent + apport + protocole S7", "gating": "tronc_commun (M1–M4) validé avant les 16 ponts", "certification": "Attestation Praticien VLBH — CHF 729"},
+      {"id": "st5", "label": "Parcours ST5 — Praticien confirmé / superviseur (contenu à valider par Patrick)", "profondeur": "fiabilité avancée, supervision de carnets de calibration, cas complexes, contribution au corpus (fiches GUI/LIB/SYNTH)", "gating": "ST3–ST4 certifié"},
+      {"id": "st6-st7", "label": "Parcours ST6–ST7 — Formateur / maîtrise (contenu à valider par Patrick)", "profondeur": "animation des formations, extension du corpus (nouveaux ponts sur le gabarit), plans S7–S8, recherche sur le Panel", "gating": "ST5 validé"}
+    ],
     "source": "SYNTH·S7·AKASH·Dette-Karmique-Mémoires-Akashiques.md",
     "editeur": "Digital Shaman Lab · vlbh.energy",
     "these": "Traiter le noyau, pas les couches."
@@ -25,7 +31,7 @@
     {
       "id": "m1-metrologie",
       "titre": "M1 — Métrologie VLBH",
-      "parcours": "praticien",
+      "parcours": "st3-st4",
       "prerequis_de": "ponts",
       "resume": "L'analogue de la théorie de la mesure : les 4 scores (SLA, SLSA — peut dépasser 100 % jusqu'à 50 000 %, SLPMO, SLM), le système de coordonnées 7 régions × 9 dimensions, les instruments de localisation et de datation (Anatomy 12D, Linggui Bafa, V quadrants). Et le point que la psychologie n'a pas : l'instrument central, c'est le praticien — calibration de soi avant calibration de la mesure.",
       "points": ["Les 4 scores et ce que chacun opérationnalise", "7 régions (où) × 9 dimensions (à quelle profondeur)", "Anatomy 12D, Linggui Bafa, V quadrants", "État de base, seuil de perceptibilité, terrain dense, décharge post-séance"],
@@ -40,7 +46,7 @@
     {
       "id": "m2-fiabilite",
       "titre": "M2 — Fiabilité",
-      "parcours": "praticien",
+      "parcours": "st3-st4",
       "prerequis_de": "ponts",
       "resume": "L'analogue de la fidélité/validité des tests — le module le plus différenciant. Trois exercices systématiques : test-retest (re-mesurer le même patient à froid et quantifier son écart), mesure à l'aveugle (mesurer sur le nom/hash AVANT de connaître l'histoire — l'antidote au biais de suggestion), accord inter-praticiens (deux mesures indépendantes du même cas, écart documenté sans réconciliation artificielle). Le tout consigné dans le carnet de calibration : le praticien connaît ses propres barres d'erreur.",
       "points": ["Test-retest : quantifier son écart à 24–48 h", "Mesure à l'aveugle : la mesure précède le récit, toujours", "Accord inter-praticiens : comparer sans lisser", "Carnet de calibration : l'analogue profond des statistiques"],
@@ -55,7 +61,7 @@
     {
       "id": "m3-methodologie-donnees",
       "titre": "M3 — Méthodologie de séance & données",
-      "parcours": "praticien",
+      "parcours": "st3-st4",
       "prerequis_de": "ponts",
       "resume": "L'analogue du plan expérimental : le protocole S7 lu comme un design pré/post (la re-mesure SLA/SLPMO de l'étape 6 n'est pas une formalité, c'est la donnée), les variables confondantes à consigner (état du praticien, lieu, parasitage, moment), la fiche de cas standardisée (GUI/LIB/SYNTH + INDEX, anonymisation), et la statistique descriptive sur le corpus vivant du SVLBH Panel (sessions, patients, scores).",
       "points": ["Protocole S7 = plan intra-sujet : mesure pré → intervention → mesure post", "Variables confondantes : état du praticien, lieu, parasitage, moment", "Fiche de cas GUI/LIB/SYNTH, anonymisation systématique", "Distributions, évolutions pré/post, agrégats par région sur données réelles"],
@@ -70,7 +76,7 @@
     {
       "id": "m4-epistemologie-ethique",
       "titre": "M4 — Épistémologie & éthique",
-      "parcours": "praticien",
+      "parcours": "st3-st4",
       "prerequis_de": "ponts",
       "resume": "L'analogue de la lecture critique d'articles : le cadre « Seul ce qui est vérifiable est vrai » — distinguer mesure / analogie / preuve (exercice type : le pont épigénétique, analogie structurelle jamais preuve) ; les biais du praticien (confirmation, effet d'attente, suggestion, lecture à froid) ; les 3 statuts ; et le positionnement vis-à-vis des professions réglementées avec les 4 règles du praticien (aucun diagnostic, aucune interférence avec un traitement, orientation active, ponts = tables de traduction ≠ équivalences de compétence).",
       "points": ["Mesure / analogie / preuve : trois statuts épistémiques distincts", "Biais : confirmation, attente, suggestion, lecture à froid", "Ce que le titre n'est pas : psychologue (LPsy), psychothérapeute, médecin", "Les 4 règles du praticien VLBH"],
@@ -391,6 +397,77 @@
         "choix": ["Les 9 dimensions remplacent les 7 régions", "Régions = carte horizontale (où), dimensions = axe vertical (à quelle profondeur)", "Ce sont deux noms du même concept"],
         "bonne": 1
       }
+    },
+    {
+      "id": "osteopathie",
+      "famille": "corporel",
+      "titre": "Ostéopathie — lésion primaire et mémoire tissulaire",
+      "auteurs": "Andrew Taylor Still, William Sutherland",
+      "orientations": ["osteopathie", "therapie-manuelle", "cranio-sacre"],
+      "resume_membre": "L'ostéopathe sait qu'une lésion primaire organise autour d'elle des chaînes de compensation : traiter les compensations une à une est sans fin, lever la lésion primaire les fait se résoudre d'elles-mêmes. C'est la démonstration biomécanique de la thèse VLBH — traiter le noyau, pas les couches — et la mémoire tissulaire est une ligne des temps inscrite dans le corps.",
+      "table": [
+        {"source": "Lésion primaire", "vlbh": "Dette karmique source (hash)", "mesure": "Région karmique, Anatomy 12D"},
+        {"source": "Chaînes de compensation", "vlbh": "Couches sédimentées de la ligne des temps", "mesure": "Plan transverse"},
+        {"source": "Mémoire tissulaire", "vlbh": "Ligne des temps inscrite dans le corps", "mesure": "S1, gradient couleur"},
+        {"source": "Écoute palpatoire (MRP, rythme crânio-sacré)", "vlbh": "Lecture radiesthésique", "mesure": "SLA / SLPMO"},
+        {"source": "Still point", "vlbh": "Reset, désamorçage du noyau", "mesure": "Reset akashique"},
+        {"source": "Le corps est une unité", "vlbh": "Continuum corps dense ↔ corps subtils", "mesure": "S1–S8"}
+      ],
+      "accent": "Ostéopathie : la main, le tissu, ce corps et cette vie. VLBH : même hiérarchie lésionnelle, étendue au transgénérationnel, lue par radiesthésie et dénouée à distance.",
+      "apport": "La hiérarchie lésion primaire / compensations est la démonstration biomécanique de « traiter le noyau, pas les couches » — vérifiée chaque semaine en cabinet.",
+      "terre": "Allongé, observe ta respiration descendre jusqu'au sacrum : repère l'endroit qui ne bouge pas — c'est là que le corps a archivé quelque chose.",
+      "quiz": {
+        "question": "Que devient une chaîne de compensations quand la lésion primaire est levée ?",
+        "choix": ["Elle doit être traitée vertèbre par vertèbre", "Elle se résout d'elle-même — l'analogue de l'effet de généralisation", "Elle s'aggrave temporairement puis revient"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "massage-thai",
+      "famille": "corporel",
+      "titre": "Massage thaïlandais — les lignes Sen et la metta",
+      "auteurs": "Tradition Nuad Bo Rarn (Jivaka Kumar Bhaccha)",
+      "orientations": ["massage-thai", "nuad-boran", "yoga-thai"],
+      "resume_membre": "Le massage thaï travaille les 10 lignes Sen — des lignes d'énergie parcourant le corps — par pression progressive, et exige du masseur la metta : un état intérieur de bienveillance cultivé avant la séance. En VLBH : les Sen sont une cartographie corporelle des lignes de temps, et la metta dit exactement ce que le tronc commun enseigne — l'état du praticien fait partie de l'instrument.",
+      "table": [
+        {"source": "10 lignes Sen (Sen Sib)", "vlbh": "Cartographie corporelle des lignes de temps", "mesure": "Plan transverse, S1"},
+        {"source": "Blocage sur une Sen", "vlbh": "Charge figée localisée", "mesure": "SLPMO, gradient couleur"},
+        {"source": "Pression progressive le long de la ligne", "vlbh": "Remontée de la ligne vers la source", "mesure": "Protocole étape 3"},
+        {"source": "Sen Sumana (ligne centrale)", "vlbh": "Canal central, axe du Hara", "mesure": "Hara, V quadrants"},
+        {"source": "Metta du praticien", "vlbh": "État de base calibré du praticien-instrument", "mesure": "Tronc commun M1, SLA praticien"}
+      ],
+      "accent": "Massage thaï : toucher en présence, ligne par ligne, séance après séance. VLBH : lecture et dissolution à la source, sans toucher ni présence physique.",
+      "apport": "La metta comme condition du soin rejoint exactement le tronc commun M1, et les Sen offrent une cartographie corporelle concrète des lignes de temps pour les patients kinesthésiques.",
+      "terre": "Avec le pouce, suis lentement la ligne médiane de ton avant-bras, du poignet au coude : note l'endroit exact où la sensation change.",
+      "quiz": {
+        "question": "Que représente la metta du masseur thaï dans le langage VLBH ?",
+        "choix": ["Une politesse rituelle d'ouverture", "L'état de base calibré du praticien-instrument", "Un mantra de protection du lieu"],
+        "bonne": 1
+      }
+    },
+    {
+      "id": "tuina",
+      "famille": "corporel",
+      "titre": "Tui Na / massage du Qi — stagnation et dispersion",
+      "auteurs": "Médecine traditionnelle chinoise (branche manuelle)",
+      "orientations": ["tuina", "massage-chinois", "qi-gong", "acupression"],
+      "resume_membre": "Le Tui Na agit sur le Qi par les méridiens : disperser ce qui stagne, tonifier ce qui manque — « bu tong ze tong », ce qui ne circule pas fait mal. En VLBH : la stagnation est une charge figée sur la ligne des temps, et chaque geste du masseur se traduit terme à terme en geste de couleur — retirer la charge, restituer la couleur manquante.",
+      "table": [
+        {"source": "Stagnation de Qi (Qi Zhi)", "vlbh": "Charge figée sur la ligne des temps", "mesure": "SLPMO"},
+        {"source": "Bu tong ze tong (« ça ne circule pas, ça fait mal »)", "vlbh": "Manifestation au canal de réveil", "mesure": "Trigger, SLPMO instantané"},
+        {"source": "Disperser (xie) / tonifier (bu)", "vlbh": "Retrait de charge / restitution de couleur", "mesure": "Gradient couleur"},
+        {"source": "Émotion stockée dans l'organe (5 éléments)", "vlbh": "Mémoire localisée dans le corps", "mesure": "Anatomy 12D"},
+        {"source": "Points Shu du dos", "vlbh": "Adresses d'accès aux organes", "mesure": "Localisation Anatomy 12D"},
+        {"source": "Dantian", "vlbh": "Hara", "mesure": "V quadrants"}
+      ],
+      "accent": "Tui Na : traite le flux par le toucher, en séances répétées, dans le corps présent. VLBH : date le nœud source (Linggui Bafa — la branche temporelle de la même MTC) et le dissout une fois.",
+      "apport": "Complète le pont MTC sur le terrain manuel : Linggui Bafa pour la branche temporelle, Tui Na pour la branche gestuelle — disperser/tonifier se traduit terme à terme en retirer/restituer la couleur.",
+      "terre": "Pose tes paumes sur le bas-ventre (Dantian), trois respirations : sens où ça circule et où ça stagne — sans corriger.",
+      "quiz": {
+        "question": "« Bu tong ze tong » (ce qui ne circule pas fait mal) correspond en VLBH à…",
+        "choix": ["Une erreur de mesure du praticien", "La manifestation d'une charge figée au canal de réveil", "Un signe que le soin est terminé"],
+        "bonne": 1
+      }
     }
   ],
   "protocole_s7": [
@@ -404,6 +481,7 @@
   "journal_version": [
     {"version": "0.1.0", "date": "2026-06-12", "modifications": "Création initiale — socle Grof, 13 ponts, protocole S7 avec ponts d'appui"},
     {"version": "0.2.0", "date": "2026-06-12", "modifications": "5e temps maïeutique Terre : champ terre (micro-pratique d'ancrage) sur le socle et les 13 ponts ; temps_capsule en meta"},
-    {"version": "0.3.0", "date": "2026-06-12", "modifications": "Section tronc_commun : 4 capsules prérequis du parcours Praticien (M1 métrologie, M2 fiabilité, M3 méthodologie & données, M4 épistémologie & éthique), source tronc-commun-metrologie-vlbh-v0.1.0.md"}
+    {"version": "0.3.0", "date": "2026-06-12", "modifications": "Section tronc_commun : 4 capsules prérequis du parcours Praticien (M1 métrologie, M2 fiabilité, M3 méthodologie & données, M4 épistémologie & éthique), source tronc-commun-metrologie-vlbh-v0.1.0.md"},
+    {"version": "0.4.0", "date": "2026-06-12", "modifications": "16 ponts : famille corporel (ostéopathie, massage-thai, tuina). Échelle des parcours en meta : ST2 (membres), ST3–ST4 (praticien, gating tronc_commun), ST5 et ST6–ST7 (squelettes à valider)"}
   ]
 }

@@ -1,12 +1,12 @@
-"""digiSha tutor router — Formation « Les 13 ponts » (spec v0.2.0, 12 juin 2026).
+"""digiSha tutor router — Formation « Les 16 ponts » (spec v0.3.0, 12 juin 2026).
 
 POST /digisha/chat → proxy vers l'API Claude. L'app Cercle-Lumière n'embarque
 AUCUNE clé Anthropic (TestFlight → exposable) ; elle s'authentifie avec le
 header X-DigiSha-Token (env DIGISHA_TOKEN).
 
-Routage modèle (DEC Patrick 2026-06-12) :
-  parcours membre    → claude-sonnet-4-6
-  parcours praticien → claude-fable-5
+Routage modèle (DEC Patrick 2026-06-12, échelle des parcours v0.3.0) :
+  ST2 (membres, alias legacy "membre")        → claude-sonnet-4-6
+  ST3-ST4 et au-delà (alias legacy "praticien") → claude-fable-5
 """
 from __future__ import annotations
 
@@ -20,13 +20,17 @@ from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-CONTENT = json.loads((DATA_DIR / "formation_13_ponts.json").read_text())
+CONTENT = json.loads((DATA_DIR / "formation_16_ponts.json").read_text())
 FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-MODEL_BY_PARCOURS = {"membre": "claude-sonnet-4-6", "praticien": "claude-fable-5"}
+# ST2 → sonnet ; ST3-ST4/ST5/ST6-ST7 → fable. Legacy "membre"/"praticien" acceptés.
+ST2_PARCOURS = {"membre", "st2"}
 
-# System prompt du tuteur digiSha — v0.2.0, verbatim de la spec.
+def model_for(parcours: str) -> str:
+    return "claude-sonnet-4-6" if parcours in ST2_PARCOURS else "claude-fable-5"
+
+# System prompt du tuteur digiSha — spec v0.3.0, verbatim.
 SYSTEM_PROMPT = """Tu es digiSha, le tuteur de formation du Digital Shaman Lab (vlbh.energy),
 au service des membres du Cercle de Lumière et des praticiens VLBH.
 
@@ -35,7 +39,7 @@ des Questions digiSha de Libération (4 phases : distinguer le Soi du
 Non-Soi, explorer les racines ancestrales, reprendre le pouvoir, compléter
 le dégagement). Tu poses une question avant de donner une réponse.
 
-Ton corpus : les 13 ponts entre le modèle VLBH et les grandes méthodes
+Ton corpus : les 16 ponts entre le modèle VLBH et les grandes méthodes
 (fourni en JSON). Ta thèse centrale : traiter le noyau, pas les couches.
 
 Règles :
@@ -44,9 +48,10 @@ Règles :
 2. Tu respectes le cadre « Seul ce qui est vérifiable est vrai » :
    le pont épigénétique est une ANALOGIE STRUCTURELLE, jamais une preuve.
    Tu ne promets aucune guérison.
-3. Parcours Membre : langage simple, capsules courtes, pas de jargon
-   sans le définir. Parcours Praticien : tables complètes, instruments
-   de mesure (SLA/SLPMO, Linggui Bafa, Anatomy 12D), protocole S7.
+3. Parcours ST2 (membres) : langage simple, capsules courtes, pas de
+   jargon sans le définir. Parcours ST3-ST4 (praticien) : tables
+   complètes, instruments de mesure (SLA/SLPMO, Linggui Bafa,
+   Anatomy 12D), protocole S7 — tronc commun M1-M4 validé d'abord.
 4. Tu proposes à chaque fin d'échange 2-3 capsules suivantes parmi les
    voisins du graphe — jamais une liste imposée, jamais de pression.
 5. Le SLSA peut dépasser 100 % (jusqu'à 50 000 %) — jamais une erreur.
@@ -86,7 +91,7 @@ class MemberState(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    parcours: Literal["membre", "praticien"] = "membre"
+    parcours: Literal["membre", "praticien", "st2", "st3-st4", "st5", "st6-st7"] = "st2"
     etat: MemberState = Field(default_factory=MemberState)
     messages: list[ChatTurn] = Field(min_length=1, max_length=40)
 
@@ -129,10 +134,10 @@ async def digisha_chat(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="ANTHROPIC_API_KEY not configured — le tuteur digiSha n'est pas encore activé",
         )
-    model = MODEL_BY_PARCOURS[body.parcours]
+    model = model_for(body.parcours)
     payload = {
         "model": model,
-        "max_tokens": 1024 if body.parcours == "membre" else 2048,
+        "max_tokens": 1024 if body.parcours in ST2_PARCOURS else 2048,
         "system": build_system(body.parcours, body.etat),
         "messages": [t.model_dump() for t in body.messages],
     }
