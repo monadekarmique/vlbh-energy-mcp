@@ -127,8 +127,10 @@ class ChatRequest(BaseModel):
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
                        model: str, etat: dict | None = None) -> None:
     """Journal DiGiSha → Supabase digisha_chat_log (best effort, jamais bloquant)."""
-    supa_url = os.environ.get("SUPABASE_URL", "")
-    supa_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    # Variables dédiées : le SUPABASE_URL du service pointe sur l'ancien
+    # projet middleware — digisha_chat_log vit sur qodnztqsawsofimbsfhb.
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
     if not supa_url or not supa_key:
         return
     try:
