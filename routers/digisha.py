@@ -121,6 +121,36 @@ class ChatRequest(BaseModel):
     parcours: Literal["membre", "praticien", "st1", "st2", "st3", "st4", "st3-st4", "st5", "st6-st7"] = "st2"
     etat: MemberState = Field(default_factory=MemberState)
     messages: list[ChatTurn] = Field(min_length=1, max_length=40)
+    no_log: bool = False        # opt-out praticienne (DEC Patrick 2026-06-13)
+
+
+async def log_exchange(source: str, mode: str, user_message: str, reply: str,
+                       model: str, etat: dict | None = None) -> None:
+    """Journal DiGiSha → Supabase digisha_chat_log (best effort, jamais bloquant)."""
+    supa_url = os.environ.get("SUPABASE_URL", "")
+    supa_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"{supa_url}/rest/v1/digisha_chat_log",
+                json={
+                    "source": source,
+                    "mode": mode,
+                    "user_message": user_message,
+                    "assistant_reply": reply,
+                    "model": model,
+                    "etat": etat,
+                },
+                headers={
+                    "apikey": supa_key,
+                    "Authorization": f"Bearer {supa_key}",
+                    "Prefer": "return=minimal",
+                },
+            )
+    except Exception:
+        pass
 
 
 class ChatResponse(BaseModel):
@@ -181,11 +211,18 @@ async def digisha_chat(
         )
     data = resp.json()
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    if not body.no_log:
+        await log_exchange(
+            "render-tuteur", body.parcours,
+            body.messages[-1].content if body.messages else "", text, model,
+            etat=body.etat.model_dump(),
+        )
     return ChatResponse(reply=text, model=model)
 
 
 class AccompagnementRequest(BaseModel):
     messages: list[ChatTurn] = Field(min_length=1, max_length=60)
+    no_log: bool = False        # opt-out praticienne (DEC Patrick 2026-06-13)
 
 
 @router.post("/accompagnement", response_model=ChatResponse)
@@ -220,4 +257,10 @@ async def digisha_accompagnement(
         )
     data = resp.json()
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    if not body.no_log:
+        await log_exchange(
+            "render-accompagnement", "accompagnement",
+            body.messages[-1].content if body.messages else "", text,
+            ACCOMPAGNEMENT_MODEL,
+        )
     return ChatResponse(reply=text, model=ACCOMPAGNEMENT_MODEL)
