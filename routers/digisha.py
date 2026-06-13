@@ -24,6 +24,9 @@ CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
 FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+# Version de l'intervention (traçabilité recherche, DEC Patrick 2026-06-13) :
+# bumper à CHAQUE modification du system prompt ou du contenu injecté.
+PROMPT_VERSION = "tuteur-spec-0.7.0-contenu-1.5.0"
 # ST2 → sonnet ; ST3-ST4/ST5/ST6-ST7 → fable. Legacy "membre"/"praticien" acceptés.
 ST2_PARCOURS = {"membre", "st1", "st2"}   # membres → sonnet ; st3+ → fable
 
@@ -144,6 +147,7 @@ async def log_exchange(source: str, mode: str, user_message: str, reply: str,
                     "assistant_reply": reply,
                     "model": model,
                     "etat": etat,
+                    "prompt_version": PROMPT_VERSION,
                 },
                 headers={
                     "apikey": supa_key,
