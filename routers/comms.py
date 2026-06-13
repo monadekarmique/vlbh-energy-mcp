@@ -23,7 +23,7 @@ router = APIRouter(prefix="/comms", tags=["Comms"])
 _STORE = Path("data/comms_messages.json")
 _LOCK = threading.Lock()
 
-Peer = Literal["patrickbays", "patricktest", "patrick"]
+Peer = Literal["patrickbays", "patricktest", "patricktest-a", "patricktest-b", "patrick"]
 
 
 class CommsMessage(BaseModel):
