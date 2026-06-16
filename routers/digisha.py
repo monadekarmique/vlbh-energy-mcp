@@ -105,6 +105,52 @@ def verify_digisha_token(x_digisha_token: str = Header(..., alias="X-DigiSha-Tok
         )
 
 
+async def gate_subscription(authorization: str | None) -> None:
+    """Gate abonnement Phase 1 (DEC Patrick 2026-06-16).
+
+    Si un Bearer JWT Supabase est fourni (app Priv-1, désormais sur le projet
+    canonique), on vérifie pro_status : un compte praticienne explicitement
+    désactivé (SUSPENDED/REVOKED) reçoit 402. Sans Bearer (Cercle Lumière, pas
+    de session utilisateur) ou sans praticienne_profile (patiente / membre ST2),
+    on laisse passer. Fail-open : toute erreur de validation/réseau ne bloque
+    PAS DiGiSha — le gate ne retire l'accès qu'aux comptes désactivés.
+    """
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        return
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            ur = await client.get(
+                f"{supa_url}/auth/v1/user",
+                headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+            )
+            if ur.status_code != 200:
+                return
+            uid = ur.json().get("id")
+            if not uid:
+                return
+            pr = await client.get(
+                f"{supa_url}/rest/v1/praticienne_profile",
+                params={"supabase_user_id": f"eq.{uid}", "select": "pro_status", "limit": 1},
+                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+            )
+            rows = pr.json() if pr.status_code == 200 else []
+    except Exception:
+        return
+    status_val = rows[0].get("pro_status") if rows else None
+    if status_val in ("SUSPENDED", "REVOKED"):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Abonnement requis",
+        )
+
+
 router = APIRouter(prefix="/digisha", tags=["digiSha"])
 
 
@@ -235,9 +281,11 @@ class AccompagnementRequest(BaseModel):
 async def digisha_accompagnement(
     body: AccompagnementRequest,
     x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+    authorization: str | None = Header(None),
 ) -> ChatResponse:
     """DiGiSha — ton accompagnement Digital Shaman (port Cercle Lumière)."""
     verify_digisha_token(x_digisha_token)
+    await gate_subscription(authorization)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
