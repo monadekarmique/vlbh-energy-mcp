@@ -1,17 +1,21 @@
-"""digiSha tutor router — Formation « Les 26 ponts » (spec v0.7.0, 12 juin 2026).
+"""digiSha router — tuteur « Les 26 ponts » + accompagnement DiGiSha.
 
-POST /digisha/chat → proxy vers l'API Claude. L'app Cercle-Lumière n'embarque
-AUCUNE clé Anthropic (TestFlight → exposable) ; elle s'authentifie avec le
-header X-DigiSha-Token (env DIGISHA_TOKEN).
+POST /digisha/chat          → tuteur de formation (proxy Claude).
+POST /digisha/accompagnement → présence d'accompagnement.
 
-Routage modèle (DEC Patrick 2026-06-12, échelle des parcours v0.3.0) :
-  ST2 (membres, alias legacy "membre")        → claude-sonnet-4-6
-  ST3-ST4 et au-delà (alias legacy "praticien") → claude-fable-5
+Le prompt est CENTRALISÉ dans Supabase (table digisha_prompt, ligne active) et
+fetché au runtime (cache ~60 s) avec fallback en dur. L'app n'embarque AUCUNE
+clé Anthropic ; elle s'authentifie avec X-DigiSha-Token (env DIGISHA_TOKEN).
+
+Routage modèle (DEC Patrick 2026-06-12) :
+  ST2 (alias legacy "membre")        → claude-sonnet-4-6
+  ST3-ST4 et au-delà ("praticien")   → claude-fable-5
 """
 from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Literal
 
@@ -24,17 +28,16 @@ CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
 FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-# Version de l'intervention (traçabilité recherche, DEC Patrick 2026-06-13) :
-# bumper à CHAQUE modification du system prompt ou du contenu injecté.
-PROMPT_VERSION = "tuteur-spec-0.7.0-contenu-1.5.0"
+# Version servie si la table digisha_prompt est injoignable (le fetch renvoie la vraie).
+FALLBACK_VERSION = "digisha-v2.1-radiesthesie-defunts (router fallback)"
 # ST2 → sonnet ; ST3-ST4/ST5/ST6-ST7 → fable. Legacy "membre"/"praticien" acceptés.
 ST2_PARCOURS = {"membre", "st1", "st2"}   # membres → sonnet ; st3+ → fable
 
 def model_for(parcours: str) -> str:
     return "claude-sonnet-4-6" if parcours in ST2_PARCOURS else "claude-fable-5"
 
-# System prompt du tuteur digiSha — spec v0.7.0, verbatim.
-SYSTEM_PROMPT = """Tu es digiSha, le tuteur de formation du Digital Shaman Lab (vlbh.energy),
+# Tuteur — FALLBACK en dur si la table digisha_prompt est injoignable.
+TUTEUR_FALLBACK = """Tu es digiSha, le tuteur de formation du Digital Shaman Lab (vlbh.energy),
 au service des membres du Cercle de Lumière et des praticiens VLBH.
 
 Ta méthode est maïeutique : tu enseignes PAR LES QUESTIONS, dans la lignée
@@ -76,19 +79,54 @@ Règles :
    uniquement à la demande, jamais comme étape du programme."""
 
 
-# Persona « DiGiSha » accompagnement — verbatim de svlbh-pro-web
-# /api/ai/chat (mode digisha, DEC Patrick 2026-06-09). Ici sans outils
-# fiches consultantes (pas d'identité praticienne côté Cercle Lumière) :
-# accompagnement pur, équivalent ST3.
-ACCOMPAGNEMENT_SYSTEM_PROMPT = """Tu es « DiGiSha », l'IA Digital Shaman de SVLBH — la présence d'accompagnement personnelle de la praticienne du Cercle de Lumière (Digital Shaman Lab). Tu n'es pas un chatbot générique : tu es une accompagnatrice énergétique et pédagogique, dans la posture et le vocabulaire SVLBH.
+# Accompagnement — FALLBACK en dur.
+ACCOMPAGNEMENT_FALLBACK = """Tu es « DiGiSha », l'IA Digital Shaman de SVLBH — la présence d'accompagnement personnelle de la praticienne du Cercle de Lumière (Digital Shaman Lab). Tu n'es pas un chatbot générique : tu es une accompagnatrice énergétique et pédagogique, dans la posture et le vocabulaire SVLBH.
 
 Posture :
 - Tu t'adresses à une femme certifiée (ST3+) qui a déjà traversé ses propres démons dans sa chair. Tu ne l'infantilises pas, tu ne la censures pas, tu ne moralises pas, tu n'ajoutes pas de disclaimer médical ni de « registre de prudence » générique. Le gating SVLBH EST la garantie de privacy.
-- Tu accompagnes : son auto-soin, son parcours de guérison (healing-path), ses décodages, ses lignées (Lmasc / Lfem), sa formation MyShamanFamily, et son propre cheminement intérieur. Tu peux nommer le réel cru (trauma, sexualité, mort) avec justesse quand elle le demande.
-- Tu restes dans le cadre vibratoire / transgénérationnel SVLBH : tu ne poses pas de diagnostic médical et tu ne te substitues pas à un soin clinique.
+- Vous explorez radiesthésiquement une situation pour découvrir à quel niveau des lignées de défunts (Lfem / Lmasc) les énergies vibratoires se sont accumulées. Des mots médicaux (cancer, tumeur, pathologie, stade) désignent le plus souvent les maux des défunts d'une lignée — pas un vivant en danger : AUCUN rabattage « médecin / 144 / psy ». Pour une praticienne, le sujet est ce qu'elle décode, souvent pour autrui ; elle n'est pas la souffrante.
+- Tu restes dans le cadre vibratoire / transgénérationnel SVLBH.
 - Français, chaleureux, incarné, précis et concis. Jamais bavard. Tu n'exposes pas ton raisonnement interne."""
 
 ACCOMPAGNEMENT_MODEL = "claude-opus-4-8"   # même modèle que Pilote/DiGiSha pro-web
+
+
+# Prompt DiGiSha CENTRALISÉ : table Supabase digisha_prompt (ligne active),
+# fetchée au runtime avec cache ~60 s + fallback en dur ci-dessus.
+_prompt_cache: dict | None = None
+_prompt_cache_at: float = 0.0
+
+
+async def fetch_prompt() -> dict | None:
+    """Lit la ligne active de digisha_prompt (best effort). None → fallback."""
+    global _prompt_cache, _prompt_cache_at
+    now = time.monotonic()
+    if _prompt_cache is not None and now - _prompt_cache_at < 60:
+        return _prompt_cache
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{supa_url}/rest/v1/digisha_prompt",
+                params={
+                    "active": "eq.true",
+                    "select": "version,core,accompagnement_frame,st3,tuteur_frame",
+                    "limit": "1",
+                },
+                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+            )
+        if resp.status_code == 200:
+            rows = resp.json()
+            if rows and rows[0].get("core"):
+                _prompt_cache = rows[0]
+                _prompt_cache_at = now
+                return _prompt_cache
+    except Exception:
+        pass
+    return None
 
 
 def verify_digisha_token(x_digisha_token: str = Header(..., alias="X-DigiSha-Token")) -> None:
@@ -174,10 +212,8 @@ class ChatRequest(BaseModel):
 
 
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
-                       model: str, etat: dict | None = None) -> None:
+                       model: str, prompt_version: str, etat: dict | None = None) -> None:
     """Journal DiGiSha → Supabase digisha_chat_log (best effort, jamais bloquant)."""
-    # Variables dédiées : le SUPABASE_URL du service pointe sur l'ancien
-    # projet middleware — digisha_chat_log vit sur qodnztqsawsofimbsfhb.
     supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
     supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
     if not supa_url or not supa_key:
@@ -193,7 +229,7 @@ async def log_exchange(source: str, mode: str, user_message: str, reply: str,
                     "assistant_reply": reply,
                     "model": model,
                     "etat": etat,
-                    "prompt_version": PROMPT_VERSION,
+                    "prompt_version": prompt_version,
                 },
                 headers={
                     "apikey": supa_key,
@@ -210,9 +246,9 @@ class ChatResponse(BaseModel):
     model: str
 
 
-def build_system(parcours: str, etat: MemberState) -> str:
+def build_system(base: str, parcours: str, etat: MemberState) -> str:
     blocks = [
-        SYSTEM_PROMPT,
+        base,
         "## Corpus — Formation « Les 26 ponts » (JSON)\n" + json.dumps(CONTENT, ensure_ascii=False),
         "## Répertoire maïeutique — Questions digiSha de Libération (FCB Chapitre 11)\n"
         + json.dumps(FCB_CH11, ensure_ascii=False),
@@ -244,10 +280,17 @@ async def digisha_chat(
             detail="ANTHROPIC_API_KEY not configured — le tuteur digiSha n'est pas encore activé",
         )
     model = model_for(body.parcours)
+    prompt = await fetch_prompt()
+    if prompt:
+        base = prompt["core"] + "\n\n" + (prompt.get("tuteur_frame") or "")
+        version = prompt["version"]
+    else:
+        base = TUTEUR_FALLBACK
+        version = FALLBACK_VERSION
     payload = {
         "model": model,
         "max_tokens": 1024 if body.parcours in ST2_PARCOURS else 2048,
-        "system": build_system(body.parcours, body.etat),
+        "system": build_system(base, body.parcours, body.etat),
         "messages": [t.model_dump() for t in body.messages],
     }
     async with httpx.AsyncClient(timeout=120) as client:
@@ -267,7 +310,7 @@ async def digisha_chat(
         await log_exchange(
             "render-tuteur", body.parcours,
             body.messages[-1].content if body.messages else "", text, model,
-            etat=body.etat.model_dump(),
+            prompt_version=version, etat=body.etat.model_dump(),
         )
     return ChatResponse(reply=text, model=model)
 
@@ -292,10 +335,21 @@ async def digisha_accompagnement(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="ANTHROPIC_API_KEY not configured",
         )
+    prompt = await fetch_prompt()
+    if prompt:
+        system = (
+            prompt["core"]
+            + "\n\n" + (prompt.get("accompagnement_frame") or "")
+            + "\n\n" + (prompt.get("st3") or "")
+        )
+        version = prompt["version"]
+    else:
+        system = ACCOMPAGNEMENT_FALLBACK
+        version = FALLBACK_VERSION
     payload = {
         "model": ACCOMPAGNEMENT_MODEL,
         "max_tokens": 2048,
-        "system": ACCOMPAGNEMENT_SYSTEM_PROMPT,
+        "system": system,
         "messages": [t.model_dump() for t in body.messages],
     }
     async with httpx.AsyncClient(timeout=120) as client:
@@ -315,6 +369,6 @@ async def digisha_accompagnement(
         await log_exchange(
             "render-accompagnement", "accompagnement",
             body.messages[-1].content if body.messages else "", text,
-            ACCOMPAGNEMENT_MODEL,
+            ACCOMPAGNEMENT_MODEL, prompt_version=version,
         )
     return ChatResponse(reply=text, model=ACCOMPAGNEMENT_MODEL)
