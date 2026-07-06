@@ -233,7 +233,7 @@ async def gate_subscription(authorization: str | None) -> dict | None:
             pr = await client.get(
                 f"{supa_url}/rest/v1/praticienne_profile",
                 params={"supabase_user_id": f"eq.{uid}",
-                        "select": "svlbh_id,pro_status,digisha_profondeur,digisha_profondeur_trial_until",
+                        "select": "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until",
                         "limit": 1},
                 headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
             )
@@ -248,8 +248,15 @@ async def gate_subscription(authorization: str | None) -> dict | None:
         )
     if not rows:
         return {"uid": uid, "svlbh_id": None, "profondeur": False}
-    # Profondeur effective = option payée OU essai 48 h en cours (DEC 2026-07-06).
+    # COMPRENDRE effectif = ST5+ (exempté — Membres du Cercle) OU option payée
+    # (ST2-ST4, +59 CHF) OU essai 5 jours en cours (DEC Patrick 2026-07-06).
     profondeur = bool(rows[0].get("digisha_profondeur"))
+    stx = str(rows[0].get("stx") or "")
+    if not profondeur and stx.upper().startswith("ST"):
+        try:
+            profondeur = int(stx[2:3]) >= 5
+        except ValueError:
+            pass
     trial = rows[0].get("digisha_profondeur_trial_until")
     if not profondeur and trial:
         from datetime import datetime, timezone
