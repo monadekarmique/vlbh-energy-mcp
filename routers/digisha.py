@@ -233,7 +233,8 @@ async def gate_subscription(authorization: str | None) -> dict | None:
             pr = await client.get(
                 f"{supa_url}/rest/v1/praticienne_profile",
                 params={"supabase_user_id": f"eq.{uid}",
-                        "select": "svlbh_id,pro_status,digisha_profondeur", "limit": 1},
+                        "select": "svlbh_id,pro_status,digisha_profondeur,digisha_profondeur_trial_until",
+                        "limit": 1},
                 headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
             )
             rows = pr.json() if pr.status_code == 200 else []
@@ -247,8 +248,17 @@ async def gate_subscription(authorization: str | None) -> dict | None:
         )
     if not rows:
         return {"uid": uid, "svlbh_id": None, "profondeur": False}
-    return {"uid": uid, "svlbh_id": rows[0].get("svlbh_id"),
-            "profondeur": bool(rows[0].get("digisha_profondeur"))}
+    # Profondeur effective = option payée OU essai 48 h en cours (DEC 2026-07-06).
+    profondeur = bool(rows[0].get("digisha_profondeur"))
+    trial = rows[0].get("digisha_profondeur_trial_until")
+    if not profondeur and trial:
+        from datetime import datetime, timezone
+        try:
+            t = datetime.fromisoformat(str(trial).replace("Z", "+00:00"))
+            profondeur = t > datetime.now(timezone.utc)
+        except Exception:
+            pass
+    return {"uid": uid, "svlbh_id": rows[0].get("svlbh_id"), "profondeur": profondeur}
 
 
 # ── Option « DiGiSha Profondeur » +59 CHF (DEC Patrick 2026-07-06) ────────────
@@ -441,6 +451,44 @@ async def digisha_chat(
             prompt_version=version, etat=body.etat.model_dump(),
         )
     return ChatResponse(reply=text, model=model)
+
+
+class CompareRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+
+
+@router.post("/compare")
+async def digisha_compare(
+    body: CompareRequest,
+    x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+) -> dict:
+    """Comparateur sonnet vs opus (exemple parlant pour l'option Profondeur).
+    Même system prompt accompagnement, même question, les deux modèles en parallèle."""
+    verify_digisha_token(x_digisha_token)
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
+    prompt = await fetch_prompt()
+    system = (prompt["core"] + "\n\n" + (prompt.get("accompagnement_frame") or "")
+              + "\n\n" + (prompt.get("st3") or "")) if prompt else ACCOMPAGNEMENT_FALLBACK
+    import asyncio
+
+    async def ask(model: str) -> str:
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.post(ANTHROPIC_URL, json={
+                "model": model, "max_tokens": 2048, "system": system,
+                "messages": [{"role": "user", "content": body.message}],
+            }, headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"})
+        if r.status_code != 200:
+            return f"[erreur {r.status_code}]"
+        return "".join(b.get("text", "") for b in r.json().get("content", [])
+                       if b.get("type") == "text")
+
+    inclus, profondeur = await asyncio.gather(
+        ask(ACCOMPAGNEMENT_MODEL_INCLUS), ask(ACCOMPAGNEMENT_MODEL_PROFONDEUR))
+    return {"question": body.message,
+            "inclus": {"model": ACCOMPAGNEMENT_MODEL_INCLUS, "reply": inclus},
+            "profondeur": {"model": ACCOMPAGNEMENT_MODEL_PROFONDEUR, "reply": profondeur}}
 
 
 class AccompagnementRequest(BaseModel):
