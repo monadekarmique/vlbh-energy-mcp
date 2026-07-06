@@ -264,11 +264,11 @@ async def gate_subscription(authorization: str | None) -> dict | None:
 # ── Option « DiGiSha Profondeur » +59 CHF (DEC Patrick 2026-07-06) ────────────
 # Inclus (179 CHF) : accompagnement sur sonnet. Profondeur : opus — DiGiSha reste
 # TOUJOURS une génération derrière le frontier (DEC Patrick 2026-07-06 : fable-5
-# deviendra éligible quand le modèle 6 sortira). Fair-use 150 échanges opus/mois,
+# deviendra éligible quand le modèle 6 sortira). Fair-use 500 questions longues/mois,
 # au-delà retour doux sur sonnet (jamais de coupure).
 ACCOMPAGNEMENT_MODEL_INCLUS = "claude-sonnet-4-6"
 ACCOMPAGNEMENT_MODEL_PROFONDEUR = "claude-opus-4-8"
-PROFONDEUR_FAIR_USE = 150
+PROFONDEUR_FAIR_USE = 500
 
 
 async def _monthly_accompagnement_count(svlbh_id: str) -> int:
