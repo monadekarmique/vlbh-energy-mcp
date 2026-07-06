@@ -200,7 +200,7 @@ def verify_digisha_token(x_digisha_token: str = Header(..., alias="X-DigiSha-Tok
         )
 
 
-async def gate_subscription(authorization: str | None) -> None:
+async def gate_subscription(authorization: str | None) -> dict | None:
     """Gate abonnement Phase 1 (DEC Patrick 2026-06-16).
 
     Si un Bearer JWT Supabase est fourni (app Priv-1, désormais sur le projet
@@ -232,18 +232,71 @@ async def gate_subscription(authorization: str | None) -> None:
                 return
             pr = await client.get(
                 f"{supa_url}/rest/v1/praticienne_profile",
-                params={"supabase_user_id": f"eq.{uid}", "select": "pro_status", "limit": 1},
+                params={"supabase_user_id": f"eq.{uid}",
+                        "select": "svlbh_id,pro_status,digisha_profondeur", "limit": 1},
                 headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
             )
             rows = pr.json() if pr.status_code == 200 else []
     except Exception:
-        return
+        return None
     status_val = rows[0].get("pro_status") if rows else None
     if status_val in ("SUSPENDED", "REVOKED"):
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="Abonnement requis",
         )
+    if not rows:
+        return {"uid": uid, "svlbh_id": None, "profondeur": False}
+    return {"uid": uid, "svlbh_id": rows[0].get("svlbh_id"),
+            "profondeur": bool(rows[0].get("digisha_profondeur"))}
+
+
+# ── Option « DiGiSha Profondeur » +59 CHF (DEC Patrick 2026-07-06) ────────────
+# Inclus (179 CHF) : accompagnement sur sonnet. Profondeur : opus — DiGiSha reste
+# TOUJOURS une génération derrière le frontier (DEC Patrick 2026-07-06 : fable-5
+# deviendra éligible quand le modèle 6 sortira). Fair-use 150 échanges opus/mois,
+# au-delà retour doux sur sonnet (jamais de coupure).
+ACCOMPAGNEMENT_MODEL_INCLUS = "claude-sonnet-4-6"
+ACCOMPAGNEMENT_MODEL_PROFONDEUR = "claude-opus-4-8"
+PROFONDEUR_FAIR_USE = 150
+
+
+async def _monthly_accompagnement_count(svlbh_id: str) -> int:
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key or not svlbh_id:
+        return 0
+    from datetime import datetime, timezone
+    month_start = datetime.now(timezone.utc).strftime("%Y-%m-01T00:00:00Z")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"{supa_url}/rest/v1/digisha_chat_log",
+                params={"svlbh_id": f"eq.{svlbh_id}", "mode": "eq.accompagnement",
+                        "created_at": f"gte.{month_start}", "select": "id"},
+                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
+                         "Prefer": "count=exact", "Range": "0-0"},
+            )
+        cr = r.headers.get("content-range", "")
+        return int(cr.split("/")[-1]) if "/" in cr and cr.split("/")[-1].isdigit() else 0
+    except Exception:
+        return 0
+
+
+def _cache_history(messages: list[dict]) -> list[dict]:
+    """Prompt caching sur l'historique : marque le DERNIER message d'un
+    breakpoint cache_control → tout le préfixe (system + tours précédents) est
+    caché et se prolonge à chaque tour (TTL 5 min). ~2-3x d'économie sur les
+    longues conversations."""
+    if not messages:
+        return messages
+    out = [dict(m) for m in messages]
+    last = out[-1]
+    content = last.get("content")
+    if isinstance(content, str):
+        last["content"] = [{"type": "text", "text": content,
+                           "cache_control": {"type": "ephemeral"}}]
+    return out
 
 
 router = APIRouter(prefix="/digisha", tags=["digiSha"])
@@ -269,7 +322,9 @@ class ChatRequest(BaseModel):
 
 
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
-                       model: str, prompt_version: str, etat: dict | None = None) -> None:
+                       model: str, prompt_version: str, etat: dict | None = None,
+                       svlbh_id: str | None = None,
+                       supabase_user_id: str | None = None) -> None:
     """Journal DiGiSha → Supabase digisha_chat_log (best effort, jamais bloquant)."""
     supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
     supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
@@ -287,6 +342,8 @@ async def log_exchange(source: str, mode: str, user_message: str, reply: str,
                     "model": model,
                     "etat": etat,
                     "prompt_version": prompt_version,
+                    **({"svlbh_id": svlbh_id} if svlbh_id else {}),
+                    **({"supabase_user_id": supabase_user_id} if supabase_user_id else {}),
                 },
                 headers={
                     "apikey": supa_key,
@@ -355,7 +412,7 @@ async def digisha_chat(
         "model": model,
         "max_tokens": 1024 if body.parcours in ST2_PARCOURS else 2048,
         "system": build_system(base, body.parcours, body.etat),
-        "messages": [t.model_dump() for t in body.messages],
+        "messages": _cache_history([t.model_dump() for t in body.messages]),
     }
     async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(
@@ -399,7 +456,7 @@ async def digisha_accompagnement(
 ) -> ChatResponse:
     """DiGiSha — ton accompagnement Digital Shaman (port Cercle Lumière)."""
     verify_digisha_token(x_digisha_token)
-    await gate_subscription(authorization)
+    ident = await gate_subscription(authorization)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -417,11 +474,18 @@ async def digisha_accompagnement(
     else:
         system = ACCOMPAGNEMENT_FALLBACK
         version = FALLBACK_VERSION
+    # Tier : Profondeur (opus, fair-use 150/mois) sinon inclus (sonnet). Au-delà
+    # du fair-use → retour doux sur sonnet, jamais de coupure.
+    model = ACCOMPAGNEMENT_MODEL_INCLUS
+    if ident and ident.get("profondeur") and ident.get("svlbh_id"):
+        used = await _monthly_accompagnement_count(str(ident["svlbh_id"]))
+        if used < PROFONDEUR_FAIR_USE:
+            model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
     payload = {
-        "model": ACCOMPAGNEMENT_MODEL,
+        "model": model,
         "max_tokens": 2048,
         "system": system,
-        "messages": [t.model_dump() for t in body.messages],
+        "messages": _cache_history([t.model_dump() for t in body.messages]),
     }
     async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(
@@ -447,6 +511,8 @@ async def digisha_accompagnement(
         await log_exchange(
             "render-accompagnement", "accompagnement",
             body.messages[-1].content if body.messages else "", text,
-            ACCOMPAGNEMENT_MODEL, prompt_version=version,
+            model, prompt_version=version,
+            svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
+            supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
         )
-    return ChatResponse(reply=text, model=ACCOMPAGNEMENT_MODEL)
+    return ChatResponse(reply=text, model=model)
