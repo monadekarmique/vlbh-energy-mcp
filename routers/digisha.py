@@ -34,7 +34,11 @@ FALLBACK_VERSION = "digisha-v2.1-radiesthesie-defunts (router fallback)"
 ST2_PARCOURS = {"membre", "st1", "st2"}   # membres → sonnet ; st3+ → fable
 
 def model_for(parcours: str) -> str:
-    return "claude-sonnet-4-6" if parcours in ST2_PARCOURS else "claude-fable-5"
+    # DEC Patrick 2026-07-06 (économie post-incident crédit) : le TUTEUR tourne
+    # sur sonnet pour TOUS les parcours (~5x moins cher que fable, largement au
+    # niveau pour la maïeutique). L'accompagnement reste sur ACCOMPAGNEMENT_MODEL.
+    # (Remplace la DEC 2026-06-12 : ST3+ → fable-5.)
+    return "claude-sonnet-4-6"
 
 
 # ── Économie de tokens (DEC Patrick 2026-07-06, incident crédit API) ──────────
