@@ -36,6 +36,59 @@ ST2_PARCOURS = {"membre", "st1", "st2"}   # membres → sonnet ; st3+ → fable
 def model_for(parcours: str) -> str:
     return "claude-sonnet-4-6" if parcours in ST2_PARCOURS else "claude-fable-5"
 
+
+# ── Économie de tokens (DEC Patrick 2026-07-06, incident crédit API) ──────────
+# Avant : le corpus COMPLET (~187K tokens) partait dans CHAQUE message, sans
+# cache → ~2,5-3,5 $ le message sur fable-5 (les ~50 $/mois d'Anne à elle seule).
+# Après : (a) system en BLOCS avec prompt caching (préfixe statique partagé,
+# TTL 5 min, lecture -90 %) ; (b) corpus SLIM (résumés, ~32K tokens) dans le
+# bloc caché, la capsule COURANTE complète voyage dans le bloc dynamique.
+# Revert corpus complet : env DIGISHA_FULL_CORPUS=1 (reste caché).
+_SLIM_KEYS = ("id", "code", "famille", "famille_secondaire", "titre", "title",
+              "auteurs", "orientations", "resume_membre", "resume")
+
+
+def _slim_list(items):
+    if not isinstance(items, list):
+        return items
+    return [{k: it[k] for k in _SLIM_KEYS if k in it} if isinstance(it, dict) else it
+            for it in items]
+
+
+def _build_static_corpus() -> str:
+    if os.environ.get("DIGISHA_FULL_CORPUS") == "1":
+        return json.dumps(CONTENT, ensure_ascii=False)
+    slim = {
+        "meta": CONTENT.get("meta"),
+        "socle": CONTENT.get("socle"),
+        "tronc_commun": _slim_list(CONTENT.get("tronc_commun")),
+        "st1": CONTENT.get("st1"),
+        "st2_modules": _slim_list(CONTENT.get("st2_modules")),
+        "st5": CONTENT.get("st5"),
+        "st6_st7": CONTENT.get("st6_st7"),
+        "ponts": _slim_list(CONTENT.get("ponts")),
+        "protocole_s7": CONTENT.get("protocole_s7"),
+        "transverses": CONTENT.get("transverses"),
+        "bibliotheque_ecoute": CONTENT.get("bibliotheque_ecoute"),
+        "note": "Corpus en RÉSUMÉS (id/titre/résumé). Le contenu COMPLET de la "
+                "capsule courante est fourni dans « État du membre ». Pour "
+                "enseigner une autre capsule, demande au membre de l'ouvrir.",
+    }
+    return json.dumps(slim, ensure_ascii=False)
+
+
+STATIC_CORPUS_JSON = _build_static_corpus()
+
+
+def _full_item(capsule_id):
+    if not capsule_id:
+        return None
+    for coll in ("ponts", "tronc_commun", "st2_modules"):
+        for it in CONTENT.get(coll) or []:
+            if isinstance(it, dict) and it.get("id") == capsule_id:
+                return it
+    return None
+
 # Tuteur — FALLBACK en dur si la table digisha_prompt est injoignable.
 TUTEUR_FALLBACK = """Tu es digiSha, le tuteur de formation du Digital Shaman Lab (vlbh.energy),
 au service des membres du Cercle de Lumière et des praticiens VLBH.
@@ -246,25 +299,32 @@ class ChatResponse(BaseModel):
     model: str
 
 
-def build_system(base: str, parcours: str, etat: MemberState) -> str:
-    blocks = [
-        base,
-        "## Corpus — Formation « Les 26 ponts » (JSON)\n" + json.dumps(CONTENT, ensure_ascii=False),
-        "## Répertoire maïeutique — Questions digiSha de Libération (FCB Chapitre 11)\n"
-        + json.dumps(FCB_CH11, ensure_ascii=False),
-        "## État du membre\n"
-        + json.dumps(
-            {
-                "parcours": parcours,
-                "orientation": etat.orientation,
-                "capsules_vues": etat.capsules_vues,
-                "quiz_reussis": etat.quiz_reussis,
-                "capsule_courante": etat.capsule_courante,
-            },
-            ensure_ascii=False,
-        ),
+def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
+    """Blocs système : préfixe STATIQUE (prompt Supabase + corpus slim + FCB)
+    marqué cache_control → prompt caching Anthropic (partagé entre membres du
+    même modèle, TTL 5 min, lecture -90 %). Le bloc DYNAMIQUE (état + capsule
+    courante complète) reste hors cache."""
+    etat_dyn = {
+        "parcours": parcours,
+        "orientation": etat.orientation,
+        "capsules_vues": etat.capsules_vues,
+        "quiz_reussis": etat.quiz_reussis,
+        "capsule_courante": etat.capsule_courante,
+    }
+    full = _full_item(etat.capsule_courante)
+    if full is not None:
+        etat_dyn["capsule_courante_contenu_complet"] = full
+    return [
+        {"type": "text", "text": base},
+        {"type": "text",
+         "text": "## Corpus — Formation « Les 26 ponts » (JSON)\n" + STATIC_CORPUS_JSON},
+        {"type": "text",
+         "text": "## Répertoire maïeutique — Questions digiSha de Libération (FCB Chapitre 11)\n"
+                 + json.dumps(FCB_CH11, ensure_ascii=False),
+         "cache_control": {"type": "ephemeral"}},
+        {"type": "text",
+         "text": "## État du membre\n" + json.dumps(etat_dyn, ensure_ascii=False)},
     ]
-    return "\n\n".join(blocks)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -300,6 +360,13 @@ async def digisha_chat(
             headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
         )
     if resp.status_code != 200:
+        low = resp.text.lower()
+        if "credit" in low or "billing" in low:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Le tuteur est momentanément en pause (crédit API épuisé) — "
+                       "Patrick est prévenu, réessaie un peu plus tard 🙏",
+            )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
@@ -359,6 +426,13 @@ async def digisha_accompagnement(
             headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
         )
     if resp.status_code != 200:
+        low = resp.text.lower()
+        if "credit" in low or "billing" in low:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Le tuteur est momentanément en pause (crédit API épuisé) — "
+                       "Patrick est prévenu, réessaie un peu plus tard 🙏",
+            )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
