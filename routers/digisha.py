@@ -23,6 +23,8 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
+from routers.digisha_formation_m1 import m1_system_block
+
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
 FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
@@ -336,6 +338,11 @@ class ChatRequest(BaseModel):
     etat: MemberState = Field(default_factory=MemberState)
     messages: list[ChatTurn] = Field(min_length=1, max_length=40)
     no_log: bool = False        # opt-out praticienne (DEC Patrick 2026-06-13)
+    # Formation « Accompagner un proche » M1 (DEC Patrick 2026-07-07) :
+    # mode formation_m1 + fiche du proche → le serveur résout le parcours du
+    # proche (RLS via le JWT utilisateur) et n'ouvre QUE ses fenêtres.
+    mode: Literal["tuteur", "formation_m1"] = "tuteur"
+    proche_consultante_id: str | None = None
 
 
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
@@ -377,6 +384,40 @@ class ChatResponse(BaseModel):
     model: str
 
 
+async def fetch_proche_parcours(consultante_id: str, authorization: str | None) -> str:
+    """Parcours du proche via sa fiche consultante, RLS appliquée (JWT utilisateur).
+
+    Le lookup passe par PostgREST avec le Bearer de l'utilisateur : si la RLS ne
+    lui donne pas cette fiche, elle n'existe pas pour lui (404) — le serveur ne
+    révèle jamais un parcours hors périmètre."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Le mode formation requiert une session utilisateur (Bearer JWT)",
+        )
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase non configuré côté DiGiSha",
+        )
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get(
+            f"{supa_url}/rest/v1/consultante_record",
+            params={"consultante_id": f"eq.{consultante_id.lower()}", "select": "parcours"},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+        )
+    rows = r.json() if r.status_code == 200 else []
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fiche du proche introuvable ou non accessible",
+        )
+    return str(rows[0].get("parcours") or "")
+
+
 def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
     """Blocs système : préfixe STATIQUE (prompt Supabase + corpus slim + FCB)
     marqué cache_control → prompt caching Anthropic (partagé entre membres du
@@ -409,6 +450,7 @@ def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
 async def digisha_chat(
     body: ChatRequest,
     x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+    authorization: str | None = Header(None),
 ) -> ChatResponse:
     verify_digisha_token(x_digisha_token)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -425,12 +467,44 @@ async def digisha_chat(
     else:
         base = TUTEUR_FALLBACK
         version = FALLBACK_VERSION
-    payload = {
-        "model": model,
-        "max_tokens": 1024 if body.parcours in ST2_PARCOURS else 2048,
-        "system": build_system(base, body.parcours, body.etat),
-        "messages": _cache_history([t.model_dump() for t in body.messages]),
-    }
+
+    if body.mode == "formation_m1":
+        # Formation « Accompagner un proche » M1 : gating serveur des fenêtres
+        # sur le parcours du proche (fiche liée, RLS via JWT utilisateur).
+        if not body.proche_consultante_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="proche_consultante_id requis en mode formation_m1",
+            )
+        parcours_proche = await fetch_proche_parcours(body.proche_consultante_id, authorization)
+        m1_block = m1_system_block(parcours_proche)
+        if m1_block is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Le Module 1 ne s'ouvre pas encore pour ce parcours ({parcours_proche or 'inconnu'}) — il s'ouvre en ST2",
+            )
+        system_blocks = [
+            {"type": "text", "text": base},
+            {"type": "text", "text": m1_block,
+             "cache_control": {"type": "ephemeral"}},
+            {"type": "text",
+             "text": "## État du membre\n" + json.dumps(
+                 {"parcours_accompagnante": body.parcours,
+                  "parcours_proche": parcours_proche}, ensure_ascii=False)},
+        ]
+        payload = {
+            "model": model,
+            "max_tokens": 2048,
+            "system": system_blocks,
+            "messages": _cache_history([t.model_dump() for t in body.messages]),
+        }
+    else:
+        payload = {
+            "model": model,
+            "max_tokens": 1024 if body.parcours in ST2_PARCOURS else 2048,
+            "system": build_system(base, body.parcours, body.etat),
+            "messages": _cache_history([t.model_dump() for t in body.messages]),
+        }
     async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(
             ANTHROPIC_URL,
@@ -453,7 +527,8 @@ async def digisha_chat(
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
-            "render-tuteur", body.parcours,
+            "render-tuteur",
+            "formation_m1" if body.mode == "formation_m1" else body.parcours,
             body.messages[-1].content if body.messages else "", text, model,
             prompt_version=version, etat=body.etat.model_dump(),
         )
