@@ -232,14 +232,35 @@ async def gate_subscription(authorization: str | None) -> dict | None:
             uid = ur.json().get("id")
             if not uid:
                 return
+            profile_select = "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until"
             pr = await client.get(
                 f"{supa_url}/rest/v1/praticienne_profile",
                 params={"supabase_user_id": f"eq.{uid}",
-                        "select": "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until",
+                        "select": profile_select,
                         "limit": 1},
                 headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
             )
             rows = pr.json() if pr.status_code == 200 else []
+            if not rows:
+                # Doctrine #11 : multi-comptes → 1 svlbh_id canonique. Si le slot
+                # direct ne matche pas, résoudre via praticienne_user_alias pour
+                # ne pas perdre l'exemption ST5+/profondeur des comptes secondaires.
+                al = await client.get(
+                    f"{supa_url}/rest/v1/praticienne_user_alias",
+                    params={"supabase_user_id": f"eq.{uid}", "select": "svlbh_id", "limit": 1},
+                    headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+                )
+                alias_rows = al.json() if al.status_code == 200 else []
+                alias_svlbh = alias_rows[0].get("svlbh_id") if alias_rows else None
+                if alias_svlbh:
+                    pr2 = await client.get(
+                        f"{supa_url}/rest/v1/praticienne_profile",
+                        params={"svlbh_id": f"eq.{alias_svlbh}",
+                                "select": profile_select,
+                                "limit": 1},
+                        headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+                    )
+                    rows = pr2.json() if pr2.status_code == 200 else []
     except Exception:
         return None
     status_val = rows[0].get("pro_status") if rows else None
