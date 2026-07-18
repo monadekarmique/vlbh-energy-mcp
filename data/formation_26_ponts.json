@@ -1,8 +1,8 @@
 {
   "meta": {
     "nom": "Formation digiSha — Les 26 ponts « Traiter le noyau traite les couches »",
-    "version": "1.5.0",
-    "date": "2026-06-12",
+    "version": "1.6.0",
+    "date": "2026-07-18",
     "temps_capsule": [
       "identifier",
       "relier",
@@ -86,6 +86,12 @@
       }
     },
     "fil_rouge": "Économie du geste (Hartman : force minimale, spécificité maximale) — on ne se bat pas couche par couche, on place un geste précis au noyau : traiter le noyau traite les couches.",
+    "fil_rouge_ponderation": {
+      "poids": 0.45,
+      "libelle": "45%",
+      "note": "L'histoire du fil rouge (économie du geste — « traiter le noyau traite les couches ») pèse 45% de la pondération de la formation : c'est le fil transversal qui relie les 26 capsules, évalué comme tel dans la note d'un parcours/module.",
+      "date": "2026-07-18"
+    },
     "marque": {
       "nom": "Les 26 ponts « Traiter le noyau traite les couches »",
       "figee": true,
@@ -5534,6 +5540,11 @@
       "version": "1.5.0",
       "date": "2026-06-12",
       "modifications": "Bibliothèque d'écoute ST2 (décision Patrick 1a) : 22 grilles d'écoute par pont (voix accompagnante), hors parcours, servie par digiSha à la demande quand le proche pratique la méthode"
+    },
+    {
+      "version": "1.6.0",
+      "date": "2026-07-18",
+      "modifications": "Pondération du fil rouge (décision Patrick) : l'histoire du fil rouge (économie du geste — traiter le noyau traite les couches) vaut 45% de la pondération de la formation — champ meta.fil_rouge_ponderation"
     }
   ],
   "transverses": [
