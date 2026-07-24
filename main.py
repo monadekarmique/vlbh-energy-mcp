@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from routers import slm, sla, session, lead, tore, billing, dashboard, workspace, flux_whatsapp
 from routers import auth
+from routers import claim
 from routers import digisha
 from routers import comms
 from services.make_service import MakeService
@@ -47,6 +48,8 @@ app.include_router(workspace.router)
 app.include_router(flux_whatsapp.router)
 app.include_router(comms.router)
 app.include_router(auth.router)
+# onboarding claim flow — bind orphan Apple session → svlbh_id (doctrine #11), prototype
+app.include_router(claim.router)
 
 # digiSha — tuteur formation « Les 26 ponts » + accompagnement (auth X-DigiSha-Token)
 app.include_router(digisha.router)
