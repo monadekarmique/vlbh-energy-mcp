@@ -64,7 +64,7 @@ final class ProcessMonitor: ObservableObject {
 
         let pipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = Pipe()
+        task.standardError = FileHandle.nullDevice
 
         do {
             try task.run()
@@ -121,7 +121,7 @@ final class ProcessMonitor: ObservableObject {
         vmTask.executableURL = URL(fileURLWithPath: "/usr/bin/vm_stat")
         let vmPipe = Pipe()
         vmTask.standardOutput = vmPipe
-        vmTask.standardError = Pipe()
+        vmTask.standardError = FileHandle.nullDevice
 
         var memUsed: Double = 0
         do {
@@ -139,7 +139,7 @@ final class ProcessMonitor: ObservableObject {
         topTask.arguments = ["-l", "1", "-n", "0", "-s", "0"]
         let topPipe = Pipe()
         topTask.standardOutput = topPipe
-        topTask.standardError = Pipe()
+        topTask.standardError = FileHandle.nullDevice
 
         var cpuUsage: Double = 0
         do {
