@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from routers import slm, sla, session, lead, tore, billing, dashboard, workspace, flux_whatsapp
 from routers import auth
 from routers import invite
+from routers import tarif590
 from routers import digisha
 from routers import comms
 from services.make_service import MakeService
@@ -50,6 +51,9 @@ app.include_router(comms.router)
 app.include_router(auth.router)
 # praticienne invite-token — premier-lien Apple/Google (C4 Option B), prototype
 app.include_router(invite.router)
+
+# Tarif 590 — premier PDF praticienne au standard WeasyPrint (DEC Patrick 2026-08-08)
+app.include_router(tarif590.router)
 
 # digiSha — tuteur formation « Les 26 ponts » + accompagnement (auth X-DigiSha-Token)
 app.include_router(digisha.router)
