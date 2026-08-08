@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  /* Tarif 590 — facture officielle de thérapie complémentaire (tarif590.ch).
+     Document NORMÉ : sobre, noir sur blanc, lisible par les assureurs.
+     La charte SVLBH n'intervient qu'en filigrane discret du pied de page. */
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+         font-size: 9.5pt; color: #111; margin: 0; }
+  h1 { font-size: 14pt; margin: 0 0 2mm; }
+  .muted { color: #555; }
+  .row { display: flex; gap: 6mm; }
+  .col { flex: 1; }
+  .box { border: 0.4pt solid #333; border-radius: 2pt; padding: 3mm; margin-bottom: 4mm; }
+  .box h2 { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em;
+            color: #555; margin: 0 0 2mm; }
+  .kv { margin: 0.6mm 0; }
+  .kv b { display: inline-block; min-width: 30mm; font-weight: 600; }
+  table.prestations { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; }
+  table.prestations th { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em;
+       text-align: left; border-bottom: 0.8pt solid #111; padding: 1.6mm 1.2mm; }
+  table.prestations td { border-bottom: 0.3pt solid #bbb; padding: 1.6mm 1.2mm; vertical-align: top; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .totaux { width: 62mm; margin-left: auto; }
+  .totaux .ligne { display: flex; justify-content: space-between; padding: 1mm 0; }
+  .totaux .total { border-top: 1pt solid #111; font-weight: 700; font-size: 11pt; }
+  .cases { display: flex; gap: 8mm; margin: 2mm 0; }
+  .case { display: inline-block; }
+  .case .carre { display: inline-block; width: 3.2mm; height: 3.2mm;
+                 border: 0.5pt solid #111; margin-right: 1.5mm; vertical-align: -0.4mm;
+                 text-align: center; line-height: 3mm; font-size: 8pt; }
+  footer { position: fixed; bottom: -12mm; left: 0; right: 0;
+           font-size: 7pt; color: #8B3A62; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Facture Tarif 590 <span class="muted">— thérapie complémentaire</span></h1>
+<div class="kv"><b>Facture n°</b> {{ invoice_number }} &nbsp;·&nbsp;
+  <b>Date</b> {{ invoice_date }}
+  {% if reference_number %}&nbsp;·&nbsp; <b>Réf. QR</b> {{ reference_number }}{% endif %}</div>
+
+<div class="cases">
+  <span class="case"><span class="carre">{{ "✕" if maladie else "" }}</span>Maladie</span>
+  <span class="case"><span class="carre">{{ "✕" if accident else "" }}</span>Accident (LAA)</span>
+  {% if diagnostic %}<span class="case"><b>Motif&nbsp;:</b>&nbsp;{{ diagnostic }}</span>{% endif %}
+</div>
+
+<div class="row">
+  <div class="col box">
+    <h2>Thérapeute</h2>
+    <div class="kv">{{ therapeute.name }}</div>
+    <div class="kv">{{ therapeute.street }} {{ therapeute.house_number or "" }}</div>
+    <div class="kv">{{ therapeute.postal_code }} {{ therapeute.city }}</div>
+    {% if therapeute.phone %}<div class="kv"><b>Téléphone</b> {{ therapeute.phone }}</div>{% endif %}
+    <div class="kv"><b>N° RCC</b> {{ therapeute.rcc_number }}</div>
+    {% if therapeute.gln_number %}<div class="kv"><b>GLN</b> {{ therapeute.gln_number }}</div>{% endif %}
+    {% if therapeute.nif_number %}<div class="kv"><b>NIF</b> {{ therapeute.nif_number }}</div>{% endif %}
+    <div class="kv"><b>Méthode</b> {{ methode_label }}</div>
+  </div>
+  <div class="col box">
+    <h2>Patient·e</h2>
+    <div class="kv">{{ patient.first_name }} {{ patient.last_name }}</div>
+    {% if patient.street %}<div class="kv">{{ patient.street }} {{ patient.house_number or "" }}</div>{% endif %}
+    {% if patient.postal_code %}<div class="kv">{{ patient.postal_code }} {{ patient.city }}</div>{% endif %}
+    <div class="kv"><b>Date de naissance</b> {{ patient.date_of_birth.strftime("%d.%m.%Y") }}</div>
+    {% if patient.avs_number %}<div class="kv"><b>N° AVS</b> {{ patient.avs_number }}</div>{% endif %}
+    {% if patient.insurance_name %}<div class="kv"><b>Assurance</b> {{ patient.insurance_name }}</div>{% endif %}
+    {% if patient.insurance_number %}<div class="kv"><b>Police</b> {{ patient.insurance_number }}</div>{% endif %}
+    <div class="kv"><b>Canton</b> {{ patient.canton }}</div>
+  </div>
+</div>
+
+<table class="prestations">
+  <thead>
+    <tr>
+      <th>Date</th><th>Tarif</th><th>Code</th><th>Prestation</th>
+      <th class="num">Durée</th><th class="num">Qté (5 min)</th>
+      <th class="num">PU CHF</th><th>TVA</th><th class="num">Montant CHF</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in prestations %}
+    <tr>
+      <td>{{ p.service_date }}</td>
+      <td>{{ p.tarif_code }}</td>
+      <td>{{ p.code_prestation }}</td>
+      <td>{{ p.description }}</td>
+      <td class="num">{{ p.duration_minutes }} min</td>
+      <td class="num">{{ p.quantity }}</td>
+      <td class="num">{{ "%.2f"|format(p.unit_price) }}</td>
+      <td>{{ p.tva_label }}</td>
+      <td class="num">{{ "%.2f"|format(p.amount) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="totaux">
+  <div class="ligne total"><span>Total CHF</span><span>{{ "%.2f"|format(total_amount) }}</span></div>
+</div>
+
+<footer>Digital Shaman Lab - Patrick Bays - SVLBH</footer>
+
+</body>
+</html>
