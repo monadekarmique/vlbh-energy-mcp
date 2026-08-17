@@ -362,7 +362,10 @@ class ChatRequest(BaseModel):
     # Formation « Accompagner un proche » M1 (DEC Patrick 2026-07-07) :
     # mode formation_m1 + fiche du proche → le serveur résout le parcours du
     # proche (RLS via le JWT utilisateur) et n'ouvre QUE ses fenêtres.
-    mode: Literal["tuteur", "formation_m1"] = "tuteur"
+    # Formation ST2 « Accompagner la libération de la dette monadique »
+    # (DEC Patrick 2026-08-17) : sur soi, sans proche — chaque formation a
+    # SON mode, deux libellés ne partagent jamais un contenu.
+    mode: Literal["tuteur", "formation_m1", "formation_dette_monadique"] = "tuteur"
     proche_consultante_id: str | None = None
 
 
@@ -489,6 +492,18 @@ async def digisha_chat(
         base = TUTEUR_FALLBACK
         version = FALLBACK_VERSION
 
+    if body.mode == "formation_dette_monadique":
+        # Formation ST2 (DEC Patrick 2026-08-17). Le MODULE n'est pas encore
+        # écrit — la source (svlbh-digisha/parcours-st2/conception-st2-v0.2.0.md,
+        # découverte 3 « Dettes karmiques des Sur-Âmes et Monades ») attend son
+        # passage en module verbatim, comme M1 l'a fait depuis sa base source.
+        # Tant qu'il n'existe pas : refus CLAIR — jamais un contenu improvisé,
+        # et surtout pas le M1 servi sous un autre nom.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La formation « Accompagner la libération de la dette "
+                   "monadique » est en préparation — elle s'ouvre très bientôt. 🌙",
+        )
     if body.mode == "formation_m1":
         # Formation « Accompagner un proche » M1 : gating serveur des fenêtres
         # sur le parcours du proche (fiche liée, RLS via JWT utilisateur).
