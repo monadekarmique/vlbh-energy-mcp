@@ -14,13 +14,14 @@ Routage modèle (DEC Patrick 2026-06-12) :
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from pathlib import Path
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from routers.digisha_formation_m1 import m1_system_block
@@ -188,7 +189,7 @@ async def fetch_prompt() -> dict | None:
     return None
 
 
-def verify_digisha_token(x_digisha_token: str = Header(..., alias="X-DigiSha-Token")) -> None:
+def verify_digisha_token(x_digisha_token: str) -> None:
     expected = os.environ.get("DIGISHA_TOKEN", "")
     if not expected:
         raise HTTPException(
@@ -200,6 +201,90 @@ def verify_digisha_token(x_digisha_token: str = Header(..., alias="X-DigiSha-Tok
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing X-DigiSha-Token",
         )
+
+
+log = logging.getLogger("digisha")
+
+# ── Garde d'appel — durcissement 2026-08-21 (audit sécurité 5 apps Priv) ─────
+# `X-DigiSha-Token` est un secret PARTAGÉ, embarqué en clair dans six binaires
+# publiés : `strings` sur une IPA suffit à le lire. Il n'établit donc RIEN sur
+# l'appelant, alors qu'il ouvre un proxy LLM facturé. Tant que des builds
+# installés ne savent faire que ça, on le garde comme laissez-passer de repli —
+# mais il ne vaut plus autant qu'une session :
+#   • une session Supabase valide (Bearer) suffit désormais à elle seule ;
+#   • le repli « jeton seul » est plafonné par IP, et bien plus bas ;
+#   • chaque appel sans session est journalisé, pour mesurer l'adoption et l'abus.
+# Le jeton sera retiré quand les six apps enverront leur JWT (étape 3 du plan).
+RATE_ANON_PER_HOUR = int(os.environ.get("DIGISHA_RATE_ANON_HOUR", "12"))
+RATE_USER_PER_HOUR = int(os.environ.get("DIGISHA_RATE_USER_HOUR", "120"))
+
+# Fenêtre glissante en mémoire. Le service tourne en instance unique (Render
+# starter, numInstances=1) : pas de store partagé nécessaire aujourd'hui. Si on
+# passe à plusieurs instances, ce compteur devient par-instance — le noter alors.
+_rate_hits: dict[str, list[float]] = {}
+
+
+def _rate_check(key: str, limit: int) -> None:
+    now = time.time()
+    hits = [t for t in _rate_hits.get(key, []) if now - t < 3600]
+    if len(hits) >= limit:
+        _rate_hits[key] = hits
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Trop d'appels sur cette heure — réessaie plus tard.",
+        )
+    hits.append(now)
+    _rate_hits[key] = hits
+
+
+async def resolve_uid(authorization: str | None) -> str | None:
+    """UID Supabase du porteur du Bearer, ou None. Un seul appel /auth/v1/user,
+    sans lecture de profil : sert à décider du titre d'accès et à clé le quota."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"{supa_url}/auth/v1/user",
+                headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+            )
+            if r.status_code != 200:
+                return None
+            return r.json().get("id")
+    except Exception:
+        return None
+
+
+async def authorize_caller(
+    request: Request,
+    x_digisha_token: str | None,
+    authorization: str | None,
+) -> str | None:
+    """Autorise l'appel et applique le quota. Renvoie l'uid s'il y en a un.
+
+    Session valide → on passe, quota généreux, le jeton n'est même pas regardé.
+    Pas de session → le jeton statique reste accepté, quota bas par IP + trace.
+    """
+    uid = await resolve_uid(authorization)
+    if uid:
+        _rate_check(f"uid:{uid}", RATE_USER_PER_HOUR)
+        return uid
+    verify_digisha_token(x_digisha_token or "")
+    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
+        or (request.client.host if request.client else "unknown")
+    log.warning(
+        "digisha: appel au jeton statique SANS session (ip=%s path=%s ua=%s)",
+        ip, request.url.path, request.headers.get("user-agent", "?"),
+    )
+    _rate_check(f"ip:{ip}", RATE_ANON_PER_HOUR)
+    return None
 
 
 async def gate_subscription(authorization: str | None) -> dict | None:
@@ -472,11 +557,12 @@ def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
 
 @router.post("/chat", response_model=ChatResponse)
 async def digisha_chat(
+    request: Request,
     body: ChatRequest,
-    x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+    x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
     authorization: str | None = Header(None),
 ) -> ChatResponse:
-    verify_digisha_token(x_digisha_token)
+    await authorize_caller(request, x_digisha_token, authorization)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -577,12 +663,14 @@ class CompareRequest(BaseModel):
 
 @router.post("/compare")
 async def digisha_compare(
+    request: Request,
     body: CompareRequest,
-    x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+    x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
+    authorization: str | None = Header(None),
 ) -> dict:
     """Comparateur sonnet vs opus (exemple parlant pour l'option Profondeur).
     Même system prompt accompagnement, même question, les deux modèles en parallèle."""
-    verify_digisha_token(x_digisha_token)
+    await authorize_caller(request, x_digisha_token, authorization)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
@@ -616,12 +704,13 @@ class AccompagnementRequest(BaseModel):
 
 @router.post("/accompagnement", response_model=ChatResponse)
 async def digisha_accompagnement(
+    request: Request,
     body: AccompagnementRequest,
-    x_digisha_token: str = Header(..., alias="X-DigiSha-Token"),
+    x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
     authorization: str | None = Header(None),
 ) -> ChatResponse:
     """DiGiSha — ton accompagnement Digital Shaman (port Cercle Lumière)."""
-    verify_digisha_token(x_digisha_token)
+    await authorize_caller(request, x_digisha_token, authorization)
     ident = await gate_subscription(authorization)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
