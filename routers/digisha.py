@@ -450,8 +450,13 @@ class ChatRequest(BaseModel):
     # Formation ST2 « Accompagner la libération de la dette monadique »
     # (DEC Patrick 2026-08-17) : sur soi, sans proche — chaque formation a
     # SON mode, deux libellés ne partagent jamais un contenu.
-    mode: Literal["tuteur", "formation_m1", "formation_dette_monadique"] = "tuteur"
+    # Mode « fil » (DEC Patrick 2026-08-22) : poser une question sur le fil d'une
+    # consultante — « qu'est-ce qu'elle a dit sur sa mère ? » — au lieu de chercher
+    # des mots-clés. Le serveur choisit les passages, la RLS choisit ce qu'il a le
+    # droit de lire, et la réponse cite ses sources.
+    mode: Literal["tuteur", "formation_m1", "formation_dette_monadique", "fil"] = "tuteur"
     proche_consultante_id: str | None = None
+    fil_consultante_id: str | None = None
 
 
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
@@ -527,6 +532,72 @@ async def fetch_proche_parcours(consultante_id: str, authorization: str | None) 
     return str(rows[0].get("parcours") or "")
 
 
+async def fetch_passages_du_fil(
+    consultante_id: str, question: str, authorization: str | None, limite: int = 12
+) -> list[dict]:
+    """Passages du fil les plus proches de la question, RLS appliquée (JWT utilisateur).
+
+    La sélection se fait EN BASE (`chercher_dans_le_fil`, recherche française) et non
+    ici : c'est la seule façon de n'envoyer au modèle que ce que l'appelant a le droit
+    de lire, et de ne pas charger 200 000 caractères à chaque question. Liste vide =
+    rien d'accessible ou rien de pertinent — dans les deux cas on ne bluffe pas."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Le mode fil requiert une session utilisateur (Bearer JWT)",
+        )
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase non configuré côté DiGiSha",
+        )
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.post(
+            f"{supa_url}/rest/v1/rpc/chercher_dans_le_fil",
+            json={"p_consultante": consultante_id.lower(),
+                  "p_question": question,
+                  "p_limite": limite},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
+                     "Content-Type": "application/json"},
+        )
+    if r.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ce fil n'est pas accessible avec cette session",
+        )
+    return r.json() or []
+
+
+def build_fil_context(passages: list[dict]) -> str:
+    """Le contexte lu par DiGiSha : chaque passage porte SA date et SON titre, pour
+    que la réponse puisse être vérifiée à la source plutôt que crue sur parole."""
+    if not passages:
+        return "AUCUN PASSAGE TROUVÉ dans le fil pour cette question."
+    morceaux = []
+    for p in passages:
+        morceaux.append(
+            f"### {p.get('jour','?')} — {p.get('titre') or 'sans titre'}\n{p.get('corps','')}"
+        )
+    return "\n\n".join(morceaux)
+
+
+FIL_CADRE = """## Ce que tu fais ici
+
+Tu réponds à une question sur le fil d'échanges d'UNE personne accompagnée. Les
+passages ci-dessous sont les seuls que tu as le droit de lire, et ils sont datés.
+
+Règles, sans exception :
+- Tu réponds UNIQUEMENT à partir de ces passages. Ce qui n'y est pas, tu ne le sais pas.
+- Tu CITES tes sources en fin de réponse, sous la forme « 12.07 — Les lignes du temps ».
+  Sans citation, la réponse ne vaut rien : elle doit pouvoir être vérifiée.
+- Si les passages ne répondent pas, tu le dis franchement et tu proposes une autre
+  formulation de la question. Tu n'inventes jamais un souvenir manquant.
+- Tu parles de la personne accompagnée à la troisième personne, sobrement. C'est un
+  outil de travail pour sa praticienne, pas un récit."""
+
 def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
     """Blocs système : préfixe STATIQUE (prompt Supabase + corpus slim + FCB)
     marqué cache_control → prompt caching Anthropic (partagé entre membres du
@@ -590,7 +661,29 @@ async def digisha_chat(
             detail="La formation « Accompagner la libération de la dette "
                    "monadique » est en préparation — elle s'ouvre très bientôt. 🌙",
         )
-    if body.mode == "formation_m1":
+    if body.mode == "fil":
+        # Question sur le fil d'une consultante (DEC Patrick 22.08.2026).
+        if not body.fil_consultante_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="fil_consultante_id requis en mode fil",
+            )
+        question = body.messages[-1].content if body.messages else ""
+        passages = await fetch_passages_du_fil(
+            body.fil_consultante_id, question, authorization
+        )
+        system_blocks = [
+            {"type": "text", "text": base},
+            {"type": "text", "text": FIL_CADRE},
+            {"type": "text", "text": "## Passages du fil\n\n" + build_fil_context(passages)},
+        ]
+        payload = {
+            "model": model,
+            "max_tokens": 2048,
+            "system": system_blocks,
+            "messages": _cache_history([t.model_dump() for t in body.messages]),
+        }
+    elif body.mode == "formation_m1":
         # Formation « Accompagner un proche » M1 : gating serveur des fenêtres
         # sur le parcours du proche (fiche liée, RLS via JWT utilisateur).
         if not body.proche_consultante_id:
@@ -650,7 +743,7 @@ async def digisha_chat(
     if not body.no_log:
         await log_exchange(
             "render-tuteur",
-            "formation_m1" if body.mode == "formation_m1" else body.parcours,
+            body.mode if body.mode in ("formation_m1", "fil") else body.parcours,
             body.messages[-1].content if body.messages else "", text, model,
             prompt_version=version, etat=body.etat.model_dump(),
         )
