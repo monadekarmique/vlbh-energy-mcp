@@ -148,11 +148,15 @@ async def preparer_historique(
     return {"type": "text", "text": texte, "cache_control": {"type": "ephemeral"}}, recents, len(blocs)
 
 
-def journaliser_usage(endpoint: str, mode: str, model: str, data: dict, n_msgs: int, n_blocs: int) -> None:
-    """Une ligne INFO par appel : ce que la console Anthropic sait, lisible dans Render."""
+def journaliser_usage(endpoint: str, mode: str, model: str, data: dict, n_msgs: int, n_blocs: int,
+                      qui: str = "∅", n_mois: int | None = None) -> None:
+    """Une ligne INFO par appel : ce que la console Anthropic sait, lisible dans
+    Render — plus QUI (8 premiers caractères de l'identifiant) et, pour
+    l'accompagnement, le rang de l'appel dans le mois."""
     u = (data or {}).get("usage") or {}
     log.info(
-        "usage endpoint=%s mode=%s model=%s in=%s cache_w=%s cache_r=%s out=%s msgs=%d blocs_resumes=%d",
-        endpoint, mode, model, u.get("input_tokens"), u.get("cache_creation_input_tokens"),
+        "usage endpoint=%s mode=%s model=%s qui=%s in=%s cache_w=%s cache_r=%s out=%s msgs=%d blocs_resumes=%d%s",
+        endpoint, mode, model, qui, u.get("input_tokens"), u.get("cache_creation_input_tokens"),
         u.get("cache_read_input_tokens"), u.get("output_tokens"), n_msgs, n_blocs,
+        f" n_mois={n_mois}" if n_mois is not None else "",
     )

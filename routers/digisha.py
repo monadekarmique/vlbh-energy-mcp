@@ -13,10 +13,13 @@ Routage modèle (DEC Patrick 2026-06-12) :
 """
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
+import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -237,6 +240,41 @@ if not log.handlers:  # uvicorn ne touche pas au root logger : sans ceci, rien s
     log.setLevel(logging.INFO)
     log.propagate = False
 
+
+def _role_de_cle(cle: str) -> str:
+    """Rôle porté par une clé Supabase, sans jamais l'afficher : JWT hérité
+    (claim `role`) ou nouvelle clé `sb_secret_…` / `sb_publishable_…`."""
+    if not cle:
+        return "ABSENTE"
+    if cle.startswith("sb_secret_"):
+        return "sb_secret (serveur)"
+    if cle.startswith("sb_publishable_"):
+        return "sb_publishable (PAS une clé serveur)"
+    try:
+        payload = cle.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return str(json.loads(base64.urlsafe_b64decode(payload)).get("role", "?"))
+    except Exception:
+        return "illisible"
+
+
+def journaliser_env() -> None:
+    """Une ligne au démarrage : les variables DiGiSha sont-elles là, et la clé
+    est-elle bien une clé serveur ? (Réponse au journal muet du 30.08 — sans
+    accès aux valeurs, qui ne sortent jamais.)"""
+    url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    projet = re.sub(r"^https?://([a-z0-9]+)\..*$", r"\1", url) if url else "ABSENTE"
+    role = _role_de_cle(os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", ""))
+    ok = bool(url) and role in ("service_role", "sb_secret (serveur)")
+    (log.info if ok else log.warning)(
+        "env DiGiSha : DIGISHA_SUPABASE_URL=%s · DIGISHA_SUPABASE_SERVICE_KEY rôle=%s · ANTHROPIC_API_KEY=%s%s",
+        projet, role, "présente" if os.environ.get("ANTHROPIC_API_KEY") else "ABSENTE",
+        "" if ok else " — le journal digisha_chat_log et le compteur Profondeur ne peuvent pas écrire",
+    )
+
+
+journaliser_env()
+
 # ── Garde d'appel — durcissement 2026-08-21 (audit sécurité 5 apps Priv) ─────
 # `X-DigiSha-Token` est un secret PARTAGÉ, embarqué en clair dans six binaires
 # publiés : `strings` sur une IPA suffit à le lire. Il n'établit donc RIEN sur
@@ -420,27 +458,41 @@ ACCOMPAGNEMENT_MODEL_PROFONDEUR = "claude-opus-4-8"
 PROFONDEUR_FAIR_USE = 500
 
 
-async def _monthly_accompagnement_count(svlbh_id: str) -> int:
+_usage_mem: dict[tuple[str, str], int] = {}   # (svlbh_id, 'AAAA-MM') → n, secours si la base ne répond pas
+
+
+async def _compter_accompagnement(svlbh_id: str) -> int:
+    """Appels /accompagnement de cette praticienne ce mois-ci, CET APPEL COMPRIS.
+
+    Compté en base (`digisha_usage_incr`, table `digisha_usage_mensuel`) — hors
+    journal, donc indépendant du consentement : avant le 09.09.2026 le garde-fou
+    Profondeur se comptait dans `digisha_chat_log`, où une praticienne qui a coupé
+    le consentement n'écrit rien, et n'était donc jamais ramenée sur sonnet
+    (DEC Patrick 09.09). En mémoire du process si la base ne répond pas."""
+    mois = datetime.now(timezone.utc).strftime("%Y-%m")
+    for k in [k for k in _usage_mem if k[1] != mois]:
+        _usage_mem.pop(k, None)
+    cle = (svlbh_id, mois)
+    _usage_mem[cle] = _usage_mem.get(cle, 0) + 1
+    n_mem = _usage_mem[cle]
     supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
     supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
-    if not supa_url or not supa_key or not svlbh_id:
-        return 0
-    from datetime import datetime, timezone
-    month_start = datetime.now(timezone.utc).strftime("%Y-%m-01T00:00:00Z")
+    if not supa_url or not supa_key:
+        return n_mem
     try:
-        client = _http()
-        r = await client.get(
-            f"{supa_url}/rest/v1/digisha_chat_log",
-            params={"svlbh_id": f"eq.{svlbh_id}", "mode": "eq.accompagnement",
-                    "created_at": f"gte.{month_start}", "select": "id"},
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/digisha_usage_incr",
+            json={"p_svlbh": svlbh_id, "p_mois": mois},
             headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
-                     "Prefer": "count=exact", "Range": "0-0"},
+                     "Content-Type": "application/json"},
             timeout=10,
         )
-        cr = r.headers.get("content-range", "")
-        return int(cr.split("/")[-1]) if "/" in cr and cr.split("/")[-1].isdigit() else 0
-    except Exception:
-        return 0
+        if r.status_code == 200:
+            return max(int(r.json()), n_mem)
+        log.warning("digisha_usage_incr refusé : HTTP %s %s", r.status_code, r.text[:200])
+    except Exception as exc:
+        log.warning("digisha_usage_incr impossible : %r", exc)
+    return n_mem
 
 
 def _cache_history(messages: list[dict]) -> list[dict]:
@@ -674,7 +726,7 @@ async def digisha_chat(
     x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
     authorization: str | None = Header(None),
 ) -> ChatResponse:
-    await authorize_caller(request, x_digisha_token, authorization)
+    caller_uid = await authorize_caller(request, x_digisha_token, authorization)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -786,7 +838,8 @@ async def digisha_chat(
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
         )
     data = resp.json()
-    journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs)
+    journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs,
+                      qui=(caller_uid or "anon")[:8])
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
@@ -873,10 +926,11 @@ async def digisha_accompagnement(
     # Tier : Profondeur (opus, fair-use 150/mois) sinon inclus (sonnet). Au-delà
     # du fair-use → retour doux sur sonnet, jamais de coupure.
     model = ACCOMPAGNEMENT_MODEL_INCLUS
-    if ident and ident.get("profondeur") and ident.get("svlbh_id"):
-        used = await _monthly_accompagnement_count(str(ident["svlbh_id"]))
-        if used < PROFONDEUR_FAIR_USE:
-            model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
+    used = 0
+    if ident and ident.get("svlbh_id"):
+        used = await _compter_accompagnement(str(ident["svlbh_id"]))
+    if ident and ident.get("profondeur") and ident.get("svlbh_id") and used <= PROFONDEUR_FAIR_USE:
+        model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
     raw_messages = [t.model_dump() for t in body.messages]
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     system_blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
@@ -908,7 +962,9 @@ async def digisha_accompagnement(
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
         )
     data = resp.json()
-    journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs)
+    journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs,
+                      qui=(str(ident["svlbh_id"])[:8] if ident and ident.get("svlbh_id") else "∅"),
+                      n_mois=used)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
