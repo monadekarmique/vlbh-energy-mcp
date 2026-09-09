@@ -49,14 +49,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16.2
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
-
+      # Xcode par défaut de l'image : épingler Xcode_16.2 sur macos-15 échouait
+      # depuis le 07.04.2026 (« iOS 18.2 is not installed » — le runtime du
+      # simulateur n'est plus livré avec l'image). Destination générique : pas
+      # de nom d'appareil ni de version d'OS à maintenir.
       - name: Build for iOS Simulator
         run: |
           xcodebuild build \
             -scheme VLBHEnergyKit \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation
 
   lint:
