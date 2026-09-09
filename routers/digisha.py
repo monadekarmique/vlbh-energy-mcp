@@ -664,16 +664,37 @@ async def fetch_passages_du_fil(
     return r.json() or []
 
 
+FIL_SECTION_ENTIERE_MAX = 3_000    # au-delà, on sert l'extrait ts_headline de la base
+FIL_CONTEXTE_MAX_CAR = 40_000       # ≈ 10k tokens par question
+
+
 def build_fil_context(passages: list[dict]) -> str:
     """Le contexte lu par DiGiSha : chaque passage porte SA date et SON titre, pour
-    que la réponse puisse être vérifiée à la source plutôt que crue sur parole."""
+    que la réponse puisse être vérifiée à la source plutôt que crue sur parole.
+
+    Mesuré le 09.09.2026 : 12 sections entières du fil d'Anne = ~139 000 tokens
+    écrits en cache par question (0,52 USD), jamais relus puisque chaque question
+    choisit d'autres sections — c'était le coût du 7.9. Une section courte passe
+    entière ; une longue passe par son extrait centré sur les mots de la question
+    (`chercher_dans_le_fil.extrait`) ; le tout est plafonné."""
     if not passages:
         return "AUCUN PASSAGE TROUVÉ dans le fil pour cette question."
-    morceaux = []
+    morceaux, total = [], 0
     for p in passages:
+        corps = p.get("corps") or ""
+        extrait = (p.get("extrait") or "").strip()
+        en_extrait = len(corps) > FIL_SECTION_ENTIERE_MAX and bool(extrait)
+        texte = extrait if en_extrait else corps
+        reste = FIL_CONTEXTE_MAX_CAR - total
+        if reste <= 0:
+            break
+        if len(texte) > reste:
+            texte = texte[:reste] + " […]"
         morceaux.append(
-            f"### {p.get('jour','?')} — {p.get('titre') or 'sans titre'}\n{p.get('corps','')}"
+            f"### {p.get('jour','?')} — {p.get('titre') or 'sans titre'}"
+            f"{' (extrait)' if en_extrait else ''}\n{texte}"
         )
+        total += len(texte)
     return "\n\n".join(morceaux)
 
 
@@ -759,6 +780,7 @@ async def digisha_chat(
     raw_messages = [t.model_dump() for t in body.messages]
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     resume_blocks = [resume_block] if resume_block else []
+    usage_extra = ""
     if body.mode == "fil":
         # Question sur le fil d'une consultante (DEC Patrick 22.08.2026).
         if not body.fil_consultante_id:
@@ -770,10 +792,12 @@ async def digisha_chat(
         passages = await fetch_passages_du_fil(
             body.fil_consultante_id, question, authorization
         )
+        contexte_fil = build_fil_context(passages)
+        usage_extra = f" fil_sections={len(passages)} fil_car={len(contexte_fil)}"
         system_blocks = [
             {"type": "text", "text": base},
             {"type": "text", "text": FIL_CADRE},
-            {"type": "text", "text": "## Passages du fil\n\n" + build_fil_context(passages)},
+            {"type": "text", "text": "## Passages du fil\n\n" + contexte_fil},
         ] + resume_blocks
         payload = {
             "model": model,
@@ -839,7 +863,7 @@ async def digisha_chat(
         )
     data = resp.json()
     journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs,
-                      qui=(caller_uid or "anon")[:8])
+                      qui=(caller_uid or "anon")[:8], extra=usage_extra)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(

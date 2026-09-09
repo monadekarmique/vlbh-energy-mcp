@@ -149,7 +149,7 @@ async def preparer_historique(
 
 
 def journaliser_usage(endpoint: str, mode: str, model: str, data: dict, n_msgs: int, n_blocs: int,
-                      qui: str = "∅", n_mois: int | None = None) -> None:
+                      qui: str = "∅", n_mois: int | None = None, extra: str = "") -> None:
     """Une ligne INFO par appel : ce que la console Anthropic sait, lisible dans
     Render — plus QUI (8 premiers caractères de l'identifiant) et, pour
     l'accompagnement, le rang de l'appel dans le mois."""
@@ -158,5 +158,5 @@ def journaliser_usage(endpoint: str, mode: str, model: str, data: dict, n_msgs: 
         "usage endpoint=%s mode=%s model=%s qui=%s in=%s cache_w=%s cache_r=%s out=%s msgs=%d blocs_resumes=%d%s",
         endpoint, mode, model, qui, u.get("input_tokens"), u.get("cache_creation_input_tokens"),
         u.get("cache_read_input_tokens"), u.get("output_tokens"), n_msgs, n_blocs,
-        f" n_mois={n_mois}" if n_mois is not None else "",
+        (f" n_mois={n_mois}" if n_mois is not None else "") + extra,
     )

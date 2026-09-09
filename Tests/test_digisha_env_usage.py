@@ -63,3 +63,17 @@ def test_compteur_base_refusee_retombe_en_memoire(monkeypatch):
 
     d._http_client = httpx.AsyncClient(transport=httpx.MockTransport(refus))
     assert asyncio.run(d._compter_accompagnement("y")) == 1
+
+
+def test_fil_context_extrait_et_plafond():
+    long_corps = "x" * 9_000
+    passages = [
+        {"jour": "2026-09-01", "titre": "court", "corps": "petit passage", "extrait": "petit"},
+        {"jour": "2026-09-02", "titre": "long", "corps": long_corps, "extrait": "*mot* clé […] suite"},
+    ] + [{"jour": f"2026-09-{i:02d}", "titre": "bloc", "corps": "y" * 9_000, "extrait": "z" * 2_000} for i in range(3, 40)]
+    ctx = d.build_fil_context(passages)
+    assert "petit passage" in ctx and "(extrait)" not in ctx.split("### 2026-09-02")[0]
+    assert "### 2026-09-02 — long (extrait)\n*mot* clé" in ctx
+    assert "x" * 100 not in ctx, "une section longue ne passe jamais entière"
+    assert len(ctx) < d.FIL_CONTEXTE_MAX_CAR + 5_000, "le contexte est plafonné"
+    assert d.build_fil_context([]).startswith("AUCUN PASSAGE")
