@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     app.state.make_service = MakeService(push_url=push_url, pull_url=pull_url)
     yield
     await app.state.make_service.close()
+    await digisha.close_http()
 
 
 app = FastAPI(

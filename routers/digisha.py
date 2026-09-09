@@ -31,6 +31,30 @@ CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
 FCB_CH11 = json.loads((DATA_DIR / "fcb_chapitre11.json").read_text())
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+
+# ── Client HTTP partagé ──────────────────────────────────────────────────────
+# Mesuré sur Render le 09.09.2026 : un `httpx.AsyncClient()` par appel sortant
+# reconstruit à chaque fois son contexte SSL (trousseau de certificats compris),
+# et ces allocations OpenSSL ne sont jamais rendues au système — +4 MB de RSS
+# par requête DiGiSha, escalier qui ne redescend pas, OOM du starter 512 MB
+# après ~100 requêtes. Un seul client par process = un seul contexte SSL.
+# Les délais restent ceux de chaque appel (`timeout=…` sur la requête).
+_http_client: httpx.AsyncClient | None = None
+
+
+def _http() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=10)  # défaut = l'ancien délai Supabase
+    return _http_client
+
+
+async def close_http() -> None:
+    """Ferme le client partagé (arrêt propre du process — lifespan)."""
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        await _http_client.aclose()
+    _http_client = None
 # Version servie si la table digisha_prompt est injoignable (le fetch renvoie la vraie).
 FALLBACK_VERSION = "digisha-v2.1-radiesthesie-defunts (router fallback)"
 # ST2 → sonnet ; ST3-ST4/ST5/ST6-ST7 → fable. Legacy "membre"/"praticien" acceptés.
@@ -168,16 +192,17 @@ async def fetch_prompt() -> dict | None:
     if not supa_url or not supa_key:
         return None
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
-                f"{supa_url}/rest/v1/digisha_prompt",
-                params={
-                    "active": "eq.true",
-                    "select": "version,core,accompagnement_frame,st3,tuteur_frame",
-                    "limit": "1",
-                },
-                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
-            )
+        client = _http()
+        resp = await client.get(
+            f"{supa_url}/rest/v1/digisha_prompt",
+            params={
+                "active": "eq.true",
+                "select": "version,core,accompagnement_frame,st3,tuteur_frame",
+                "limit": "1",
+            },
+            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+            timeout=10,
+        )
         if resp.status_code == 200:
             rows = resp.json()
             if rows and rows[0].get("core"):
@@ -250,14 +275,15 @@ async def resolve_uid(authorization: str | None) -> str | None:
     if not supa_url or not supa_key:
         return None
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                f"{supa_url}/auth/v1/user",
-                headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
-            )
-            if r.status_code != 200:
-                return None
-            return r.json().get("id")
+        client = _http()
+        r = await client.get(
+            f"{supa_url}/auth/v1/user",
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            return None
+        return r.json().get("id")
     except Exception:
         return None
 
@@ -307,45 +333,46 @@ async def gate_subscription(authorization: str | None) -> dict | None:
     if not supa_url or not supa_key:
         return
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            ur = await client.get(
-                f"{supa_url}/auth/v1/user",
-                headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
-            )
-            if ur.status_code != 200:
-                return
-            uid = ur.json().get("id")
-            if not uid:
-                return
-            profile_select = "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until"
-            pr = await client.get(
-                f"{supa_url}/rest/v1/praticienne_profile",
-                params={"supabase_user_id": f"eq.{uid}",
-                        "select": profile_select,
-                        "limit": 1},
+        client = _http()
+        ur = await client.get(
+            f"{supa_url}/auth/v1/user",
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        if ur.status_code != 200:
+            return
+        uid = ur.json().get("id")
+        if not uid:
+            return
+        profile_select = "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until"
+        pr = await client.get(
+            f"{supa_url}/rest/v1/praticienne_profile",
+            params={"supabase_user_id": f"eq.{uid}",
+                    "select": profile_select,
+                    "limit": 1},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
+        )
+        rows = pr.json() if pr.status_code == 200 else []
+        if not rows:
+            # Doctrine #11 : multi-comptes → 1 svlbh_id canonique. Si le slot
+            # direct ne matche pas, résoudre via praticienne_user_alias pour
+            # ne pas perdre l'exemption ST5+/profondeur des comptes secondaires.
+            al = await client.get(
+                f"{supa_url}/rest/v1/praticienne_user_alias",
+                params={"supabase_user_id": f"eq.{uid}", "select": "svlbh_id", "limit": 1},
                 headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
             )
-            rows = pr.json() if pr.status_code == 200 else []
-            if not rows:
-                # Doctrine #11 : multi-comptes → 1 svlbh_id canonique. Si le slot
-                # direct ne matche pas, résoudre via praticienne_user_alias pour
-                # ne pas perdre l'exemption ST5+/profondeur des comptes secondaires.
-                al = await client.get(
-                    f"{supa_url}/rest/v1/praticienne_user_alias",
-                    params={"supabase_user_id": f"eq.{uid}", "select": "svlbh_id", "limit": 1},
+            alias_rows = al.json() if al.status_code == 200 else []
+            alias_svlbh = alias_rows[0].get("svlbh_id") if alias_rows else None
+            if alias_svlbh:
+                pr2 = await client.get(
+                    f"{supa_url}/rest/v1/praticienne_profile",
+                    params={"svlbh_id": f"eq.{alias_svlbh}",
+                            "select": profile_select,
+                            "limit": 1},
                     headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
                 )
-                alias_rows = al.json() if al.status_code == 200 else []
-                alias_svlbh = alias_rows[0].get("svlbh_id") if alias_rows else None
-                if alias_svlbh:
-                    pr2 = await client.get(
-                        f"{supa_url}/rest/v1/praticienne_profile",
-                        params={"svlbh_id": f"eq.{alias_svlbh}",
-                                "select": profile_select,
-                                "limit": 1},
-                        headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
-                    )
-                    rows = pr2.json() if pr2.status_code == 200 else []
+                rows = pr2.json() if pr2.status_code == 200 else []
     except Exception:
         return None
     status_val = rows[0].get("pro_status") if rows else None
@@ -394,14 +421,15 @@ async def _monthly_accompagnement_count(svlbh_id: str) -> int:
     from datetime import datetime, timezone
     month_start = datetime.now(timezone.utc).strftime("%Y-%m-01T00:00:00Z")
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(
-                f"{supa_url}/rest/v1/digisha_chat_log",
-                params={"svlbh_id": f"eq.{svlbh_id}", "mode": "eq.accompagnement",
-                        "created_at": f"gte.{month_start}", "select": "id"},
-                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
-                         "Prefer": "count=exact", "Range": "0-0"},
-            )
+        client = _http()
+        r = await client.get(
+            f"{supa_url}/rest/v1/digisha_chat_log",
+            params={"svlbh_id": f"eq.{svlbh_id}", "mode": "eq.accompagnement",
+                    "created_at": f"gte.{month_start}", "select": "id"},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
+                     "Prefer": "count=exact", "Range": "0-0"},
+            timeout=10,
+        )
         cr = r.headers.get("content-range", "")
         return int(cr.split("/")[-1]) if "/" in cr and cr.split("/")[-1].isdigit() else 0
     except Exception:
@@ -467,30 +495,34 @@ async def log_exchange(source: str, mode: str, user_message: str, reply: str,
     supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
     supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
     if not supa_url or not supa_key:
+        log.warning("digisha_chat_log non écrit : DIGISHA_SUPABASE_URL/_SERVICE_KEY absents")
         return
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(
-                f"{supa_url}/rest/v1/digisha_chat_log",
-                json={
-                    "source": source,
-                    "mode": mode,
-                    "user_message": user_message,
-                    "assistant_reply": reply,
-                    "model": model,
-                    "etat": etat,
-                    "prompt_version": prompt_version,
-                    **({"svlbh_id": svlbh_id} if svlbh_id else {}),
-                    **({"supabase_user_id": supabase_user_id} if supabase_user_id else {}),
-                },
-                headers={
-                    "apikey": supa_key,
-                    "Authorization": f"Bearer {supa_key}",
-                    "Prefer": "return=minimal",
-                },
-            )
-    except Exception:
-        pass
+        client = _http()
+        r = await client.post(
+            f"{supa_url}/rest/v1/digisha_chat_log",
+            json={
+                "source": source,
+                "mode": mode,
+                "user_message": user_message,
+                "assistant_reply": reply,
+                "model": model,
+                "etat": etat,
+                "prompt_version": prompt_version,
+                **({"svlbh_id": svlbh_id} if svlbh_id else {}),
+                **({"supabase_user_id": supabase_user_id} if supabase_user_id else {}),
+            },
+            headers={
+                "apikey": supa_key,
+                "Authorization": f"Bearer {supa_key}",
+                "Prefer": "return=minimal",
+            },
+            timeout=10,
+        )
+        if r.status_code >= 300:
+            log.warning("digisha_chat_log non écrit : HTTP %s %s", r.status_code, r.text[:200])
+    except Exception as exc:  # best effort, jamais bloquant — mais jamais muet
+        log.warning("digisha_chat_log non écrit : %r", exc)
 
 
 class ChatResponse(BaseModel):
@@ -517,12 +549,13 @@ async def fetch_proche_parcours(consultante_id: str, authorization: str | None) 
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Supabase non configuré côté DiGiSha",
         )
-    async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get(
-            f"{supa_url}/rest/v1/consultante_record",
-            params={"consultante_id": f"eq.{consultante_id.lower()}", "select": "parcours"},
-            headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
-        )
+    client = _http()
+    r = await client.get(
+        f"{supa_url}/rest/v1/consultante_record",
+        params={"consultante_id": f"eq.{consultante_id.lower()}", "select": "parcours"},
+        headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+        timeout=10,
+    )
     rows = r.json() if r.status_code == 200 else []
     if not rows:
         raise HTTPException(
@@ -554,15 +587,16 @@ async def fetch_passages_du_fil(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Supabase non configuré côté DiGiSha",
         )
-    async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.post(
-            f"{supa_url}/rest/v1/rpc/chercher_dans_le_fil",
-            json={"p_consultante": consultante_id.lower(),
-                  "p_question": question,
-                  "p_limite": limite},
-            headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
-                     "Content-Type": "application/json"},
-        )
+    client = _http()
+    r = await client.post(
+        f"{supa_url}/rest/v1/rpc/chercher_dans_le_fil",
+        json={"p_consultante": consultante_id.lower(),
+              "p_question": question,
+              "p_limite": limite},
+        headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
+                 "Content-Type": "application/json"},
+        timeout=15,
+    )
     if r.status_code != 200:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -720,12 +754,13 @@ async def digisha_chat(
             "system": build_system(base, body.parcours, body.etat),
             "messages": _cache_history([t.model_dump() for t in body.messages]),
         }
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(
-            ANTHROPIC_URL,
-            json=payload,
-            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
-        )
+    client = _http()
+    resp = await client.post(
+        ANTHROPIC_URL,
+        json=payload,
+        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+        timeout=120,
+    )
     if resp.status_code != 200:
         low = resp.text.lower()
         if "credit" in low or "billing" in low:
@@ -773,11 +808,11 @@ async def digisha_compare(
     import asyncio
 
     async def ask(model: str) -> str:
-        async with httpx.AsyncClient(timeout=120) as client:
-            r = await client.post(ANTHROPIC_URL, json={
-                "model": model, "max_tokens": 2048, "system": system,
-                "messages": [{"role": "user", "content": body.message}],
-            }, headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"})
+        client = _http()
+        r = await client.post(ANTHROPIC_URL, json={
+            "model": model, "max_tokens": 2048, "system": system,
+            "messages": [{"role": "user", "content": body.message}],
+        }, headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"}, timeout=120)
         if r.status_code != 200:
             return f"[erreur {r.status_code}]"
         return "".join(b.get("text", "") for b in r.json().get("content", [])
@@ -835,12 +870,13 @@ async def digisha_accompagnement(
         "system": system,
         "messages": _cache_history([t.model_dump() for t in body.messages]),
     }
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(
-            ANTHROPIC_URL,
-            json=payload,
-            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
-        )
+    client = _http()
+    resp = await client.post(
+        ANTHROPIC_URL,
+        json=payload,
+        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+        timeout=120,
+    )
     if resp.status_code != 200:
         low = resp.text.lower()
         if "credit" in low or "billing" in low:
