@@ -25,6 +25,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from routers.digisha_formation_m1 import m1_system_block
+from routers.digisha_memoire import journaliser_usage, preparer_historique
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
@@ -229,6 +230,12 @@ def verify_digisha_token(x_digisha_token: str) -> None:
 
 
 log = logging.getLogger("digisha")
+if not log.handlers:  # uvicorn ne touche pas au root logger : sans ceci, rien sous WARNING ne sort
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(levelname)s: digisha — %(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
+    log.propagate = False
 
 # ── Garde d'appel — durcissement 2026-08-21 (audit sécurité 5 apps Priv) ─────
 # `X-DigiSha-Token` est un secret PARTAGÉ, embarqué en clair dans six binaires
@@ -695,6 +702,11 @@ async def digisha_chat(
             detail="La formation « Accompagner la libération de la dette "
                    "monadique » est en préparation — elle s'ouvre très bientôt. 🌙",
         )
+    # Historique : au-delà de 20 messages, les tours anciens sont résumés par
+    # blocs (cache) et seuls les derniers restent bruts — voir digisha_memoire.
+    raw_messages = [t.model_dump() for t in body.messages]
+    resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
+    resume_blocks = [resume_block] if resume_block else []
     if body.mode == "fil":
         # Question sur le fil d'une consultante (DEC Patrick 22.08.2026).
         if not body.fil_consultante_id:
@@ -710,12 +722,12 @@ async def digisha_chat(
             {"type": "text", "text": base},
             {"type": "text", "text": FIL_CADRE},
             {"type": "text", "text": "## Passages du fil\n\n" + build_fil_context(passages)},
-        ]
+        ] + resume_blocks
         payload = {
             "model": model,
             "max_tokens": 2048,
             "system": system_blocks,
-            "messages": _cache_history([t.model_dump() for t in body.messages]),
+            "messages": _cache_history(recents),
         }
     elif body.mode == "formation_m1":
         # Formation « Accompagner un proche » M1 : gating serveur des fenêtres
@@ -740,19 +752,19 @@ async def digisha_chat(
              "text": "## État du membre\n" + json.dumps(
                  {"parcours_accompagnante": body.parcours,
                   "parcours_proche": parcours_proche}, ensure_ascii=False)},
-        ]
+        ] + resume_blocks
         payload = {
             "model": model,
             "max_tokens": 2048,
             "system": system_blocks,
-            "messages": _cache_history([t.model_dump() for t in body.messages]),
+            "messages": _cache_history(recents),
         }
     else:
         payload = {
             "model": model,
             "max_tokens": 1024 if body.parcours in ST2_PARCOURS else 2048,
-            "system": build_system(base, body.parcours, body.etat),
-            "messages": _cache_history([t.model_dump() for t in body.messages]),
+            "system": build_system(base, body.parcours, body.etat) + resume_blocks,
+            "messages": _cache_history(recents),
         }
     client = _http()
     resp = await client.post(
@@ -774,6 +786,7 @@ async def digisha_chat(
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
         )
     data = resp.json()
+    journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
@@ -864,11 +877,16 @@ async def digisha_accompagnement(
         used = await _monthly_accompagnement_count(str(ident["svlbh_id"]))
         if used < PROFONDEUR_FAIR_USE:
             model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
+    raw_messages = [t.model_dump() for t in body.messages]
+    resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
+    system_blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    if resume_block:
+        system_blocks.append(resume_block)
     payload = {
         "model": model,
         "max_tokens": 2048,
-        "system": system,
-        "messages": _cache_history([t.model_dump() for t in body.messages]),
+        "system": system_blocks,
+        "messages": _cache_history(recents),
     }
     client = _http()
     resp = await client.post(
@@ -890,6 +908,7 @@ async def digisha_accompagnement(
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
         )
     data = resp.json()
+    journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
