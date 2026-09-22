@@ -584,6 +584,48 @@ async def log_exchange(source: str, mode: str, user_message: str, reply: str,
         log.warning("digisha_chat_log non écrit : %r", exc)
 
 
+async def journaliser_cout(source: str, mode: str, model: str, data: dict,
+                           svlbh_id: str | None = None,
+                           supabase_user_id: str | None = None) -> None:
+    """Coût réel par appel → RPC digisha_journaliser_cout (carte 4abea987, 22.09.2026).
+
+    La donnée existait déjà (data["usage"]) et partait dans un log.info jetable ;
+    ici elle devient une ligne durable. Le serveur n'applique AUCUN prix : le tarif
+    vit en base (digisha_tarif_modele), le calcul aussi — une seule source pour les
+    deux sites d'appel. Le sub du JWT n'est pas un svlbh_id : on le passe tel quel,
+    la RPC résout par l'alias canonique. Best effort, jamais bloquant, jamais muet.
+    Pas soumis à no_log : ce sont des compteurs, pas du contenu (même règle que
+    digisha_usage_incr)."""
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        log.warning("digisha_cout_appel non écrit : DIGISHA_SUPABASE_URL/_SERVICE_KEY absents")
+        return
+    u = (data or {}).get("usage") or {}
+    cache_1h = ((u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens")) or 0
+    try:
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/digisha_journaliser_cout",
+            json={
+                "p_source": source, "p_mode": mode, "p_model": model,
+                "p_input": u.get("input_tokens") or 0,
+                "p_cache_w": u.get("cache_creation_input_tokens") or 0,
+                "p_cache_w_1h": cache_1h,
+                "p_cache_r": u.get("cache_read_input_tokens") or 0,
+                "p_output": u.get("output_tokens") or 0,
+                "p_svlbh_id": svlbh_id,
+                "p_supabase_user_id": supabase_user_id,
+            },
+            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
+                     "Prefer": "return=minimal"},
+            timeout=10,
+        )
+        if r.status_code >= 300:
+            log.warning("digisha_cout_appel non écrit : HTTP %s %s", r.status_code, r.text[:200])
+    except Exception as exc:
+        log.warning("digisha_cout_appel non écrit : %r", exc)
+
+
 class ChatResponse(BaseModel):
     reply: str
     model: str
@@ -864,6 +906,7 @@ async def digisha_chat(
     data = resp.json()
     journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs,
                       qui=(caller_uid or "anon")[:8], extra=usage_extra)
+    await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
@@ -989,6 +1032,11 @@ async def digisha_accompagnement(
     journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs,
                       qui=(str(ident["svlbh_id"])[:8] if ident and ident.get("svlbh_id") else "∅"),
                       n_mois=used)
+    await journaliser_cout(
+        "render-accompagnement", "accompagnement", model, data,
+        svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
+        supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
+    )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if not body.no_log:
         await log_exchange(
