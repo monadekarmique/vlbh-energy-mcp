@@ -14,21 +14,26 @@ def p(session, jour, corps, titre="t"):
     return {"session_id": session, "jour": jour, "corps": corps, "titre": titre, "extrait": ""}
 
 
-def test_un_passage_trouve_par_les_deux_voies_monte_et_ne_sort_qu_une_fois():
+def test_entrelace_semantique_puis_lexical_et_un_doublon_ne_sort_qu_une_fois():
     lex = [p("s1", "2026-09-01", "A"), p("s2", "2026-09-02", "B")]
     sem = [p("s3", "2026-09-03", "C"), p("s2", "2026-09-02", "B")]
-    out = digisha.fusionner_passages(lex, sem)
-    corps = [x["corps"] for x in out]
-    assert corps.count("B") == 1
-    assert len(out) == 3
+    out = [x["corps"] for x in digisha.fusionner_passages(lex, sem)]
+    assert out == ["C", "A", "B"]          # rang 1 sémantique, rang 1 lexical, puis B une seule fois
 
 
-def test_tous_les_mois_passent_avant_les_suivants():
-    # douze passages de septembre bien classés, un seul d'avril tout en bas : avril doit rester dans la tête
+def test_le_premier_semantique_n_est_pas_noye_par_le_bruit_lexical():
+    # question sans les mots du fil : 40 passages lexicaux de bruit, la bonne section en tête du sémantique
+    lex = [p(f"l{i}", "2026-07-%02d" % (i % 28 + 1), f"bruit{i}") for i in range(40)]
+    sem = [p("vitrail", "2026-07-29", "La lampe en vitrail")] + [p(f"x{i}", "2026-06-01", f"s{i}") for i in range(39)]
+    assert digisha.fusionner_passages(lex, sem)[0]["corps"] == "La lampe en vitrail"
+
+
+def test_chaque_mois_entre_juste_apres_les_dix_premiers():
+    # douze passages de septembre bien classés, un seul d'avril tout en bas : avril passe 11e, pas 13e
     lex = [p(f"s{i}", "2026-09-%02d" % (i + 1), f"sept{i}") for i in range(12)] + [p("sa", "2026-04-10", "avril")]
     out = digisha.fusionner_passages(lex, [])
-    mois_tete = [x["jour"][:7] for x in out[:2]]
-    assert "2026-04" in mois_tete
+    assert out[0]["corps"] == "sept0"
+    assert out[digisha.FUSION_TETE]["jour"].startswith("2026-04")
 
 
 def test_sans_voie_semantique_le_lexical_reste_intact():

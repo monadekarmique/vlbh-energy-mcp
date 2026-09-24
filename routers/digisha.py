@@ -743,30 +743,44 @@ async def fetch_passages_semantiques(
     return r.json() or []
 
 
-def fusionner_passages(lexicaux: list[dict], semantiques: list[dict] | None, k: int = 60) -> list[dict]:
-    """Fusion lexicale + sémantique, dédoublonnée, puis TOUS LES MOIS d'abord.
+FUSION_TETE = 10   # les plus pertinents d'abord ; la couverture des mois vient juste après
 
-    Rang réciproque (RRF, k=60) : un passage trouvé par les deux voies monte. Clé commune : la séance et
-    l'empreinte du corps (la voie lexicale ne rend ni attachment_id ni ordre). Quand un passage vient des
-    deux, on garde la version de la voie où il est le mieux classé (son extrait est centré sur ce qui l'a fait
-    remonter).
-    Couverture des mois (demande d'Anne du 16.09, fusionnée dans la carte le 23.09) : le meilleur passage de
-    chaque mois passe avant les suivants — sinon douze passages d'août-septembre masquaient avril."""
-    score: dict[tuple, float] = {}
-    meilleur: dict[tuple, tuple[int, dict]] = {}
-    for liste in (lexicaux or [], semantiques or []):
-        for rang, p in enumerate(liste):
-            cle = (p.get("session_id"), hashlib.md5((p.get("corps") or "").encode()).hexdigest())
-            score[cle] = score.get(cle, 0.0) + 1.0 / (k + rang + 1)
-            if cle not in meilleur or rang < meilleur[cle][0]:
-                meilleur[cle] = (rang, p)
-    ordre = sorted(score, key=lambda c: -score[c])
-    vus, tete, suite = set(), [], []
-    for cle in ordre:
-        mois = str(meilleur[cle][1].get("jour") or "")[:7]
-        (suite if mois in vus else tete).append(cle)
-        vus.add(mois)
-    return [meilleur[c][1] for c in tete + suite]
+
+def fusionner_passages(lexicaux: list[dict], semantiques: list[dict] | None) -> list[dict]:
+    """Fusion lexicale + sémantique : ENTRELACÉE, dédoublonnée, puis tous les mois.
+
+    1. À chaque rang, le passage sémantique puis le lexical (clé commune : la séance et l'empreinte du corps,
+       la voie lexicale ne rendant ni attachment_id ni ordre). Un doublon garde sa première apparition.
+    2. Les FUSION_TETE premiers restent en tête ; ensuite, le meilleur passage de chaque mois encore absent
+       (demande d'Anne du 16.09 : douze passages d'août-septembre masquaient avril) ; puis le reste.
+
+    Choisi sur MESURE le 24.09 (fil d'Anne, 147 sections, six questions sans aucun mot du titre visé) :
+    entrelacer fait entrer la bonne section dans le contexte réel (plafond FIL_CONTEXTE_MAX_CAR) 5 fois sur 6,
+    dont 2 au rang 1 ; le rang réciproque (RRF, k=60) 3 fois sur 6 — le bruit lexical d'une question sans les
+    mots du fil y noyait le premier résultat sémantique. « Tous les mois d'abord » repoussait lui aussi le
+    meilleur passage. La question « David » couvre 6 mois dans les deux cas (3 avant ce lot).
+    Sans voie sémantique (None ou []), l'ordre lexical est gardé, couverture des mois comprise."""
+    vus: set[tuple] = set()
+    ordre: list[dict] = []
+    sem, lex = semantiques or [], lexicaux or []
+    for i in range(max(len(sem), len(lex))):
+        for liste in (sem, lex):
+            if i < len(liste):
+                p = liste[i]
+                cle = (p.get("session_id"), hashlib.md5((p.get("corps") or "").encode()).hexdigest())
+                if cle not in vus:
+                    vus.add(cle)
+                    ordre.append(p)
+    tete = ordre[:FUSION_TETE]
+    mois_vus = {str(p.get("jour") or "")[:7] for p in tete}
+    couverture = []
+    for p in ordre[FUSION_TETE:]:
+        mois = str(p.get("jour") or "")[:7]
+        if mois not in mois_vus:
+            mois_vus.add(mois)
+            couverture.append(p)
+    pris = {id(p) for p in couverture}
+    return tete + couverture + [p for p in ordre[FUSION_TETE:] if id(p) not in pris]
 
 
 async def passages_du_fil(consultante_id: str, question: str, authorization: str | None
