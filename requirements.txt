@@ -17,3 +17,7 @@ weasyprint>=62
 # --- tests ---
 pytest>=8.0
 pytest-asyncio>=0.24
+# Recherche sémantique du fil (carte b8d68119) — mêmes versions que le Mac (~/svlbh-exports/.venv-embeddings)
+onnxruntime==1.23.2
+sentencepiece==0.2.2
+numpy>=1.26,<3

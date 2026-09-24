@@ -178,5 +178,6 @@ Les 6 routers existants (slm, sla, session, lead, tore, billing) et leurs modele
 
 - Geo-sharding UE/CA (v0.1 = CH monorégion uniquement)
 - pgvector embeddings : NON v0.1 (évite réidentification indirecte)
+  - ⚠️ Portée : cette ligne vise VIFA v0.1 (symboles). Les FILS des mentorées, eux, ont des embeddings : DEC Patrick 15.09.2026 « oui nous avons besoin de embeddings », modèle nommé le 24.09 (paraphrase-multilingual-MiniLM-L12-v2). Calcul sur le Mac de Patrick, jamais chez un tiers ; table public.fil_embedding sous la RLS des fils ; carte Kanban b8d68119. Voir routers/digisha_semantique.py.
 - hDOM : ajout planifié v0.3
 - Sephiroth : hors scope sans date

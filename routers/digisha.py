@@ -13,7 +13,9 @@ Routage modèle (DEC Patrick 2026-06-12) :
 """
 from __future__ import annotations
 
+import asyncio
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -27,6 +29,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
 
@@ -706,6 +709,78 @@ async def fetch_passages_du_fil(
     return r.json() or []
 
 
+async def fetch_passages_semantiques(
+    consultante_id: str, question: str, authorization: str | None, limite: int = 40
+) -> list[dict] | None:
+    """Passages les plus proches EN SENS de la question (carte b8d68119), même RLS que la voie lexicale.
+
+    None = la voie sémantique n'a pas pu servir (modèle absent, RPC en erreur) : l'appelant garde le
+    lexical seul. Une liste vide, elle, veut dire « rien de proche » — ce n'est pas la même chose."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    vecteur = await digisha_semantique.vecteur_question(question)
+    if vecteur is None:
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return None
+    try:
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/chercher_dans_le_fil_semantique",
+            json={"p_consultante": consultante_id.lower(), "p_vecteur": vecteur, "p_limite": limite},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
+                     "Content-Type": "application/json"},
+            timeout=15,
+        )
+    except Exception as exc:
+        log.warning("digisha — recherche sémantique en erreur, lexicale seule : %r", exc)
+        return None
+    if r.status_code != 200:
+        log.warning("digisha — recherche sémantique HTTP %s, lexicale seule : %s", r.status_code, r.text[:200])
+        return None
+    return r.json() or []
+
+
+def fusionner_passages(lexicaux: list[dict], semantiques: list[dict] | None, k: int = 60) -> list[dict]:
+    """Fusion lexicale + sémantique, dédoublonnée, puis TOUS LES MOIS d'abord.
+
+    Rang réciproque (RRF, k=60) : un passage trouvé par les deux voies monte. Clé commune : la séance et
+    l'empreinte du corps (la voie lexicale ne rend ni attachment_id ni ordre). Quand un passage vient des
+    deux, on garde la version de la voie où il est le mieux classé (son extrait est centré sur ce qui l'a fait
+    remonter).
+    Couverture des mois (demande d'Anne du 16.09, fusionnée dans la carte le 23.09) : le meilleur passage de
+    chaque mois passe avant les suivants — sinon douze passages d'août-septembre masquaient avril."""
+    score: dict[tuple, float] = {}
+    meilleur: dict[tuple, tuple[int, dict]] = {}
+    for liste in (lexicaux or [], semantiques or []):
+        for rang, p in enumerate(liste):
+            cle = (p.get("session_id"), hashlib.md5((p.get("corps") or "").encode()).hexdigest())
+            score[cle] = score.get(cle, 0.0) + 1.0 / (k + rang + 1)
+            if cle not in meilleur or rang < meilleur[cle][0]:
+                meilleur[cle] = (rang, p)
+    ordre = sorted(score, key=lambda c: -score[c])
+    vus, tete, suite = set(), [], []
+    for cle in ordre:
+        mois = str(meilleur[cle][1].get("jour") or "")[:7]
+        (suite if mois in vus else tete).append(cle)
+        vus.add(mois)
+    return [meilleur[c][1] for c in tete + suite]
+
+
+async def passages_du_fil(consultante_id: str, question: str, authorization: str | None
+                          ) -> tuple[list[dict], str]:
+    """Les deux voies en parallèle, fusionnées. Rend (passages, mesure pour la ligne d'usage)."""
+    lexicaux, semantiques = await asyncio.gather(
+        fetch_passages_du_fil(consultante_id, question, authorization, limite=40),
+        fetch_passages_semantiques(consultante_id, question, authorization, limite=40),
+    )
+    passages = fusionner_passages(lexicaux, semantiques)
+    mesure = f" fil_lex={len(lexicaux)} fil_sem={'∅' if semantiques is None else len(semantiques)}"
+    return passages, mesure
+
+
 FIL_SECTION_ENTIERE_MAX = 3_000    # au-delà, on sert l'extrait ts_headline de la base
 FIL_CONTEXTE_MAX_CAR = 40_000       # ≈ 10k tokens par question
 
@@ -831,11 +906,9 @@ async def digisha_chat(
                 detail="fil_consultante_id requis en mode fil",
             )
         question = body.messages[-1].content if body.messages else ""
-        passages = await fetch_passages_du_fil(
-            body.fil_consultante_id, question, authorization
-        )
+        passages, mesure_fil = await passages_du_fil(body.fil_consultante_id, question, authorization)
         contexte_fil = build_fil_context(passages)
-        usage_extra = f" fil_sections={len(passages)} fil_car={len(contexte_fil)}"
+        usage_extra = f" fil_sections={len(passages)} fil_car={len(contexte_fil)}{mesure_fil}"
         system_blocks = [
             {"type": "text", "text": base},
             {"type": "text", "text": FIL_CADRE},
@@ -961,6 +1034,16 @@ async def digisha_compare(
 class AccompagnementRequest(BaseModel):
     messages: list[ChatTurn] = Field(min_length=1, max_length=60)
     no_log: bool = False        # opt-out praticienne (DEC Patrick 2026-06-13)
+    # Mentorée en contexte (carte b8d68119, point 4). MÊME nom que ChatRequest, le proxy priv-web, svlbh-core
+    # et svlbh-core-android : pas de seconde orthographe. Absent = accompagnement inchangé.
+    fil_consultante_id: str | None = None
+
+
+FIL_CADRE_ACCOMPAGNEMENT = """## Passages du fil de la personne dont on parle
+
+Ces passages viennent du fil d'échanges de la personne accompagnée dont la praticienne te parle, choisis pour
+leur proximité avec son dernier message. Appuie-toi dessus quand c'est pertinent, en donnant la date
+(« le 12.07… »). Ce qui n'y est pas, tu ne le sais pas : tu n'inventes jamais un souvenir."""
 
 
 @router.post("/accompagnement", response_model=ChatResponse)
@@ -1003,6 +1086,12 @@ async def digisha_accompagnement(
     system_blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
     if resume_block:
         system_blocks.append(resume_block)
+    mesure_fil = ""
+    if body.fil_consultante_id:
+        question = body.messages[-1].content if body.messages else ""
+        passages, mesure_fil = await passages_du_fil(body.fil_consultante_id, question, authorization)
+        system_blocks.append({"type": "text",
+                              "text": FIL_CADRE_ACCOMPAGNEMENT + "\n\n" + build_fil_context(passages)})
     payload = {
         "model": model,
         "max_tokens": 2048,
@@ -1031,14 +1120,15 @@ async def digisha_accompagnement(
     data = resp.json()
     journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs,
                       qui=(str(ident["svlbh_id"])[:8] if ident and ident.get("svlbh_id") else "∅"),
-                      n_mois=used)
+                      n_mois=used, extra=mesure_fil)
     await journaliser_cout(
         "render-accompagnement", "accompagnement", model, data,
         svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
         supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
-    if not body.no_log:
+    # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
+    if not body.no_log and not body.fil_consultante_id:
         await log_exchange(
             "render-accompagnement", "accompagnement",
             body.messages[-1].content if body.messages else "", text,

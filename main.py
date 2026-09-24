@@ -3,6 +3,7 @@
 All routers consolidated on main.
 """
 from __future__ import annotations
+import asyncio
 import os
 import time
 from contextlib import asynccontextmanager
@@ -14,6 +15,7 @@ from routers import auth
 from routers import invite
 from routers import tarif590
 from routers import digisha
+from routers import digisha_semantique
 from routers import comms
 from services.make_service import MakeService
 from fastapi_mcp import FastApiMCP
@@ -24,6 +26,8 @@ async def lifespan(app: FastAPI):
     push_url = os.environ["MAKE_WEBHOOK_PUSH_URL"]
     pull_url = os.environ["MAKE_WEBHOOK_PULL_URL"]
     app.state.make_service = MakeService(push_url=push_url, pull_url=pull_url)
+    # Recherche sémantique du fil (carte b8d68119) : chargée en arrière-plan, ne retarde pas le démarrage.
+    asyncio.create_task(digisha_semantique.precharger())
     yield
     await app.state.make_service.close()
     await digisha.close_http()
