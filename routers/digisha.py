@@ -1060,6 +1060,59 @@ leur proximité avec son dernier message. Appuie-toi dessus quand c'est pertinen
 (« le 12.07… »). Ce qui n'y est pas, tu ne le sais pas : tu n'inventes jamais un souvenir."""
 
 
+# ── Banque Questions/Réponses (carte 564cd650, 05.10.2026) ────────────────────────────────────────────────────
+# Les questions qu'Anne ou Patrick ont décidé d'AFFICHER, cherchées EN BASE (`qa_chercher`) sous le JWT de
+# l'appelante : la base ne rend que les affichées, et seulement à qui a le droit de les lire. Même contrat que
+# le site (svlbh-pro-web, api/ai/chat). Elles se citent « banque Questions/Réponses », jamais comme le fil
+# d'une personne. Un échec ne casse pas la réponse : DiGiSha répond sans la banque.
+QA_CADRE = """## Banque Questions/Réponses de MyShamanFamily Pro
+
+Ces questions et leurs réponses ont été choisies et validées par Patrick ou Anne pour être lues par les
+apprenantes. Quand l'une répond à ce qu'on te demande, appuie-toi dessus et cite-la comme venant de la
+« banque Questions/Réponses » (avec son code, par ex. Q-20261005-01) — jamais comme le fil d'une personne.
+Ne la recopie pas mot pour mot si une phrase suffit ; n'y ajoute rien qu'elle ne dit pas."""
+QA_LIMITE = 5
+
+
+async def fetch_banque_qr(question: str, authorization: str | None, limite: int = QA_LIMITE) -> list[dict]:
+    """Les questions AFFICHÉES de la banque les plus proches de la question — liste vide si rien, si pas de
+    session, ou si la base ne répond pas (jamais une exception : la banque est un plus, pas une condition)."""
+    if not question.strip() or not authorization or not authorization.lower().startswith("bearer "):
+        return []
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return []
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/qa_chercher",
+            json={"p_question": question, "p_limite": limite},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
+                     "Content-Type": "application/json"},
+            timeout=10,
+        )
+    except httpx.HTTPError:
+        return []
+    if r.status_code != 200:
+        return []
+    lignes = r.json() or []
+    return lignes if isinstance(lignes, list) else []
+
+
+def build_qa_context(lignes: list[dict]) -> str | None:
+    """Le bloc système de la banque, ou None s'il n'y a rien à citer."""
+    if not lignes:
+        return None
+    corps = "\n\n".join(
+        f"### {q.get('code', '?')} — {q.get('theme', '')}\n"
+        f"Question : {q.get('question', '')}\n"
+        f"Réponse : {q.get('reponse') or '(pas encore de réponse)'}"
+        for q in lignes
+    )
+    return QA_CADRE + "\n\n" + corps
+
+
 @router.post("/accompagnement", response_model=ChatResponse)
 async def digisha_accompagnement(
     request: Request,
@@ -1106,6 +1159,11 @@ async def digisha_accompagnement(
         passages, mesure_fil = await passages_du_fil(body.fil_consultante_id, question, authorization)
         system_blocks.append({"type": "text",
                               "text": FIL_CADRE_ACCOMPAGNEMENT + "\n\n" + build_fil_context(passages)})
+    # La banque Questions/Réponses (carte 564cd650) : les questions affichées proches du dernier message.
+    derniere = body.messages[-1].content if body.messages else ""
+    bloc_qa = build_qa_context(await fetch_banque_qr(derniere, authorization))
+    if bloc_qa:
+        system_blocks.append({"type": "text", "text": bloc_qa})
     payload = {
         "model": model,
         "max_tokens": 2048,
