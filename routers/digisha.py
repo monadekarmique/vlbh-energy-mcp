@@ -669,6 +669,31 @@ async def fetch_proche_parcours(consultante_id: str, authorization: str | None) 
     return str(rows[0].get("parcours") or "")
 
 
+async def est_abonnee_myshamanfamily(authorization: str | None) -> bool:
+    """L'appelant est-il abonnée MyShamanFamily PRO ? Même porte que les programmes myShaman
+    (programmes_myshaman_accessibles : profil ACTIVE, Anne ou formation MyShamanFamily PRO active,
+    propriétaire) — lue en base avec SON jeton, jamais recopiée ici. Toute panne = non : on ne
+    rouvre rien sur une erreur."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return False
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not token or not supa_url or not supa_key:
+        return False
+    try:
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/programmes_myshaman_accessibles",
+            json={},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
+                     "Content-Type": "application/json"},
+            timeout=10,
+        )
+        return r.status_code == 200 and bool(r.json())
+    except Exception:
+        return False
+
+
 async def fetch_passages_du_fil(
     consultante_id: str, question: str, authorization: str | None, limite: int = 12
 ) -> list[dict]:
@@ -944,6 +969,8 @@ async def digisha_chat(
             )
         parcours_proche = await fetch_proche_parcours(body.proche_consultante_id, authorization)
         m1_block = m1_system_block(parcours_proche)
+        if m1_block is None and await est_abonnee_myshamanfamily(authorization):
+            m1_block = m1_system_block(parcours_proche, ouvert_par_abonnement=True)
         if m1_block is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

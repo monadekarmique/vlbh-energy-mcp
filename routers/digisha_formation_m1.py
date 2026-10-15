@@ -15,14 +15,20 @@ M1_ST3_WINDOWS = ["D2", "D4", "D5", "D6", "D7", "D8", "D9", "D10"]
 
 _ST3_PLUS = {f"st{n}" for n in range(3, 15)}
 
+# ABONNÉES MyShamanFamily PRO (Patrick, 15.10.2026 : « Fabienne est Abonnée MyShamanFamily je comprends pas
+# pourquoi STx nous bloque encore ») : pour une accompagnante abonnée, un proche en ST0/ST1 (ou sans parcours)
+# n'est plus une porte fermée — le module s'ouvre sur les fenêtres de départ (celles du ST2). ST3+ inchangé.
 
-def m1_open_windows(parcours_proche: str) -> list[str] | None:
+
+def m1_open_windows(parcours_proche: str, ouvert_par_abonnement: bool = False) -> list[str] | None:
     """Fenêtres ouvertes pour le parcours du proche — None = module fermé."""
     p = (parcours_proche or "").strip().lower()
     if p == "st2":
         return M1_ST2_WINDOWS
     if p in _ST3_PLUS:
         return M1_ST3_WINDOWS
+    if ouvert_par_abonnement:
+        return M1_ST2_WINDOWS
     return None  # st0/st1/inconnu : le Module 1 ne s'ouvre pas
 
 
@@ -162,14 +168,17 @@ En ST2, AUCUN de ces fils ne s'ouvre : la question se travaille exclusivement pa
 les fenêtres du soi."""
 
 
-def m1_system_block(parcours_proche: str) -> str | None:
+def m1_system_block(parcours_proche: str, ouvert_par_abonnement: bool = False) -> str | None:
     """Bloc système Module 1 assemblé pour le parcours du proche — None si fermé."""
-    windows = m1_open_windows(parcours_proche)
+    windows = m1_open_windows(parcours_proche, ouvert_par_abonnement)
     if windows is None:
         return None
     parts = [_M1_FRAME]
+    parcours_lu = (parcours_proche or "").strip().upper() or "SANS PARCOURS"
+    if windows is M1_ST2_WINDOWS and parcours_lu != "ST2":
+        parcours_lu += ", ouvert par l'abonnement MyShamanFamily PRO de l'accompagnant·e"
     parts.append(
-        f"### Fenêtres OUVERTES pour ce proche (parcours {parcours_proche.upper()}) : "
+        f"### Fenêtres OUVERTES pour ce proche (parcours {parcours_lu}) : "
         + " · ".join(windows)
         + "\nToute autre fenêtre est FERMÉE : ne la nomme jamais, ne t'en sers jamais."
     )
