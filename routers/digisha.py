@@ -449,7 +449,7 @@ async def gate_subscription(authorization: str | None) -> dict | None:
             profondeur = t > datetime.now(timezone.utc)
         except Exception:
             pass
-    return {"uid": uid, "svlbh_id": rows[0].get("svlbh_id"), "profondeur": profondeur}
+    return {"uid": uid, "svlbh_id": rows[0].get("svlbh_id"), "profondeur": profondeur, "stx": stx}
 
 
 # ── Option « DiGiSha Profondeur » +59 CHF (DEC Patrick 2026-07-06) ────────────
@@ -724,6 +724,14 @@ async def digisha_a_soi_actif(authorization: str | None) -> bool:
         return r.status_code == 200 and r.json() is True
     except Exception:
         return False
+
+
+def refuser_st1(ident: dict | None) -> None:
+    """ST1 n'a pas DiGiSha — Patrick, 17.10.2026 : « ST1 est exclu personne n'aurait accès à DigiSha comme ST1 ».
+    Le stade lu est celui du profil (gate_subscription) ; sans profil (jeton d'app, anon) on ne tranche pas ici."""
+    if ident and str(ident.get("stx") or "").upper() == "ST1":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="DiGiSha s'ouvre à partir de ST2 — ton programme n'y est pas encore.")
 
 
 async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeout: int = 10):
@@ -1053,6 +1061,7 @@ async def digisha_chat(
     # correspond au soin ». Chaque tour, quel que soit le mode, se dépose dans le fil : la fiche visée (proche, fil) ou,
     # sans fiche, la sienne ; le canal est celui de la praticienne (digisha_canal). Jamais bloquant.
     ident = await gate_subscription(authorization)
+    refuser_st1(ident)
     moi = str((ident or {}).get("svlbh_id") or "").lower() or None
     depot_fil: tuple[str | None, str] | None = None   # (fiche ou None = la sienne, canal)
     if body.mode == "fil":
@@ -1301,6 +1310,7 @@ async def digisha_accompagnement(
     """DiGiSha — ton accompagnement Digital Shaman (port Cercle Lumière)."""
     await authorize_caller(request, x_digisha_token, authorization)
     ident = await gate_subscription(authorization)
+    refuser_st1(ident)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
