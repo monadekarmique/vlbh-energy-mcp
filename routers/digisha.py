@@ -751,12 +751,14 @@ async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeou
 
 
 async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: bool) -> str:
-    """Le canal où la conversation a lieu (Patrick à Anne, 16.10.2026 21h52) : z1 si c'est pour soi (« tu discutes avec
-    ton âme »), z4 si l'accompagnante est en z4 (une cliente — canal à protéger), z2 sinon (un proche)."""
-    if sur_soi:
-        return "z1"
-    canal = await _rpc_personne(authorization, "canal_de", {"p_svlbh": moi}) if moi else None
-    return "z4" if str(canal or "").lower() == "z4" else "z2"
+    """Le canal où la conversation a lieu — lu en base (digisha_canal, migration 2026-10-16j) : le canal posé par
+    Patrick pour la praticienne (Anne z2, Giulia z3, Cornelia z4, Patrick z12 — « pour moi z5, z6, z8 et z9 qui vont
+    dans mon user … dans le canal z12 », 16.10.2026), sinon z1 sur soi (« tu discutes avec ton âme »), sinon le canal
+    de la praticienne, sinon z2. Panne = le même calcul ici, sans la table."""
+    canal = await _rpc_personne(authorization, "digisha_canal", {"p_svlbh": moi, "p_sur_soi": sur_soi}) if moi else None
+    if isinstance(canal, str) and re.fullmatch(r"z\d+", canal):
+        return canal
+    return "z1" if sur_soi else "z2"
 
 
 async def fil_digisha_reprise(authorization: str | None, consultante_id: str, canal: str) -> str:
@@ -769,12 +771,12 @@ async def fil_digisha_reprise(authorization: str | None, consultante_id: str, ca
     return "\n\n".join(f"**{r.get('titre')}** ({r.get('jour')})\n{r.get('corps')}" for r in rows)
 
 
-async def fil_digisha_deposer(authorization: str | None, consultante_id: str, canal: str,
+async def fil_digisha_deposer(authorization: str | None, consultante_id: str | None, canal: str,
                               question: str, reponse: str, mode: str) -> bool:
     """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
     tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant."""
     r = await _rpc_personne(authorization, "digisha_fil_deposer",
-                            {"p_consultante": consultante_id, "p_canal": canal, "p_question": question,
+                            {"p_consultante": consultante_id or None, "p_canal": canal, "p_question": question,
                              "p_reponse": reponse, "p_mode": mode}, timeout=15)
     return r is not None
 
@@ -1047,7 +1049,12 @@ async def digisha_chat(
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     resume_blocks = [resume_block] if resume_block else []
     usage_extra = ""
-    depot_fil: tuple[str, str] | None = None   # (fiche, canal) quand le tour se dépose dans le fil (formation_m1)
+    # Expérience de Patrick (16.10.2026 22h4x) : « toute utilisation de DiGiSha répond dès maintenant dans le canal qui
+    # correspond au soin ». Chaque tour, quel que soit le mode, se dépose dans le fil : la fiche visée (proche, fil) ou,
+    # sans fiche, la sienne ; le canal est celui de la praticienne (digisha_canal). Jamais bloquant.
+    ident = await gate_subscription(authorization)
+    moi = str((ident or {}).get("svlbh_id") or "").lower() or None
+    depot_fil: tuple[str | None, str] | None = None   # (fiche ou None = la sienne, canal)
     if body.mode == "fil":
         # Question sur le fil d'une consultante (DEC Patrick 22.08.2026).
         if not body.fil_consultante_id:
@@ -1079,8 +1086,6 @@ async def digisha_chat(
                 detail="proche_consultante_id requis en mode formation_m1",
             )
         parcours_proche, proche_soi = await fetch_proche_fiche(body.proche_consultante_id, authorization)
-        ident = await gate_subscription(authorization)
-        moi = str((ident or {}).get("svlbh_id") or "").lower() or None
         sur_soi = bool(moi and proche_soi and moi == proche_soi)
         m1_block = m1_system_block(parcours_proche, sur_soi=sur_soi)
         a_soi = False
@@ -1161,7 +1166,10 @@ async def digisha_chat(
                       qui=(caller_uid or "anon")[:8], extra=usage_extra)
     await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
-    if depot_fil:
+    if depot_fil is None and moi:
+        cible = body.fil_consultante_id if body.mode == "fil" else None
+        depot_fil = (cible, await canal_digisha(authorization, moi, sur_soi=(cible is None)))
+    if depot_fil and moi:
         await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
                                   body.messages[-1].content if body.messages else "", text, body.mode)
     if not body.no_log:
@@ -1369,6 +1377,11 @@ async def digisha_accompagnement(
         supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    moi_acc = str((ident or {}).get("svlbh_id") or "").lower() or None
+    if moi_acc:
+        cible = body.fil_consultante_id or None
+        await fil_digisha_deposer(authorization, cible, await canal_digisha(authorization, moi_acc, sur_soi=(cible is None)),
+                                  body.messages[-1].content if body.messages else "", text, "accompagnement")
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
     if not body.no_log and not body.fil_consultante_id:
         await log_exchange(
