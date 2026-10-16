@@ -726,6 +726,59 @@ async def digisha_a_soi_actif(authorization: str | None) -> bool:
         return False
 
 
+async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeout: int = 10):
+    """Un appel RPC PostgREST avec le jeton de la PERSONNE (RLS et droits = les siens). None sur toute panne."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not token or not supa_url or not supa_key:
+        return None
+    try:
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/{nom}", json=corps,
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=timeout,
+        )
+        if r.status_code != 200:
+            log.warning("digisha — rpc %s HTTP %s : %s", nom, r.status_code, r.text[:200])
+            return None
+        return r.json()
+    except Exception as exc:
+        log.warning("digisha — rpc %s en erreur : %r", nom, exc)
+        return None
+
+
+async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: bool) -> str:
+    """Le canal où la conversation a lieu (Patrick à Anne, 16.10.2026 21h52) : z1 si c'est pour soi (« tu discutes avec
+    ton âme »), z4 si l'accompagnante est en z4 (une cliente — canal à protéger), z2 sinon (un proche)."""
+    if sur_soi:
+        return "z1"
+    canal = await _rpc_personne(authorization, "canal_de", {"p_svlbh": moi}) if moi else None
+    return "z4" if str(canal or "").lower() == "z4" else "z2"
+
+
+async def fil_digisha_reprise(authorization: str | None, consultante_id: str, canal: str) -> str:
+    """Les dernières sections DiGiSha de cette fiche et de ce canal, pour reprendre là où on s'était arrêtées
+    (migration 2026-10-16g, digisha_fil_reprendre ; les droits sont ceux du fil). Vide si rien ou refusé."""
+    rows = await _rpc_personne(authorization, "digisha_fil_reprendre",
+                               {"p_consultante": consultante_id, "p_canal": canal, "p_max_car": 12000})
+    if not rows:
+        return ""
+    return "\n\n".join(f"**{r.get('titre')}** ({r.get('jour')})\n{r.get('corps')}" for r in rows)
+
+
+async def fil_digisha_deposer(authorization: str | None, consultante_id: str, canal: str,
+                              question: str, reponse: str, mode: str) -> bool:
+    """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
+    tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant."""
+    r = await _rpc_personne(authorization, "digisha_fil_deposer",
+                            {"p_consultante": consultante_id, "p_canal": canal, "p_question": question,
+                             "p_reponse": reponse, "p_mode": mode}, timeout=15)
+    return r is not None
+
+
 async def est_abonnee_myshamanfamily(authorization: str | None) -> bool:
     """L'appelant est-il abonnée MyShamanFamily PRO ? Même porte que les programmes myShaman
     (programmes_myshaman_accessibles : profil ACTIVE, Anne ou formation MyShamanFamily PRO active,
@@ -994,6 +1047,7 @@ async def digisha_chat(
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     resume_blocks = [resume_block] if resume_block else []
     usage_extra = ""
+    depot_fil: tuple[str, str] | None = None   # (fiche, canal) quand le tour se dépose dans le fil (formation_m1)
     if body.mode == "fil":
         # Question sur le fil d'une consultante (DEC Patrick 22.08.2026).
         if not body.fil_consultante_id:
@@ -1044,6 +1098,9 @@ async def digisha_chat(
             usage_extra += " a_soi=1"
         if sur_soi:
             usage_extra += " sur_soi=1"
+        canal_fil = await canal_digisha(authorization, moi, sur_soi)
+        reprise = await fil_digisha_reprise(authorization, body.proche_consultante_id, canal_fil)
+        usage_extra += f" canal={canal_fil} reprise_car={len(reprise)}"
         if m1_block is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1058,9 +1115,15 @@ async def digisha_chat(
                  {"parcours_accompagnante": body.parcours,
                   "parcours_proche": parcours_proche,
                   "sur_soi": sur_soi,
+                  "canal": canal_fil,
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
                  ensure_ascii=False)},
-        ] + resume_blocks
+        ] + ([{"type": "text",
+               "text": "## Ton fil DiGiSha — ce qui s'est déjà dit (reprise)\n"
+                       "Ce sont les derniers tours déposés dans le fil pour cette personne et ce canal. Si la conversation "
+                       "reprend, pars de là : ne redemande pas ce qui est déjà posé, nomme où on s'était arrêtées.\n\n"
+                       + reprise}] if reprise else []) + resume_blocks
+        depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
             "max_tokens": 2048,
@@ -1098,6 +1161,9 @@ async def digisha_chat(
                       qui=(caller_uid or "anon")[:8], extra=usage_extra)
     await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    if depot_fil:
+        await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
+                                  body.messages[-1].content if body.messages else "", text, body.mode)
     if not body.no_log:
         await log_exchange(
             "render-tuteur",
