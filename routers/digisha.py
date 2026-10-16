@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import time
+from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
@@ -656,7 +657,7 @@ async def fetch_proche_parcours(consultante_id: str, authorization: str | None) 
     client = _http()
     r = await client.get(
         f"{supa_url}/rest/v1/consultante_record",
-        params={"consultante_id": f"eq.{consultante_id.lower()}", "select": "parcours"},
+        params={"consultante_id": f"eq.{consultante_id.lower()}", "select": "parcours,self_praticienne_svlbh_id"},
         headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
         timeout=10,
     )
@@ -667,6 +668,62 @@ async def fetch_proche_parcours(consultante_id: str, authorization: str | None) 
             detail="Fiche du proche introuvable ou non accessible",
         )
     return str(rows[0].get("parcours") or "")
+
+
+async def fetch_proche_fiche(consultante_id: str, authorization: str | None) -> tuple[str, str | None]:
+    """(parcours, self_praticienne_svlbh_id) de la fiche du proche — même lecture que fetch_proche_parcours,
+    plus la praticienne dont c'est la fiche « soi » : si c'est l'appelante, le Module 1 se joue SUR ELLE
+    (voie « DiGiSha à soi », Patrick 16.10.2026 : « toi c'est DiGiSha ton truc, avec introspection solitaire »)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Le mode formation requiert une session utilisateur (Bearer JWT)",
+        )
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase non configuré côté DiGiSha",
+        )
+    r = await _http().get(
+        f"{supa_url}/rest/v1/consultante_record",
+        params={"consultante_id": f"eq.{consultante_id.lower()}", "select": "parcours,self_praticienne_svlbh_id"},
+        headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+        timeout=10,
+    )
+    rows = r.json() if r.status_code == 200 else []
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fiche du proche introuvable ou non accessible",
+        )
+    soi = rows[0].get("self_praticienne_svlbh_id")
+    return str(rows[0].get("parcours") or ""), (str(soi).lower() if soi else None)
+
+
+async def digisha_a_soi_actif(authorization: str | None) -> bool:
+    """L'appelante a-t-elle une fenêtre « DiGiSha à soi » ouverte (découverte 5 jours, mois, trimestre) ? Porte
+    digisha_a_soi_actif() de la base (migration 2026-10-16f), lue avec SON jeton. Toute panne = non."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return False
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not token or not supa_url or not supa_key:
+        return False
+    try:
+        r = await _http().post(
+            f"{supa_url}/rest/v1/rpc/digisha_a_soi_actif",
+            json={},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}",
+                     "Content-Type": "application/json"},
+            timeout=10,
+        )
+        return r.status_code == 200 and r.json() is True
+    except Exception:
+        return False
 
 
 async def est_abonnee_myshamanfamily(authorization: str | None) -> bool:
@@ -967,10 +1024,26 @@ async def digisha_chat(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="proche_consultante_id requis en mode formation_m1",
             )
-        parcours_proche = await fetch_proche_parcours(body.proche_consultante_id, authorization)
-        m1_block = m1_system_block(parcours_proche)
-        if m1_block is None and await est_abonnee_myshamanfamily(authorization):
-            m1_block = m1_system_block(parcours_proche, ouvert_par_abonnement=True)
+        parcours_proche, proche_soi = await fetch_proche_fiche(body.proche_consultante_id, authorization)
+        ident = await gate_subscription(authorization)
+        moi = str((ident or {}).get("svlbh_id") or "").lower() or None
+        sur_soi = bool(moi and proche_soi and moi == proche_soi)
+        m1_block = m1_system_block(parcours_proche, sur_soi=sur_soi)
+        a_soi = False
+        if m1_block is None:
+            a_soi = await digisha_a_soi_actif(authorization)
+            if a_soi and not sur_soi:
+                # La découverte s'ouvre sur SA fiche : pas sur celle d'une autre.
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="DiGiSha à soi s'ouvre sur ta propre fiche — choisis-toi comme proche.",
+                )
+            if a_soi or await est_abonnee_myshamanfamily(authorization):
+                m1_block = m1_system_block(parcours_proche, ouvert_par_abonnement=True, sur_soi=sur_soi)
+        if a_soi:
+            usage_extra += " a_soi=1"
+        if sur_soi:
+            usage_extra += " sur_soi=1"
         if m1_block is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -983,7 +1056,10 @@ async def digisha_chat(
             {"type": "text",
              "text": "## État du membre\n" + json.dumps(
                  {"parcours_accompagnante": body.parcours,
-                  "parcours_proche": parcours_proche}, ensure_ascii=False)},
+                  "parcours_proche": parcours_proche,
+                  "sur_soi": sur_soi,
+                  "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
+                 ensure_ascii=False)},
         ] + resume_blocks
         payload = {
             "model": model,
@@ -1028,6 +1104,7 @@ async def digisha_chat(
             body.mode if body.mode in ("formation_m1", "fil") else body.parcours,
             body.messages[-1].content if body.messages else "", text, model,
             prompt_version=version, etat=body.etat.model_dump(),
+            supabase_user_id=caller_uid,
         )
     return ChatResponse(reply=text, model=model)
 

@@ -168,12 +168,21 @@ En ST2, AUCUN de ces fils ne s'ouvre : la question se travaille exclusivement pa
 les fenêtres du soi."""
 
 
-def m1_system_block(parcours_proche: str, ouvert_par_abonnement: bool = False) -> str | None:
-    """Bloc système Module 1 assemblé pour le parcours du proche — None si fermé."""
+_M1_SUR_SOI = """### Sur soi
+La personne accompagnée est l'apprenante elle-même : elle a ouvert le Module 1 sur SA propre fiche (voie « DiGiSha à soi »,
+introspection solitaire). Tu lui dis « toi », jamais « ton proche », et tu ne lui demandes pas pour qui elle travaille.
+Les fenêtres ouvertes sont les mêmes ; la méthode aussi : le corps d'abord, la mesure, la figure, le geste. Tu lis l'heure
+dans « État du membre » avant de dire « ce soir » ou « ce matin ». En fin de séance, rends la carte de la séance
+(fenêtres qui ont parlé, fenêtres muettes) et une phrase d'ancrage à faire vraiment, maintenant."""
+
+
+def m1_system_block(parcours_proche: str, ouvert_par_abonnement: bool = False, sur_soi: bool = False) -> str | None:
+    """Bloc système Module 1 assemblé pour le parcours du proche — None si fermé.
+    sur_soi : le proche est l'apprenante elle-même (voie « DiGiSha à soi », 16.10.2026)."""
     windows = m1_open_windows(parcours_proche, ouvert_par_abonnement)
     if windows is None:
         return None
-    parts = [_M1_FRAME]
+    parts = [_M1_FRAME] + ([_M1_SUR_SOI] if sur_soi else [])
     parcours_lu = (parcours_proche or "").strip().upper() or "SANS PARCOURS"
     if windows is M1_ST2_WINDOWS and parcours_lu != "ST2":
         parcours_lu += ", ouvert par l'abonnement MyShamanFamily PRO de l'accompagnant·e"
