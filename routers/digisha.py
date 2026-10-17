@@ -35,6 +35,7 @@ from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
+from routers.digisha_cache import du_tour, partage, ranger_pour_cache
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
@@ -1274,12 +1275,10 @@ def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
         {"type": "text", "text": base},
         {"type": "text",
          "text": "## Corpus — Formation « Les 26 ponts » (JSON)\n" + STATIC_CORPUS_JSON},
-        {"type": "text",
-         "text": "## Répertoire maïeutique — Questions digiSha de Libération (FCB Chapitre 11)\n"
-                 + json.dumps(FCB_CH11, ensure_ascii=False),
-         "cache_control": {"type": "ephemeral"}},
-        {"type": "text",
-         "text": "## État du membre\n" + json.dumps(etat_dyn, ensure_ascii=False)},
+        partage({"type": "text",
+                 "text": "## Répertoire maïeutique — Questions digiSha de Libération (FCB Chapitre 11)\n"
+                         + json.dumps(FCB_CH11, ensure_ascii=False)}),
+        du_tour("## État du membre\n" + json.dumps(etat_dyn, ensure_ascii=False)),
     ]
 
 
@@ -1344,8 +1343,8 @@ async def digisha_chat(
         usage_extra = f" fil_sections={len(passages)} fil_car={len(contexte_fil)}{mesure_fil}"
         system_blocks = [
             {"type": "text", "text": base},
-            {"type": "text", "text": FIL_CADRE},
-            {"type": "text", "text": "## Passages du fil\n\n" + contexte_fil},
+            partage({"type": "text", "text": FIL_CADRE}),
+            du_tour("## Passages du fil\n\n" + contexte_fil),
         ] + resume_blocks
         payload = {
             "model": model,
@@ -1396,19 +1395,17 @@ async def digisha_chat(
             )
         system_blocks = [
             {"type": "text", "text": base},
-            {"type": "text", "text": m1_block,
-             "cache_control": {"type": "ephemeral"}},
-            {"type": "text",
-             "text": "## État du membre\n" + json.dumps(
+            partage({"type": "text", "text": m1_block}),
+            du_tour("## État du membre\n" + json.dumps(
                  {"parcours_accompagnante": body.parcours,
                   "parcours_proche": parcours_proche,
                   "sur_soi": sur_soi,
                   "canal": canal_fil,
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
-                 ensure_ascii=False)},
-        ] + ([{"type": "text", "text": FIL_REPRISE_CADRE + reprise}] if reprise else []) \
+                 ensure_ascii=False)),
+        ] + ([du_tour(FIL_REPRISE_CADRE + reprise)] if reprise else []) \
           + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) \
-          + ([{"type": "text", "text": SAVOIR_CADRE + savoir}] if savoir else []) + resume_blocks
+          + ([du_tour(SAVOIR_CADRE + savoir)] if savoir else []) + resume_blocks
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
@@ -1428,6 +1425,7 @@ async def digisha_chat(
         ajouter_au_systeme(payload, texte_dec)
         usage_extra += f" decodage={body.decodage_id[:8]} decodage_car={len(texte_dec)}"
     model = passer_en_5_5(payload, moi)
+    ranger_pour_cache(payload)
     client = _http()
     resp = await client.post(
         ANTHROPIC_URL,
@@ -1629,7 +1627,7 @@ async def digisha_accompagnement(
         model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
     raw_messages = [t.model_dump(exclude_none=True) for t in body.messages]
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
-    system_blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    system_blocks = [partage({"type": "text", "text": system})]
     if resume_block:
         system_blocks.append(resume_block)
     mesure_fil = ""
@@ -1653,15 +1651,15 @@ async def digisha_accompagnement(
             deja = await relecture_pour(sujet=cible_acc) if await peut_relire(authorization, cible_acc) else ""
             mesure_fil += f" relecture=1 reprise_car={len(reprise)} relecture_car={len(deja)}"
             if reprise:
-                system_blocks.append({"type": "text", "text": RELECTURE_SEANCES + reprise})
+                system_blocks.append(du_tour(RELECTURE_SEANCES + reprise))
             if deja:
-                system_blocks.append({"type": "text", "text": RELECTURE_PRECEDENTES + deja})
+                system_blocks.append(du_tour(RELECTURE_PRECEDENTES + deja))
         else:
             reprise = await fil_digisha_reprise(authorization, cible_acc, canal_acc)
             coulisse = await relecture_pour(svlbh=moi_acc)
             mesure_fil += f" canal={canal_acc} reprise_car={len(reprise)}" + (f" relecture_car={len(coulisse)}" if coulisse else "")
             if reprise:
-                system_blocks.append({"type": "text", "text": FIL_REPRISE_CADRE + reprise})
+                system_blocks.append(du_tour(FIL_REPRISE_CADRE + reprise))
             if coulisse:
                 system_blocks.append({"type": "text", "text": RELECTURE_COULISSE + coulisse})
                 await _rpc_service("digisha_relecture_servie", {"p_svlbh": moi_acc})
@@ -1669,7 +1667,7 @@ async def digisha_accompagnement(
         savoir = await savoir_pour(derniere_question(body), exclure_fiche=cible_acc,
                                    exclure_svlbh=(None if cible_acc else moi_acc))
         if savoir:
-            system_blocks.append({"type": "text", "text": SAVOIR_CADRE + savoir})
+            system_blocks.append(du_tour(SAVOIR_CADRE + savoir))
             mesure_fil += f" savoir_car={len(savoir)}"
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
@@ -1682,7 +1680,7 @@ async def digisha_accompagnement(
     derniere = derniere_question(body)
     bloc_qa = build_qa_context(await fetch_banque_qr(derniere, authorization))
     if bloc_qa:
-        system_blocks.append({"type": "text", "text": bloc_qa})
+        system_blocks.append(du_tour(bloc_qa))
     payload = {
         "model": model,
         "max_tokens": 2048,
@@ -1690,6 +1688,7 @@ async def digisha_accompagnement(
         "messages": _cache_history(recents),
     }
     model = passer_en_5_5(payload, str((ident or {}).get("svlbh_id") or "") or None)
+    ranger_pour_cache(payload)
     client = _http()
     resp = await client.post(
         ANTHROPIC_URL,
