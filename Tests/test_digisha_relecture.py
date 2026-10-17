@@ -55,3 +55,28 @@ def test_savoir_exclut_la_personne_et_ne_cherche_pas_a_vide(monkeypatch):
     assert appels == [("digisha_savoir_chercher", {"p_question": "estomac et honte", "p_exclure": None,
                                                    "p_exclure_svlbh": "64810cf3", "p_limite": 6, "p_max_car": 6000})]
     assert "ne le lui attribue jamais" in d.SAVOIR_CADRE
+
+
+def _droits(monkeypatch, proprietaire, lisibles):
+    async def faux(authorization, nom, corps, timeout=10):
+        return {"is_owner_st6": proprietaire, "fils_lisibles": lisibles}.get(nom)
+    monkeypatch.setattr(d, "_rpc_personne", faux)
+
+
+def test_peut_relire_suit_la_porte_du_depot(monkeypatch):
+    x = "688a23c1-0000-4000-8000-000000000001"
+    _droits(monkeypatch, True, [])
+    assert asyncio.run(d.peut_relire("Bearer t", x)) is True
+    _droits(monkeypatch, False, [x.upper()])
+    assert asyncio.run(d.peut_relire("Bearer t", x)) is True
+    _droits(monkeypatch, False, [{"fils_lisibles": x}])
+    assert asyncio.run(d.peut_relire("Bearer t", x)) is True
+
+
+def test_peut_relire_refuse_sans_droit_et_sur_panne(monkeypatch):
+    x = "688a23c1-0000-4000-8000-000000000001"
+    _droits(monkeypatch, False, ["14bd87df-0000-4000-8000-000000000002"])
+    assert asyncio.run(d.peut_relire("Bearer t", x)) is False
+    _droits(monkeypatch, None, None)                       # panne : _rpc_personne rend None
+    assert asyncio.run(d.peut_relire("Bearer t", x)) is False
+    assert asyncio.run(d.peut_relire("Bearer t", None)) is False

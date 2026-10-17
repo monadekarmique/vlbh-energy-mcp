@@ -1041,6 +1041,21 @@ async def relecture_pour(sujet: str | None = None, svlbh: str | None = None) -> 
     return r if isinstance(r, str) else ""
 
 
+async def peut_relire(authorization: str | None, sujet: str | None) -> bool:
+    """« À propos de X » : l'appelante peut-elle relire X ? Même porte que le dépôt (digisha_relecture_deposer) —
+    propriétaire, ou X dans fils_lisibles() — lue avec SON jeton, parce que relecture_pour lit par la clé de service.
+    Toute panne = non (fiche 62afe053, audit de sécurité du 17.10.2026)."""
+    if not sujet:
+        return False
+    if await _rpc_personne(authorization, "is_owner_st6", {}) is True:
+        return True
+    r = await _rpc_personne(authorization, "fils_lisibles", {})
+    if not isinstance(r, list):
+        return False
+    ids = {str(x if not isinstance(x, dict) else next(iter(x.values()), "")).lower() for x in r}
+    return str(sujet).lower() in ids
+
+
 async def est_abonnee_myshamanfamily(authorization: str | None) -> bool:
     """L'appelant est-il abonnée MyShamanFamily PRO ? Même porte que les programmes myShaman
     (programmes_myshaman_accessibles : profil ACTIVE, Anne ou formation MyShamanFamily PRO active,
@@ -1635,7 +1650,7 @@ async def digisha_accompagnement(
         if cible_acc:
             # Relecture (2026-10-17k) : DiGiSha relit SES séances, tous canaux, et ce qui a déjà été relu d'elle.
             reprise = await fil_digisha_reprise(authorization, cible_acc, None)
-            deja = await relecture_pour(sujet=cible_acc)
+            deja = await relecture_pour(sujet=cible_acc) if await peut_relire(authorization, cible_acc) else ""
             mesure_fil += f" relecture=1 reprise_car={len(reprise)} relecture_car={len(deja)}"
             if reprise:
                 system_blocks.append({"type": "text", "text": RELECTURE_SEANCES + reprise})
