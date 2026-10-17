@@ -35,7 +35,8 @@ def test_sur_soi_et_formation_m1_gardent_le_fil(monkeypatch):
 
 
 def test_la_coulisse_ne_nomme_pas_sa_source():
-    assert "Ne le cite jamais" in d.RELECTURE_COULISSE and "ne nomme pas qui l'a faite" in d.RELECTURE_COULISSE
+    assert "Ne les cite jamais" in d.RELECTURE_COULISSE and "ne nomme pas qui les a donnés" in d.RELECTURE_COULISSE
+    assert "Tu ne cherches pas dans son fil de quoi lui répondre" in d.RELECTURE_CADRE
 
 
 def test_relecture_pour_sans_personne_ne_lit_rien():

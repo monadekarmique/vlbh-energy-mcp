@@ -947,10 +947,20 @@ async def _rpc_service(nom: str, corps: dict, timeout: int = 10):
 
 
 RELECTURE_COULISSE = (
-    "## En coulisse — ce que son accompagnant·e ressent à la relecture de ses décodages\n"
-    "Patrick (ou son accompagnante) a relu avec toi ses séances et y a posé son ressenti : ce qu'elle ne voit pas encore, "
-    "et que toi tu ne perçois pas. Laisse-le orienter tes questions et tes lectures ; amène-la à le trouver elle-même, à son "
-    "rythme, par ses propres mesures. Ne le cite jamais, ne dis pas qu'une relecture existe, ne nomme pas qui l'a faite.\n\n"
+    "## En coulisse — retours et consignes de ton superviseur pour cet accompagnement\n"
+    "Patrick (ou son accompagnante) a relu ses séances avec toi et t'a laissé ses retours et ses consignes PROPRES À ELLE : ce "
+    "qu'il ressent, ce qu'elle ne voit pas encore et que tu ne perçois pas, ce que tu dois faire autrement avec elle. Applique-les "
+    "à cette séance ; amène-la à trouver elle-même, à son rythme, par ses propres mesures. Ne les cite jamais, ne dis pas qu'ils "
+    "existent, ne nomme pas qui les a donnés.\n\n"
+)
+RELECTURE_CADRE = (
+    "## « À propos de » — Patrick te donne un retour et des consignes pour CE profil\n"
+    "Patrick a choisi cette personne pour te faire un retour avec des consignes propres à son accompagnement (Patrick, 17.10.2026 : "
+    "« apropose ne sert pas à chosiir sur quoi tu te bases pour me répondre mais sur quel profile je fais te faire un feedback "
+    "avec des instructions spécifiques à ce profile »). Tu ne cherches pas dans son fil de quoi lui répondre et tu ne fais pas "
+    "d'analyse d'elle qu'il ne t'a pas demandée. Tu REÇOIS : reformule chaque consigne en une ligne claire, demande une précision "
+    "si elle est ambiguë, dis en une phrase comment tu l'appliqueras à sa prochaine séance. Ce qu'il écrit ici t'accompagnera, en "
+    "coulisse, à chacune de ses séances ; elle ne le voit pas.\n\n"
 )
 RELECTURE_PRECEDENTES = (
     "## Tes relectures précédentes de cette personne\n"
@@ -1563,10 +1573,10 @@ async def digisha_accompagnement(
         system_blocks.append(resume_block)
     mesure_fil = ""
     if body.fil_consultante_id:
-        question = derniere_question(body)
-        passages, mesure_fil = await passages_du_fil(body.fil_consultante_id, question, authorization)
-        system_blocks.append({"type": "text",
-                              "text": FIL_CADRE_ACCOMPAGNEMENT + "\n\n" + build_fil_context(passages)})
+        # « À propos de X » = un retour et des consignes de Patrick pour le profil X, pas la matière de la réponse (fiche
+        # 2329fddd, 17.10.2026 14h30). Plus de passages du fil cherchés pour répondre ; ses séances restent plus bas, pour
+        # situer ce qu'il cite (RELECTURE_SEANCES).
+        system_blocks.append({"type": "text", "text": RELECTURE_CADRE})
     # La reprise du fil DiGiSha AVANT la réponse — mesuré le 17.10.2026 09h24 chez Patrick (z12, 7 tours déposés)
     # : « Je n'ai pas de trace de notre échange précédent ». Ce chemin déposait chaque tour sans jamais le relire ;
     # seul le chemin formation M1 de /chat le faisait. Même fiche et même canal que le dépôt, plus bas.
