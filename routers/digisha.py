@@ -460,6 +460,33 @@ async def gate_subscription(authorization: str | None) -> dict | None:
 # au-delà retour doux sur sonnet (jamais de coupure).
 ACCOMPAGNEMENT_MODEL_INCLUS = "claude-sonnet-4-6"
 ACCOMPAGNEMENT_MODEL_PROFONDEUR = "claude-opus-4-8"
+
+# Passage aux modèles 5.5 (Patrick, 17.10.2026 : « devrions nous modifier le modèle pour passer en Opus 5.5 » → « ok »).
+# Prix relus le 17.10 sur la page tarifs d'Anthropic : Opus 5.5 4 / 20 USD le Mtok (Opus 4.8 : 5 / 25), Sonnet 5.5 2 / 10
+# (Sonnet 4.6 : 3 / 15), cache relu 0,20 et 0,10. Sur les 5.5 la réflexion est TOUJOURS active, facturée en sortie et prise sur
+# max_tokens : effort réglé (Opus « medium », Sonnet « low »), plafond relevé à 8 192, et un essai sur le compte de Patrick
+# d'abord (DIGISHA_MODELES_5_5 : liste de svlbh_id, ou « tous ») pour mesurer le coût réel avant les apprenantes.
+MODELES_5_5 = {"claude-opus-4-8": "claude-opus-5-5", "claude-sonnet-4-6": "claude-sonnet-5-5"}
+EFFORT_5_5 = {"claude-opus-5-5": "medium", "claude-sonnet-5-5": "low"}
+ESSAI_5_5_DEFAUT = "52adbc98-d2b0-4444-b89c-b1311a02a983"     # Patrick
+
+
+def essai_5_5(svlbh: str | None) -> bool:
+    cible = os.environ.get("DIGISHA_MODELES_5_5", ESSAI_5_5_DEFAUT).strip().lower()
+    if cible in ("tous", "all"):
+        return True
+    return bool(svlbh) and svlbh.lower() in {x.strip() for x in cible.split(",") if x.strip()}
+
+
+def passer_en_5_5(payload: dict, svlbh: str | None) -> str:
+    """Remplace le modèle 4.x par son 5.5 pour les personnes de l'essai, avec l'effort et le plafond qui vont avec."""
+    m = payload.get("model")
+    if m in MODELES_5_5 and essai_5_5(svlbh):
+        nouveau = MODELES_5_5[m]
+        payload["model"] = nouveau
+        payload["max_tokens"] = max(int(payload.get("max_tokens") or 0), 8192)
+        payload["output_config"] = {"effort": EFFORT_5_5[nouveau]}
+    return payload["model"]
 PROFONDEUR_FAIR_USE = 500
 
 
@@ -1332,6 +1359,7 @@ async def digisha_chat(
         texte_dec = bloc_decodage(await fetch_decodage(authorization, body.decodage_id))
         ajouter_au_systeme(payload, texte_dec)
         usage_extra += f" decodage={body.decodage_id[:8]} decodage_car={len(texte_dec)}"
+    model = passer_en_5_5(payload, moi)
     client = _http()
     resp = await client.post(
         ANTHROPIC_URL,
@@ -1354,6 +1382,8 @@ async def digisha_chat(
     data = resp.json()
     if pieces_du_dernier(body):
         usage_extra += f" pieces={pieces_du_dernier(body)}"
+    if data.get("stop_reason") not in (None, "end_turn"):
+        usage_extra += f" stop={data.get('stop_reason')}"
     journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs,
                       qui=(caller_uid or "anon")[:8], extra=usage_extra)
     await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
@@ -1588,6 +1618,7 @@ async def digisha_accompagnement(
         "system": system_blocks,
         "messages": _cache_history(recents),
     }
+    model = passer_en_5_5(payload, str((ident or {}).get("svlbh_id") or "") or None)
     client = _http()
     resp = await client.post(
         ANTHROPIC_URL,
@@ -1608,6 +1639,8 @@ async def digisha_accompagnement(
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
         )
     data = resp.json()
+    if data.get("stop_reason") not in (None, "end_turn"):
+        mesure_fil += f" stop={data.get('stop_reason')}"
     journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs,
                       qui=(str(ident["svlbh_id"])[:8] if ident and ident.get("svlbh_id") else "∅"),
                       n_mois=used, extra=mesure_fil)
