@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import time
+import uuid
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
 from pathlib import Path
@@ -911,7 +912,7 @@ async def fil_digisha_reprise(authorization: str | None, consultante_id: str | N
 
 
 async def fil_digisha_deposer(authorization: str | None, consultante_id: str | None, canal: str,
-                              question: str, reponse: str, mode: str) -> bool:
+                              question: str, reponse: str, mode: str) -> str | None:
     """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
     tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant."""
     if consultante_id and mode != "formation_m1":
@@ -920,11 +921,53 @@ async def fil_digisha_deposer(authorization: str | None, consultante_id: str | N
         r = await _rpc_personne(authorization, "digisha_relecture_deposer",
                                 {"p_sujet": consultante_id, "p_canal": canal, "p_question": question,
                                  "p_reponse": reponse, "p_mode": mode}, timeout=15)
-        return r is not None
+        return r if isinstance(r, str) else None
     r = await _rpc_personne(authorization, "digisha_fil_deposer",
                             {"p_consultante": consultante_id or None, "p_canal": canal, "p_question": question,
                              "p_reponse": reponse, "p_mode": mode}, timeout=15)
-    return r is not None
+    return r if isinstance(r, str) else None
+
+
+PIECES_SEAU = "digisha-pieces"
+PIECES_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "image/webp": "webp", "application/pdf": "pdf"}
+
+
+async def ranger_pieces(session_id: str | None, contenu) -> int:
+    """Les photos et PDF du tour, gardés (fiche c51ff989, migration 2026-10-17q) : chaque pièce part dans le seau privé
+    « digisha-pieces » sous <séance>/<uuid>.<ext> (lisible par qui lit la séance), puis sa référence s'ajoute à la page du jour
+    (payload.digisha.pieces). Patrick, 17.10 : « j'ai joint des images depuis android que je ne vois pas sur mac ». Jamais bloquant."""
+    if not session_id or not isinstance(contenu, list):
+        return 0
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return 0
+    heure = datetime.now(ZoneInfo("Europe/Zurich")).strftime("%Hh%M")
+    gardees = []
+    for b in contenu:
+        b = b.model_dump() if hasattr(b, "model_dump") else b
+        if not isinstance(b, dict) or b.get("type") not in ("image", "document"):
+            continue
+        src = b.get("source") or {}
+        mt = src.get("media_type")
+        if mt not in PIECES_EXT or not src.get("data"):
+            continue
+        chemin = f"{session_id}/{uuid.uuid4()}.{PIECES_EXT[mt]}"
+        try:
+            r = await _http().post(f"{supa_url}/storage/v1/object/{PIECES_SEAU}/{chemin}", content=base64.b64decode(src["data"]),
+                                   headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}", "Content-Type": mt},
+                                   timeout=30)
+            if r.status_code not in (200, 201):
+                log.warning("digisha — pièce non gardée HTTP %s : %s", r.status_code, r.text[:200])
+                continue
+        except Exception as exc:
+            log.warning("digisha — pièce non gardée : %r", exc)
+            continue
+        gardees.append({"heure": heure, "genre": "photo" if b["type"] == "image" else "document", "chemin": chemin,
+                        "media_type": mt, "titre": b.get("title")})
+    if gardees:
+        await _rpc_service("digisha_page_pieces_ajouter", {"p_session": session_id, "p_pieces": gardees})
+    return len(gardees)
 
 
 async def _rpc_service(nom: str, corps: dict, timeout: int = 10):
@@ -1403,8 +1446,11 @@ async def digisha_chat(
         depot_fil = (cible, await canal_digisha(authorization, moi, sur_soi=(cible is None),
                                                 choisi=body.canal, stx=(ident or {}).get("stx")))
     if depot_fil and moi:
-        await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
-                                  derniere_question(body), text, body.mode)
+        seance = await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
+                                           derniere_question(body), text, body.mode)
+        if pieces_du_dernier(body):
+            n_gardees = await ranger_pieces(seance, body.messages[-1].content)
+            log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
     if not body.no_log:
         await log_exchange(
             "render-tuteur",
@@ -1661,7 +1707,10 @@ async def digisha_accompagnement(
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if moi_acc and canal_acc:
-        await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement")
+        seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement")
+        if pieces_du_dernier(body):
+            n_gardees = await ranger_pieces(seance, body.messages[-1].content)
+            log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
     if not body.no_log and not body.fil_consultante_id:
         await log_exchange(
