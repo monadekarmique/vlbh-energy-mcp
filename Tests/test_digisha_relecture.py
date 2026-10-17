@@ -40,3 +40,17 @@ def test_la_coulisse_ne_nomme_pas_sa_source():
 
 def test_relecture_pour_sans_personne_ne_lit_rien():
     assert asyncio.run(d.relecture_pour()) == ""
+
+
+def test_savoir_exclut_la_personne_et_ne_cherche_pas_a_vide(monkeypatch):
+    appels = []
+
+    async def faux(nom, corps, timeout=10):
+        appels.append((nom, corps))
+        return "— une fiche"
+    monkeypatch.setattr(d, "_rpc_service", faux)
+    assert asyncio.run(d.savoir_pour("   ")) == ""
+    assert asyncio.run(d.savoir_pour("estomac et honte", exclure_svlbh="64810cf3")) == "— une fiche"
+    assert appels == [("digisha_savoir_chercher", {"p_question": "estomac et honte", "p_exclure": None,
+                                                   "p_exclure_svlbh": "64810cf3", "p_limite": 6, "p_max_car": 6000})]
+    assert "ne le lui attribue jamais" in d.SAVOIR_CADRE

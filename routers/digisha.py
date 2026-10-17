@@ -936,6 +936,23 @@ RELECTURE_SEANCES = (
 )
 
 
+SAVOIR_CADRE = (
+    "## Savoir du Cercle — décodages déjà posés ailleurs, sans les noms\n"
+    "Des décodages radiesthésiques réellement posés dans le Cercle (fils et séances), gardés tels quels, sans les noms. "
+    "Sers-t'en comme d'un savoir : relations déjà vues, mesures, enchaînements, explications. Ce n'est PAS l'histoire de la "
+    "personne qui te parle : ne le lui attribue jamais, ne dis pas d'où ça vient, ne cite pas ces fiches comme des cas.\n\n"
+)
+
+
+async def savoir_pour(question: str, exclure_fiche: str | None = None, exclure_svlbh: str | None = None) -> str:
+    """Les fiches de savoir proches de la question (migration 2026-10-17n), jamais celles de la personne elle-même ; clé de service."""
+    if not (question or "").strip():
+        return ""
+    r = await _rpc_service("digisha_savoir_chercher", {"p_question": question[:2000], "p_exclure": exclure_fiche or None,
+                                                       "p_exclure_svlbh": exclure_svlbh or None, "p_limite": 6, "p_max_car": 6000})
+    return r if isinstance(r, str) else ""
+
+
 async def relecture_pour(sujet: str | None = None, svlbh: str | None = None) -> str:
     """Les relectures récentes d'une personne (fiche, ou personne par sa fiche « soi »), lues par la clé de service."""
     if not sujet and not svlbh:
@@ -1271,6 +1288,9 @@ async def digisha_chat(
         reprise = await fil_digisha_reprise(authorization, body.proche_consultante_id, canal_fil)
         usage_extra += f" canal={canal_fil} reprise_car={len(reprise)}"
         coulisse = await relecture_pour(sujet=body.proche_consultante_id) if sur_soi else ""
+        savoir = await savoir_pour(derniere_question(body), exclure_fiche=body.proche_consultante_id)
+        if savoir:
+            usage_extra += f" savoir_car={len(savoir)}"
         if coulisse:
             usage_extra += f" relecture_car={len(coulisse)}"
             await _rpc_service("digisha_relecture_servie", {"p_sujet": body.proche_consultante_id})
@@ -1292,7 +1312,8 @@ async def digisha_chat(
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
                  ensure_ascii=False)},
         ] + ([{"type": "text", "text": FIL_REPRISE_CADRE + reprise}] if reprise else []) \
-          + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) + resume_blocks
+          + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) \
+          + ([{"type": "text", "text": SAVOIR_CADRE + savoir}] if savoir else []) + resume_blocks
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
@@ -1543,6 +1564,12 @@ async def digisha_accompagnement(
             if coulisse:
                 system_blocks.append({"type": "text", "text": RELECTURE_COULISSE + coulisse})
                 await _rpc_service("digisha_relecture_servie", {"p_svlbh": moi_acc})
+    if moi_acc:
+        savoir = await savoir_pour(derniere_question(body), exclure_fiche=cible_acc,
+                                   exclure_svlbh=(None if cible_acc else moi_acc))
+        if savoir:
+            system_blocks.append({"type": "text", "text": SAVOIR_CADRE + savoir})
+            mesure_fil += f" savoir_car={len(savoir)}"
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
     if body.decodage_id:
