@@ -28,11 +28,12 @@ from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
+from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
@@ -507,11 +508,7 @@ def _cache_history(messages: list[dict]) -> list[dict]:
     if not messages:
         return messages
     out = [dict(m) for m in messages]
-    last = out[-1]
-    content = last.get("content")
-    if isinstance(content, str):
-        last["content"] = [{"type": "text", "text": content,
-                           "cache_control": {"type": "ephemeral"}}]
+    out[-1]["content"] = marquer_cache(out[-1].get("content"))
     return out
 
 
@@ -520,7 +517,22 @@ router = APIRouter(prefix="/digisha", tags=["digiSha"])
 
 class ChatTurn(BaseModel):
     role: Literal["user", "assistant"]
-    content: str
+    # Le texte, ou des blocs (text / image / document en base64 — digisha_pieces, 17.10.2026) passés tels quels au modèle.
+    content: Contenu
+
+    @field_validator("content")
+    @classmethod
+    def _contenu(cls, v: Contenu) -> Contenu:
+        return valider_contenu(v)
+
+
+def derniere_question(body) -> str:
+    """Le texte du dernier tour (les pièces y deviennent « [photo] » / « [document : titre] »)."""
+    return texte_de(body.messages[-1].content) if body.messages else ""
+
+
+def pieces_du_dernier(body) -> int:
+    return compter_pieces(body.messages[-1].content) if body.messages else 0
 
 
 class MemberState(BaseModel):
@@ -791,11 +803,19 @@ async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: boo
     return "z1" if sur_soi else "z2"
 
 
-async def fil_digisha_reprise(authorization: str | None, consultante_id: str, canal: str) -> str:
+FIL_REPRISE_CADRE = (
+    "## Ton fil DiGiSha — ce qui s'est déjà dit (reprise)\n"
+    "Ce sont les derniers tours déposés dans le fil pour cette personne et ce canal. Si la conversation "
+    "reprend, pars de là : ne redemande pas ce qui est déjà posé, nomme où on s'était arrêtées.\n\n"
+)
+
+
+async def fil_digisha_reprise(authorization: str | None, consultante_id: str | None, canal: str) -> str:
     """Les dernières sections DiGiSha de cette fiche et de ce canal, pour reprendre là où on s'était arrêtées
-    (migration 2026-10-16g, digisha_fil_reprendre ; les droits sont ceux du fil). Vide si rien ou refusé."""
+    (migration 2026-10-16g, digisha_fil_reprendre ; les droits sont ceux du fil). Sans fiche (None) : la fiche
+    « soi » de la personne, comme pour le dépôt (migration 2026-10-17g). Vide si rien ou refusé."""
     rows = await _rpc_personne(authorization, "digisha_fil_reprendre",
-                               {"p_consultante": consultante_id, "p_canal": canal, "p_max_car": 12000})
+                               {"p_consultante": consultante_id or None, "p_canal": canal, "p_max_car": 12000})
     if not rows:
         return ""
     return "\n\n".join(f"**{r.get('titre')}** ({r.get('jour')})\n{r.get('corps')}" for r in rows)
@@ -1075,7 +1095,7 @@ async def digisha_chat(
         )
     # Historique : au-delà de 20 messages, les tours anciens sont résumés par
     # blocs (cache) et seuls les derniers restent bruts — voir digisha_memoire.
-    raw_messages = [t.model_dump() for t in body.messages]
+    raw_messages = [t.model_dump(exclude_none=True) for t in body.messages]
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     resume_blocks = [resume_block] if resume_block else []
     usage_extra = ""
@@ -1093,7 +1113,7 @@ async def digisha_chat(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="fil_consultante_id requis en mode fil",
             )
-        question = body.messages[-1].content if body.messages else ""
+        question = derniere_question(body)
         passages, mesure_fil = await passages_du_fil(body.fil_consultante_id, question, authorization)
         contexte_fil = build_fil_context(passages)
         usage_extra = f" fil_sections={len(passages)} fil_car={len(contexte_fil)}{mesure_fil}"
@@ -1154,11 +1174,7 @@ async def digisha_chat(
                   "canal": canal_fil,
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
                  ensure_ascii=False)},
-        ] + ([{"type": "text",
-               "text": "## Ton fil DiGiSha — ce qui s'est déjà dit (reprise)\n"
-                       "Ce sont les derniers tours déposés dans le fil pour cette personne et ce canal. Si la conversation "
-                       "reprend, pars de là : ne redemande pas ce qui est déjà posé, nomme où on s'était arrêtées.\n\n"
-                       + reprise}] if reprise else []) + resume_blocks
+        ] + ([{"type": "text", "text": FIL_REPRISE_CADRE + reprise}] if reprise else []) + resume_blocks
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
@@ -1193,6 +1209,8 @@ async def digisha_chat(
             detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
         )
     data = resp.json()
+    if pieces_du_dernier(body):
+        usage_extra += f" pieces={pieces_du_dernier(body)}"
     journaliser_usage("chat", body.mode, model, data, len(recents), n_blocs,
                       qui=(caller_uid or "anon")[:8], extra=usage_extra)
     await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
@@ -1203,12 +1221,12 @@ async def digisha_chat(
                                                 choisi=body.canal, stx=(ident or {}).get("stx")))
     if depot_fil and moi:
         await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
-                                  body.messages[-1].content if body.messages else "", text, body.mode)
+                                  derniere_question(body), text, body.mode)
     if not body.no_log:
         await log_exchange(
             "render-tuteur",
             body.mode if body.mode in ("formation_m1", "fil") else body.parcours,
-            body.messages[-1].content if body.messages else "", text, model,
+            derniere_question(body), text, model,
             prompt_version=version, etat=body.etat.model_dump(),
             supabase_user_id=caller_uid,
         )
@@ -1361,19 +1379,34 @@ async def digisha_accompagnement(
         used = await _compter_accompagnement(str(ident["svlbh_id"]))
     if ident and ident.get("profondeur") and ident.get("svlbh_id") and used <= PROFONDEUR_FAIR_USE:
         model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
-    raw_messages = [t.model_dump() for t in body.messages]
+    raw_messages = [t.model_dump(exclude_none=True) for t in body.messages]
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     system_blocks = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
     if resume_block:
         system_blocks.append(resume_block)
     mesure_fil = ""
     if body.fil_consultante_id:
-        question = body.messages[-1].content if body.messages else ""
+        question = derniere_question(body)
         passages, mesure_fil = await passages_du_fil(body.fil_consultante_id, question, authorization)
         system_blocks.append({"type": "text",
                               "text": FIL_CADRE_ACCOMPAGNEMENT + "\n\n" + build_fil_context(passages)})
+    # La reprise du fil DiGiSha AVANT la réponse — mesuré le 17.10.2026 09h24 chez Patrick (z12, 7 tours déposés)
+    # : « Je n'ai pas de trace de notre échange précédent ». Ce chemin déposait chaque tour sans jamais le relire ;
+    # seul le chemin formation M1 de /chat le faisait. Même fiche et même canal que le dépôt, plus bas.
+    moi_acc = str((ident or {}).get("svlbh_id") or "").lower() or None
+    cible_acc = body.fil_consultante_id or None
+    canal_acc: str | None = None
+    if moi_acc:
+        canal_acc = await canal_digisha(authorization, moi_acc, sur_soi=(cible_acc is None),
+                                        choisi=body.canal, stx=(ident or {}).get("stx"))
+        reprise = await fil_digisha_reprise(authorization, cible_acc, canal_acc)
+        mesure_fil += f" canal={canal_acc} reprise_car={len(reprise)}"
+        if reprise:
+            system_blocks.append({"type": "text", "text": FIL_REPRISE_CADRE + reprise})
+    if pieces_du_dernier(body):
+        mesure_fil += f" pieces={pieces_du_dernier(body)}"
     # La banque Questions/Réponses (carte 564cd650) : les questions affichées proches du dernier message.
-    derniere = body.messages[-1].content if body.messages else ""
+    derniere = derniere_question(body)
     bloc_qa = build_qa_context(await fetch_banque_qr(derniere, authorization))
     if bloc_qa:
         system_blocks.append({"type": "text", "text": bloc_qa})
@@ -1412,18 +1445,13 @@ async def digisha_accompagnement(
         supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
-    moi_acc = str((ident or {}).get("svlbh_id") or "").lower() or None
-    if moi_acc:
-        cible = body.fil_consultante_id or None
-        await fil_digisha_deposer(authorization, cible,
-                                  await canal_digisha(authorization, moi_acc, sur_soi=(cible is None),
-                                                      choisi=body.canal, stx=(ident or {}).get("stx")),
-                                  body.messages[-1].content if body.messages else "", text, "accompagnement")
+    if moi_acc and canal_acc:
+        await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement")
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
     if not body.no_log and not body.fil_consultante_id:
         await log_exchange(
             "render-accompagnement", "accompagnement",
-            body.messages[-1].content if body.messages else "", text,
+            derniere_question(body), text,
             model, prompt_version=version,
             svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
             supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),

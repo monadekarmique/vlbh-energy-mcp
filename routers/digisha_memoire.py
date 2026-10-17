@@ -27,6 +27,8 @@ from collections import OrderedDict
 
 import httpx
 
+from routers.digisha_pieces import texte_de
+
 log = logging.getLogger("digisha")
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
@@ -75,8 +77,9 @@ def decouper(messages: list[dict]) -> tuple[list[list[dict]], list[dict]]:
 
 
 def _rendu(bloc: list[dict]) -> str:
+    # Un tour en blocs (photo, document — digisha_pieces) se résume par son texte, jamais par ses octets.
     return "\n\n".join(
-        ("Elle : " if m.get("role") == "user" else "DiGiSha : ") + str(m.get("content", ""))
+        ("Elle : " if m.get("role") == "user" else "DiGiSha : ") + texte_de(m.get("content", ""))
         for m in bloc
     )
 
