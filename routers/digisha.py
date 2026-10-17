@@ -548,6 +548,10 @@ class ChatRequest(BaseModel):
     mode: Literal["tuteur", "formation_m1", "formation_dette_monadique", "fil"] = "tuteur"
     proche_consultante_id: str | None = None
     fil_consultante_id: str | None = None
+    # Le canal du soin choisi dans l'app (DEC Patrick 17.10.2026 : « ajouter sur DiGiSha les z1 à z12 de l'accueil de
+    # Chroma 5 ») : « z1 » … « z12 », le sélecteur de canal de l'accueil Chroma 5 porté dans le socle. Honoré dès ST3
+    # (canal_choisi) ; une ST2 travaille sur son Âme, en z1, quoi qu'envoie l'écran. Absent = la règle de la base.
+    canal: str | None = None
 
 
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
@@ -758,11 +762,29 @@ async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeou
         return None
 
 
-async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: bool) -> str:
-    """Le canal où la conversation a lieu — lu en base (digisha_canal, migration 2026-10-16j) : le canal posé par
-    Patrick pour la praticienne (Anne z2, Giulia z3, Cornelia z4, Patrick z12 — « pour moi z5, z6, z8 et z9 qui vont
-    dans mon user … dans le canal z12 », 16.10.2026), sinon z1 sur soi (« tu discutes avec ton âme »), sinon le canal
-    de la praticienne, sinon z2. Panne = le même calcul ici, sans la table."""
+def canal_choisi(choisi: str | None, stx: str | None) -> str | None:
+    """Le canal que l'écran a choisi (sélecteur z1 → z12 de l'accueil Chroma 5, DEC Patrick 17.10.2026), s'il est
+    recevable : la forme « zN », et un stade qui a des tiers à accompagner (ST3 et plus). Une ST2 travaille sur son
+    Âme : son canal est z1, la règle de la base le dit, l'écran n'a pas voix au chapitre. Pur, sans réseau."""
+    c = (choisi or "").strip().lower()
+    if not re.fullmatch(r"z[1-9]\d?", c):
+        return None
+    s = str(stx or "").upper()
+    if not (s.startswith("ST") and s[2:3].isdigit() and int(s[2:3]) >= 3):
+        return None
+    return c
+
+
+async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: bool,
+                        choisi: str | None = None, stx: str | None = None) -> str:
+    """Le canal où la conversation a lieu — d'abord celui que l'écran a choisi, s'il est recevable (canal_choisi,
+    17.10.2026) ; sinon lu en base (digisha_canal, migration 2026-10-16j) : le canal posé par Patrick pour la
+    praticienne (Anne z2, Giulia z3, Cornelia z4, Patrick z12 — « pour moi z5, z6, z8 et z9 qui vont dans mon user …
+    dans le canal z12 », 16.10.2026), sinon z1 sur soi (« tu discutes avec ton âme »), sinon le canal de la
+    praticienne, sinon z2. Panne = le même calcul ici, sans la table."""
+    voulu = canal_choisi(choisi, stx)
+    if voulu:
+        return voulu
     canal = await _rpc_personne(authorization, "digisha_canal", {"p_svlbh": moi, "p_sur_soi": sur_soi}) if moi else None
     if isinstance(canal, str) and re.fullmatch(r"z\d+", canal):
         return canal
@@ -1112,7 +1134,7 @@ async def digisha_chat(
             usage_extra += " a_soi=1"
         if sur_soi:
             usage_extra += " sur_soi=1"
-        canal_fil = await canal_digisha(authorization, moi, sur_soi)
+        canal_fil = await canal_digisha(authorization, moi, sur_soi, choisi=body.canal, stx=(ident or {}).get("stx"))
         reprise = await fil_digisha_reprise(authorization, body.proche_consultante_id, canal_fil)
         usage_extra += f" canal={canal_fil} reprise_car={len(reprise)}"
         if m1_block is None:
@@ -1177,7 +1199,8 @@ async def digisha_chat(
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if depot_fil is None and moi:
         cible = body.fil_consultante_id if body.mode == "fil" else None
-        depot_fil = (cible, await canal_digisha(authorization, moi, sur_soi=(cible is None)))
+        depot_fil = (cible, await canal_digisha(authorization, moi, sur_soi=(cible is None),
+                                                choisi=body.canal, stx=(ident or {}).get("stx")))
     if depot_fil and moi:
         await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
                                   body.messages[-1].content if body.messages else "", text, body.mode)
@@ -1238,6 +1261,8 @@ class AccompagnementRequest(BaseModel):
     # Mentorée en contexte (carte b8d68119, point 4). MÊME nom que ChatRequest, le proxy priv-web, svlbh-core
     # et svlbh-core-android : pas de seconde orthographe. Absent = accompagnement inchangé.
     fil_consultante_id: str | None = None
+    # Le canal du soin choisi dans l'app (z1 → z12, DEC Patrick 17.10.2026) — même règle que ChatRequest.canal.
+    canal: str | None = None
 
 
 FIL_CADRE_ACCOMPAGNEMENT = """## Passages du fil de la personne dont on parle
@@ -1390,7 +1415,9 @@ async def digisha_accompagnement(
     moi_acc = str((ident or {}).get("svlbh_id") or "").lower() or None
     if moi_acc:
         cible = body.fil_consultante_id or None
-        await fil_digisha_deposer(authorization, cible, await canal_digisha(authorization, moi_acc, sur_soi=(cible is None)),
+        await fil_digisha_deposer(authorization, cible,
+                                  await canal_digisha(authorization, moi_acc, sur_soi=(cible is None),
+                                                      choisi=body.canal, stx=(ident or {}).get("stx")),
                                   body.messages[-1].content if body.messages else "", text, "accompagnement")
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
     if not body.no_log and not body.fil_consultante_id:
