@@ -1273,6 +1273,7 @@ async def digisha_chat(
         coulisse = await relecture_pour(sujet=body.proche_consultante_id) if sur_soi else ""
         if coulisse:
             usage_extra += f" relecture_car={len(coulisse)}"
+            await _rpc_service("digisha_relecture_servie", {"p_sujet": body.proche_consultante_id})
         if m1_block is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1541,6 +1542,7 @@ async def digisha_accompagnement(
                 system_blocks.append({"type": "text", "text": FIL_REPRISE_CADRE + reprise})
             if coulisse:
                 system_blocks.append({"type": "text", "text": RELECTURE_COULISSE + coulisse})
+                await _rpc_service("digisha_relecture_servie", {"p_svlbh": moi_acc})
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
     if body.decodage_id:
