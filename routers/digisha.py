@@ -872,7 +872,7 @@ FIL_REPRISE_CADRE = (
 )
 
 
-async def fil_digisha_reprise(authorization: str | None, consultante_id: str | None, canal: str) -> str:
+async def fil_digisha_reprise(authorization: str | None, consultante_id: str | None, canal: str | None) -> str:
     """Les dernières sections DiGiSha de cette fiche et de ce canal, pour reprendre là où on s'était arrêtées
     (migration 2026-10-16g, digisha_fil_reprendre ; les droits sont ceux du fil). Sans fiche (None) : la fiche
     « soi » de la personne, comme pour le dépôt (migration 2026-10-17g). Vide si rien ou refusé."""
@@ -887,10 +887,61 @@ async def fil_digisha_deposer(authorization: str | None, consultante_id: str | N
                               question: str, reponse: str, mode: str) -> bool:
     """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
     tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant."""
+    if consultante_id and mode != "formation_m1":
+        # « À propos de » une autre fiche (accompagnement, mode « fil ») : c'est une RELECTURE — elle se dépose chez celle qui
+        # relit, jamais dans le fil de la personne relue (migration 2026-10-17k ; sur sa propre fiche, le dépôt d'avant).
+        r = await _rpc_personne(authorization, "digisha_relecture_deposer",
+                                {"p_sujet": consultante_id, "p_canal": canal, "p_question": question,
+                                 "p_reponse": reponse, "p_mode": mode}, timeout=15)
+        return r is not None
     r = await _rpc_personne(authorization, "digisha_fil_deposer",
                             {"p_consultante": consultante_id or None, "p_canal": canal, "p_question": question,
                              "p_reponse": reponse, "p_mode": mode}, timeout=15)
     return r is not None
+
+
+async def _rpc_service(nom: str, corps: dict, timeout: int = 10):
+    """Un appel RPC avec la clé de SERVICE — pour ce qu'aucune personne ne doit lire elle-même (la relecture). None sur panne."""
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return None
+    try:
+        r = await _http().post(f"{supa_url}/rest/v1/rpc/{nom}", json=corps,
+                               headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
+                                        "Content-Type": "application/json"}, timeout=timeout)
+        if r.status_code != 200:
+            log.warning("digisha — rpc service %s HTTP %s : %s", nom, r.status_code, r.text[:200])
+            return None
+        return r.json()
+    except Exception as exc:
+        log.warning("digisha — rpc service %s en erreur : %r", nom, exc)
+        return None
+
+
+RELECTURE_COULISSE = (
+    "## En coulisse — ce que son accompagnant·e ressent à la relecture de ses décodages\n"
+    "Patrick (ou son accompagnante) a relu avec toi ses séances et y a posé son ressenti : ce qu'elle ne voit pas encore, "
+    "et que toi tu ne perçois pas. Laisse-le orienter tes questions et tes lectures ; amène-la à le trouver elle-même, à son "
+    "rythme, par ses propres mesures. Ne le cite jamais, ne dis pas qu'une relecture existe, ne nomme pas qui l'a faite.\n\n"
+)
+RELECTURE_PRECEDENTES = (
+    "## Tes relectures précédentes de cette personne\n"
+    "Ce que tu as déjà posé en relisant ses décodages ; pars de là, ne le redemande pas.\n\n"
+)
+RELECTURE_SEANCES = (
+    "## Ses séances DiGiSha — ce qu'elle a décodé (la relecture porte sur ces tours)\n"
+    "Les derniers tours de ses séances, tous canaux. Celle qui te parle les relit pour y poser ce qu'elle ressent : "
+    "aide-la à situer chaque ressenti dans ce qui a été décodé (date, heure, mesure).\n\n"
+)
+
+
+async def relecture_pour(sujet: str | None = None, svlbh: str | None = None) -> str:
+    """Les relectures récentes d'une personne (fiche, ou personne par sa fiche « soi »), lues par la clé de service."""
+    if not sujet and not svlbh:
+        return ""
+    r = await _rpc_service("digisha_relecture_pour", {"p_sujet": sujet or None, "p_svlbh": svlbh or None, "p_max_car": 8000})
+    return r if isinstance(r, str) else ""
 
 
 async def est_abonnee_myshamanfamily(authorization: str | None) -> bool:
@@ -1219,6 +1270,9 @@ async def digisha_chat(
         canal_fil = await canal_digisha(authorization, moi, sur_soi, choisi=body.canal, stx=(ident or {}).get("stx"))
         reprise = await fil_digisha_reprise(authorization, body.proche_consultante_id, canal_fil)
         usage_extra += f" canal={canal_fil} reprise_car={len(reprise)}"
+        coulisse = await relecture_pour(sujet=body.proche_consultante_id) if sur_soi else ""
+        if coulisse:
+            usage_extra += f" relecture_car={len(coulisse)}"
         if m1_block is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1236,7 +1290,8 @@ async def digisha_chat(
                   "canal": canal_fil,
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
                  ensure_ascii=False)},
-        ] + ([{"type": "text", "text": FIL_REPRISE_CADRE + reprise}] if reprise else []) + resume_blocks
+        ] + ([{"type": "text", "text": FIL_REPRISE_CADRE + reprise}] if reprise else []) \
+          + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) + resume_blocks
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
@@ -1469,10 +1524,23 @@ async def digisha_accompagnement(
     if moi_acc:
         canal_acc = await canal_digisha(authorization, moi_acc, sur_soi=(cible_acc is None),
                                         choisi=body.canal, stx=(ident or {}).get("stx"))
-        reprise = await fil_digisha_reprise(authorization, cible_acc, canal_acc)
-        mesure_fil += f" canal={canal_acc} reprise_car={len(reprise)}"
-        if reprise:
-            system_blocks.append({"type": "text", "text": FIL_REPRISE_CADRE + reprise})
+        if cible_acc:
+            # Relecture (2026-10-17k) : DiGiSha relit SES séances, tous canaux, et ce qui a déjà été relu d'elle.
+            reprise = await fil_digisha_reprise(authorization, cible_acc, None)
+            deja = await relecture_pour(sujet=cible_acc)
+            mesure_fil += f" relecture=1 reprise_car={len(reprise)} relecture_car={len(deja)}"
+            if reprise:
+                system_blocks.append({"type": "text", "text": RELECTURE_SEANCES + reprise})
+            if deja:
+                system_blocks.append({"type": "text", "text": RELECTURE_PRECEDENTES + deja})
+        else:
+            reprise = await fil_digisha_reprise(authorization, cible_acc, canal_acc)
+            coulisse = await relecture_pour(svlbh=moi_acc)
+            mesure_fil += f" canal={canal_acc} reprise_car={len(reprise)}" + (f" relecture_car={len(coulisse)}" if coulisse else "")
+            if reprise:
+                system_blocks.append({"type": "text", "text": FIL_REPRISE_CADRE + reprise})
+            if coulisse:
+                system_blocks.append({"type": "text", "text": RELECTURE_COULISSE + coulisse})
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
     if body.decodage_id:
