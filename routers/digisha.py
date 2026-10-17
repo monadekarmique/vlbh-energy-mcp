@@ -564,6 +564,10 @@ class ChatRequest(BaseModel):
     # Chroma 5 ») : « z1 » … « z12 », le sélecteur de canal de l'accueil Chroma 5 porté dans le socle. Honoré dès ST3
     # (canal_choisi) ; une ST2 travaille sur son Âme, en z1, quoi qu'envoie l'écran. Absent = la règle de la base.
     canal: str | None = None
+    # Le décodage que la personne poursuit (QR « Poursuivre avec DiGiSha », DEC Patrick 17.10.2026 : « via QR code serait
+    # smart » ; « les deux avec le même QR » — l'autrice, l'apprenante, la consultante). Réclamé d'abord par
+    # decodage_reprendre(jeton) (migration 2026-10-17j) ; le serveur le relit avec le jeton de la personne (RLS).
+    decodage_id: str | None = None
 
 
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
@@ -801,6 +805,64 @@ async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: boo
     if isinstance(canal, str) and re.fullmatch(r"z\d+", canal):
         return canal
     return "z1" if sur_soi else "z2"
+
+
+DECODAGE_MAX_CAR = 12_000
+
+
+async def fetch_decodage(authorization: str | None, decodage_id: str | None) -> dict | None:
+    """Le décodage poursuivi, lu avec le jeton de la PERSONNE (policy dec_v0_read_own_or_shared : le sien ou partagé avec
+    elle). None si absent, mal formé, refusé ou en panne — DiGiSha répond alors sans lui."""
+    did = (decodage_id or "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", did):
+        return None
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not token or not supa_url or not supa_key:
+        return None
+    try:
+        r = await _http().get(
+            f"{supa_url}/rest/v1/decodages_v0",
+            params={"id": f"eq.{did}", "select": "id,menu,provenance,consultante_label,is_self_care,created_at,payload"},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        rows = r.json() if r.status_code == 200 else None
+        return rows[0] if rows else None
+    except Exception as exc:
+        log.warning("digisha — décodage %s illisible : %r", did[:8], exc)
+        return None
+
+
+def bloc_decodage(d: dict | None) -> str:
+    """Le décodage, tel qu'enregistré, en tête de l'échange."""
+    if not d:
+        return ""
+    quand = str(d.get("created_at") or "")[:10]
+    try:
+        quand = datetime.fromisoformat(quand).strftime("%d.%m.%Y")
+    except ValueError:
+        pass
+    pour = "auto-soin" if d.get("is_self_care") else (d.get("consultante_label") or "")
+    contenu = json.dumps(d.get("payload") or {}, ensure_ascii=False)
+    if len(contenu) > DECODAGE_MAX_CAR:
+        contenu = contenu[:DECODAGE_MAX_CAR] + " …(tronqué)"
+    return ("## Le soin décodé que la personne poursuit\n"
+            f"« {d.get('menu') or 'Décodage'} » du {quand}" + (f" — {pour}" if pour else "")
+            + (f" (outil : {d.get('provenance')})" if d.get("provenance") else "") + ".\n"
+            "Elle vient de scanner le QR de ce décodage pour le poursuivre avec toi. Pars de ce qu'il contient : nomme où il en "
+            "est, ne lui redemande pas ce qui y est déjà mesuré. Le contenu, tel qu'enregistré :\n\n" + contenu)
+
+
+def ajouter_au_systeme(payload: dict, texte: str) -> None:
+    if not texte:
+        return
+    systeme = payload.get("system")
+    blocs = [{"type": "text", "text": systeme}] if isinstance(systeme, str) else list(systeme or [])
+    payload["system"] = blocs + [{"type": "text", "text": texte}]
 
 
 FIL_REPRISE_CADRE = (
@@ -1189,6 +1251,10 @@ async def digisha_chat(
             "system": build_system(base, body.parcours, body.etat) + resume_blocks,
             "messages": _cache_history(recents),
         }
+    if body.decodage_id:
+        texte_dec = bloc_decodage(await fetch_decodage(authorization, body.decodage_id))
+        ajouter_au_systeme(payload, texte_dec)
+        usage_extra += f" decodage={body.decodage_id[:8]} decodage_car={len(texte_dec)}"
     client = _http()
     resp = await client.post(
         ANTHROPIC_URL,
@@ -1281,6 +1347,10 @@ class AccompagnementRequest(BaseModel):
     fil_consultante_id: str | None = None
     # Le canal du soin choisi dans l'app (z1 → z12, DEC Patrick 17.10.2026) — même règle que ChatRequest.canal.
     canal: str | None = None
+    # Le décodage que la personne poursuit (QR « Poursuivre avec DiGiSha », DEC Patrick 17.10.2026 : « via QR code serait
+    # smart » ; « les deux avec le même QR » — l'autrice, l'apprenante, la consultante). Réclamé d'abord par
+    # decodage_reprendre(jeton) (migration 2026-10-17j) ; le serveur le relit avec le jeton de la personne (RLS).
+    decodage_id: str | None = None
 
 
 FIL_CADRE_ACCOMPAGNEMENT = """## Passages du fil de la personne dont on parle
@@ -1405,6 +1475,11 @@ async def digisha_accompagnement(
             system_blocks.append({"type": "text", "text": FIL_REPRISE_CADRE + reprise})
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
+    if body.decodage_id:
+        texte_dec = bloc_decodage(await fetch_decodage(authorization, body.decodage_id))
+        if texte_dec:
+            system_blocks.append({"type": "text", "text": texte_dec})
+        mesure_fil += f" decodage={body.decodage_id[:8]} decodage_car={len(texte_dec)}"
     # La banque Questions/Réponses (carte 564cd650) : les questions affichées proches du dernier message.
     derniere = derniere_question(body)
     bloc_qa = build_qa_context(await fetch_banque_qr(derniere, authorization))
