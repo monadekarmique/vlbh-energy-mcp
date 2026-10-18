@@ -995,7 +995,9 @@ RELECTURE_COULISSE = (
     "Patrick (ou son accompagnante) a relu ses séances avec toi et t'a laissé ses retours et ses consignes PROPRES À ELLE : ce "
     "qu'il ressent, ce qu'elle ne voit pas encore et que tu ne perçois pas, ce que tu dois faire autrement avec elle. Applique-les "
     "à cette séance ; amène-la à trouver elle-même, à son rythme, par ses propres mesures. Ne les cite jamais, ne dis pas qu'ils "
-    "existent, ne nomme pas qui les a donnés.\n\n"
+    "existent, ne nomme pas qui les a donnés. Seule exception (Patrick, 18.10.2026 : « Les consignes seulement ») : les lignes "
+    "des blocs « Consignes pour … » lui sont lisibles dans son app ; si elle en parle, tu peux les reconnaître et en parler avec "
+    "elle. Le reste — l'échange, le ressenti de celle qui a relu — ne se cite ni ne se résume jamais, même si elle le demande.\n\n"
 )
 RELECTURE_CADRE = (
     "## « À propos de » — Patrick te donne un retour et des consignes pour CE profil\n"
@@ -1004,33 +1006,59 @@ RELECTURE_CADRE = (
     "avec des instructions spécifiques à ce profile »). Tu ne cherches pas dans son fil de quoi lui répondre et tu ne fais pas "
     "d'analyse d'elle qu'il ne t'a pas demandée. Tu REÇOIS : demande une précision si une consigne est ambiguë, dis en une phrase "
     "comment tu l'appliqueras à sa prochaine séance. Ce qu'il écrit ici t'accompagnera, en coulisse, à chacune de ses séances.\n"
-    "CE QU'ELLE LIRA (Patrick, 18.10.2026 : « Les consignes seulement ») : cet échange reste entre lui et toi ; seules les "
-    "consignes lui deviennent lisibles. Quand il t'en pose une ou plusieurs, termine ta réponse par ce bloc, exactement :\n"
-    "Consignes pour <son prénom> :\n- <une consigne par ligne>\n"
-    "Écris chaque ligne pour qu'ELLE puisse la recevoir : ce que tu feras autrement avec elle, sans jugement sur elle ni détail de "
-    "cet échange. Une consigne par ligne, déjà posée ou nouvelle ; pas de bloc s'il n'a posé aucune consigne.\n\n"
+    "CE QU'ELLE LIRA (Patrick, 18.10.2026 : « Les consignes seulement ») : cet échange reste entre celle qui relit et toi ; "
+    "seules les consignes lui deviennent lisibles. Ses consignes ACTIVES sont dans le contexte du tour (« Tes consignes actives "
+    "pour … ») : pars d'elles. Quand on te pose une consigne NOUVELLE, ou qu'on en change une, termine ta réponse par :\n"
+    "Consignes pour <son prénom> :\n- <une consigne nouvelle par ligne>\n"
+    "Quand on en retire ou qu'on en remplace une, ajoute, en recopiant la ligne active mot pour mot :\n"
+    "Consignes retirées pour <son prénom> :\n- <la consigne retirée>\n"
+    "Écris chaque consigne nouvelle pour qu'ELLE puisse la recevoir : ce que tu feras autrement avec elle, sans jugement sur "
+    "elle ni détail de cet échange. Ne recopie pas les consignes actives qui ne changent pas. Aucun bloc si rien ne change.\n\n"
 )
 
 
-def consignes_du_texte(texte: str) -> list[str]:
-    """Les lignes du bloc « Consignes pour <prénom> : » à la fin d'une réponse « à propos de » (2026-10-18f)."""
-    lignes = (texte or "").splitlines()
-    debut = None
-    for i, l in enumerate(lignes):
-        if re.match(r"^\W{0,4}consignes pour [^:\n]{1,60}:\W{0,4}$", l.strip(), re.I):
-            debut = i
-    if debut is None:
-        return []
-    out = []
-    for l in lignes[debut + 1:]:
-        m = re.match(r"^\s*(?:[-•*–]|\d+[.)])\s+(.+?)\s*$", l)
+def _plat(t: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", t or "") if unicodedata.category(c) != "Mn").casefold().strip()
+
+
+_TETE = re.compile(r"^[#>*_\s]*consignes?\s+(retir[ée]es?\s+)?pour\s+(.+?)\s*:?[*_\s]*:?\s*$", re.I)
+_PUCE = re.compile(r"^\s*(?:[-•*–—‑]|\d+[.)])\s+(.+?)\s*$")
+
+
+def consignes_du_texte(texte: str, prenom: str | None = None) -> tuple[list[str], list[str]]:
+    """(nouvelles, retirées) des blocs « Consignes pour <prénom> : » et « Consignes retirées pour <prénom> : » d'une réponse
+    « à propos de » (2026-10-18f). Un bloc adressé à un autre prénom est ignoré ; deux blocs de même sorte = rien (ambigu)."""
+    blocs: dict[str, list[list[str]]] = {"nouvelles": [], "retirees": []}
+    courant = None
+    for l in (texte or "").replace("\r\n", "\n").split("\n"):
+        m = _TETE.match(l)
         if m:
-            t = m.group(1).strip().strip("*").strip()
-            if len(t) >= 3:
-                out.append(t[:600])
+            nom = _plat(re.sub(r"[*_]", "", m.group(2)))
+            courant = None
+            if prenom and nom.split()[0:1] == _plat(prenom).split()[0:1]:
+                courant = blocs["retirees" if m.group(1) else "nouvelles"]
+                courant.append([])
+            continue
+        if courant is None:
+            continue
+        p = _PUCE.match(l)
+        if p:
+            courant[-1].append(p.group(1))
+        elif l.strip() and l[:1] in (" ", "\t") and courant[-1]:
+            courant[-1][-1] += " " + l.strip()               # suite d'une ligne coupée
         elif l.strip():
-            break
-    return out[:12]
+            courant = None
+    def propres(listes):
+        if len(listes) != 1:
+            return []
+        out = []
+        for t in listes[0]:
+            t = re.sub(r"(\*\*|__|\*|_)", "", t).strip()
+            if len(t) >= 3 and not t.endswith("?"):
+                out.append(t[:600])
+        return out[:12]
+    return propres(blocs["nouvelles"]), propres(blocs["retirees"])
 RELECTURE_PRECEDENTES = (
     "## Tes relectures précédentes de cette personne\n"
     "Ce que tu as déjà posé en relisant ses décodages ; pars de là, ne le redemande pas.\n\n"
@@ -1059,11 +1087,14 @@ async def savoir_pour(question: str, exclure_fiche: str | None = None, exclure_s
     return r if isinstance(r, str) else ""
 
 
-async def relecture_pour(sujet: str | None = None, svlbh: str | None = None) -> str:
+async def relecture_pour(sujet: str | None = None, svlbh: str | None = None, auteur: str | None = None) -> str:
     """Les relectures récentes d'une personne (fiche, ou personne par sa fiche « soi »), lues par la clé de service."""
     if not sujet and not svlbh:
         return ""
-    r = await _rpc_service("digisha_relecture_pour", {"p_sujet": sujet or None, "p_svlbh": svlbh or None, "p_max_car": 8000})
+    corps = {"p_sujet": sujet or None, "p_svlbh": svlbh or None, "p_max_car": 8000}
+    if auteur:
+        corps["p_auteur"] = auteur                           # 18f : une relectrice ne relit que SES relectures
+    r = await _rpc_service("digisha_relecture_pour", corps)
     return r if isinstance(r, str) else ""
 
 
@@ -1666,6 +1697,7 @@ async def digisha_accompagnement(
     # seul le chemin formation M1 de /chat le faisait. Même fiche et même canal que le dépôt, plus bas.
     moi_acc = str((ident or {}).get("svlbh_id") or "").lower() or None
     cible_acc = body.fil_consultante_id or None
+    prenom_cible: str | None = None
     canal_acc: str | None = None
     if moi_acc:
         canal_acc = await canal_digisha(authorization, moi_acc, sur_soi=(cible_acc is None),
@@ -1673,7 +1705,13 @@ async def digisha_accompagnement(
         if cible_acc:
             # Relecture (2026-10-17k) : DiGiSha relit SES séances, tous canaux, et ce qui a déjà été relu d'elle.
             reprise = await fil_digisha_reprise(authorization, cible_acc, None)
-            deja = await relecture_pour(sujet=cible_acc) if await peut_relire(authorization, cible_acc) else ""
+            deja = await relecture_pour(sujet=cible_acc, auteur=moi_acc) if await peut_relire(authorization, cible_acc) else ""
+            ctx_consignes = await _rpc_personne(authorization, "digisha_consignes_contexte", {"p_sujet": cible_acc})
+            if isinstance(ctx_consignes, dict):
+                prenom_cible = ctx_consignes.get("prenom") or None
+                actives = [c for c in (ctx_consignes.get("consignes") or []) if isinstance(c, str)]
+                system_blocks.append(du_tour(f"## Tes consignes actives pour {prenom_cible or 'elle'}\n"
+                                             + ("\n".join(f"- {c}" for c in actives) if actives else "(aucune pour l'instant)")))
             mesure_fil += f" relecture=1 reprise_car={len(reprise)} relecture_car={len(deja)}"
             if reprise:
                 system_blocks.append(du_tour(RELECTURE_SEANCES + reprise))
@@ -1747,13 +1785,14 @@ async def digisha_accompagnement(
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if moi_acc and canal_acc:
         seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement")
-        if cible_acc:
-            # 2026-10-18f : les consignes du bloc deviennent lisibles par la mentorée (même porte que le dépôt, son jeton à elle).
-            consignes = consignes_du_texte(text)
-            if consignes:
+        if cible_acc and prenom_cible:
+            # 2026-10-18f : les consignes du bloc adressé à SON prénom deviennent lisibles par la mentorée (porte du dépôt, jeton
+            # de l'autrice) ; une réponse coupée ne pose rien.
+            nouvelles, retirees = consignes_du_texte(text, prenom_cible)
+            if (nouvelles or retirees) and data.get("stop_reason") in (None, "end_turn"):
                 n = await _rpc_personne(authorization, "digisha_consignes_poser",
-                                        {"p_sujet": cible_acc, "p_textes": consignes, "p_session": seance})
-                log.info("digisha — consignes=%d posees=%s sujet=%s", len(consignes), n, cible_acc[:8])
+                                        {"p_sujet": cible_acc, "p_nouvelles": nouvelles, "p_retirees": retirees, "p_session": seance})
+                log.info("digisha — consignes nouvelles=%d retirees=%d resultat=%s sujet=%s", len(nouvelles), len(retirees), n, cible_acc[:8])
         if pieces_du_dernier(body):
             n_gardees = await ranger_pieces(seance, body.messages[-1].content)
             log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])

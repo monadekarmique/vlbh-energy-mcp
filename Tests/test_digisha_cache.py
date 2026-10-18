@@ -187,7 +187,7 @@ def test_a_propos_de_x_la_consigne_ne_bouge_plus_d_un_tour_a_l_autre(monkeypatch
     async def reprise(auth, cible, canal):
         return "séances de X : " + " / ".join(depots)
 
-    async def relecture(sujet=None, svlbh=None):
+    async def relecture(sujet=None, svlbh=None, auteur=None):
         return "relectures : " + " / ".join(depots)
 
     async def deposer(auth, cible, canal, q, r, mode):
@@ -236,26 +236,36 @@ def test_a_propos_de_x_la_consigne_ne_bouge_plus_d_un_tour_a_l_autre(monkeypatch
 
 
 # ── 2026-10-18f : les consignes « à propos de X » lisibles par X (Patrick : « Les consignes seulement ») ──────────────────
-def test_consignes_du_texte_lit_le_bloc_de_fin():
-    r = ("Reçu. Je l'appliquerai dès sa prochaine séance.\n\n**Consignes pour Fabienne :**\n"
-         "- Ne plus proposer le pont Hellinger : elle ne le reconnaît pas.\n• Laisser venir la colère avant la tristesse.\n"
-         "2) Demander sa mesure avant chaque pont.\n\nBelle nuit.")
-    assert d.consignes_du_texte(r) == ["Ne plus proposer le pont Hellinger : elle ne le reconnaît pas.",
-                                       "Laisser venir la colère avant la tristesse.", "Demander sa mesure avant chaque pont."]
-    assert d.consignes_du_texte("Aucune consigne ici.\n- une liste qui n'en est pas") == []
-    assert d.consignes_du_texte("") == []
-    assert d.consignes_du_texte("Consignes pour elle :\n- ok") == []           # trop court : ignoré
-    assert len(d.consignes_du_texte("Consignes pour X :\n" + "\n".join(f"- consigne {i}" for i in range(20)))) == 12
+def test_consignes_du_texte_nouvelles_et_retirees_adressees_a_son_prenom():
+    r = ("Reçu. Je l'appliquerai dès sa prochaine séance.\n\n#### **Consignes pour Fabienne :**\n"
+         "- **Pont Hellinger** : ne plus le proposer, elle ne le reconnaît pas.\n• Laisser venir la colère\n  avant la tristesse.\n"
+         "— Demander sa mesure avant chaque pont.\n- Faut-il aussi attendre ?\n\nConsignes retirées pour Fabienne :\n"
+         "1) Proposer le pont Hellinger.\n\nBelle nuit.")
+    n, rt = d.consignes_du_texte(r, "Fabienne")
+    assert n == ["Pont Hellinger : ne plus le proposer, elle ne le reconnaît pas.", "Laisser venir la colère avant la tristesse.",
+                 "Demander sa mesure avant chaque pont."]
+    assert rt == ["Proposer le pont Hellinger."]
+    assert d.consignes_du_texte("Consigne pour fabiénne\n- Une seule consigne au singulier.", "Fabienne") == (["Une seule consigne au singulier."], [])
 
 
-def test_a_propos_de_x_les_consignes_partent_vers_la_base(monkeypatch):
-    appels = []
+def test_consignes_d_un_autre_prenom_ou_ambigues_ignorees():
+    r = "Consignes pour Fabienne :\n- A faire avec elle.\n\nConsignes pour Chloé :\n- Lui parler de son père."
+    assert d.consignes_du_texte(r, "Fabienne") == (["A faire avec elle."], [])
+    assert d.consignes_du_texte("Consignes pour sa prochaine séance :\n- Elle doit dormir.", "Fabienne") == ([], [])
+    deux = "Consignes pour Fabienne :\n- Une.\n\nConsignes pour Fabienne :\n- Deux autres."
+    assert d.consignes_du_texte(deux, "Fabienne") == ([], [])
+    assert d.consignes_du_texte("Consignes pour Fabienne :\n- Une consigne.", None) == ([], [])
+    assert d.consignes_du_texte("", "Fabienne") == ([], [])
+
+
+def _accompagnement_a_propos(monkeypatch, reponse, stop="end_turn"):
+    appels, systemes = [], []
 
     async def rien(*a, **k):
         return None
 
     async def ident(*a, **k):
-        return {"svlbh_id": "52adbc98-d2b0-4444-b89c-b1311a02a983", "uid": "306c2408-b200-4a52-971b-c77c53d31573", "stx": "ST6"}
+        return {"svlbh_id": "57bd2f8e-53c5-49f8-a778-ed8c2cd75bcc", "uid": "1ba5116b-b939-4389-a16b-5d27f57e6b0b", "stx": "ST5"}
 
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
@@ -281,24 +291,32 @@ def test_a_propos_de_x_les_consignes_partent_vers_la_base(monkeypatch):
     async def deposer(*a, **k):
         return "seance-1"
 
+    async def relecture(sujet=None, svlbh=None, auteur=None):
+        appels.append(("relecture_pour", {"sujet": sujet, "auteur": auteur}))
+        return ""
+
     async def personne(authorization, nom, corps, timeout=10):
         appels.append((nom, corps))
-        return 2
+        if nom == "digisha_consignes_contexte":
+            return {"prenom": "Fabienne", "consignes": ["Proposer le pont Hellinger."]}
+        return {"posees": 1, "retirees": 0}
 
     class Client:
         async def post(self, url, json=None, headers=None, timeout=None):
+            systemes.append(json)
+
             class R:
                 status_code = 200
                 text = ""
 
                 def json(self_inner):
-                    return {"content": [{"type": "text", "text": "Reçu.\n\nConsignes pour Fabienne :\n- Ne plus proposer le pont Hellinger.\n- Laisser venir la colère."}],
-                            "stop_reason": "end_turn", "usage": {"input_tokens": 1, "output_tokens": 1}}
+                    return {"content": [{"type": "text", "text": reponse}], "stop_reason": stop,
+                            "usage": {"input_tokens": 1, "output_tokens": 1}}
             return R()
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
     for nom, f in {"authorize_caller": rien, "gate_subscription": ident, "fetch_prompt": prompt, "_compter_accompagnement": zero,
-                   "preparer_historique": historique, "canal_digisha": canal, "fil_digisha_reprise": vide, "relecture_pour": vide,
+                   "preparer_historique": historique, "canal_digisha": canal, "fil_digisha_reprise": vide, "relecture_pour": relecture,
                    "peut_relire": vrai, "savoir_pour": vide, "fetch_banque_qr": liste, "journaliser_cout": rien, "log_exchange": rien,
                    "fil_digisha_deposer": deposer, "_rpc_service": rien, "_rpc_personne": personne}.items():
         monkeypatch.setattr(d, nom, f)
@@ -309,10 +327,26 @@ def test_a_propos_de_x_les_consignes_partent_vers_la_base(monkeypatch):
     x = "688a23c1-f09e-48d7-be5b-dd24c101c1c1"
     corps = d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="Ne lui propose plus Hellinger.")], fil_consultante_id=x)
     asyncio.run(d.digisha_accompagnement(request=None, body=corps, x_digisha_token=None, authorization="Bearer t"))
+    return appels, systemes, x
+
+
+def test_a_propos_de_x_pose_les_nouvelles_retire_les_retirees_et_relit_seulement_les_siennes(monkeypatch):
+    rep = ("Reçu.\n\nConsignes pour Fabienne :\n- Ne plus proposer le pont Hellinger.\n\n"
+           "Consignes retirées pour Fabienne :\n- Proposer le pont Hellinger.")
+    appels, systemes, x = _accompagnement_a_propos(monkeypatch, rep)
     poses = [c for n, c in appels if n == "digisha_consignes_poser"]
-    assert poses == [{"p_sujet": x, "p_textes": ["Ne plus proposer le pont Hellinger.", "Laisser venir la colère."], "p_session": "seance-1"}]
-    # sans « à propos de » (sur soi), aucun dépôt de consignes
-    appels.clear()
-    corps2 = d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="Bonjour")])
-    asyncio.run(d.digisha_accompagnement(request=None, body=corps2, x_digisha_token=None, authorization="Bearer t"))
+    assert poses == [{"p_sujet": x, "p_nouvelles": ["Ne plus proposer le pont Hellinger."],
+                      "p_retirees": ["Proposer le pont Hellinger."], "p_session": "seance-1"}]
+    assert ("relecture_pour", {"sujet": x, "auteur": "57bd2f8e-53c5-49f8-a778-ed8c2cd75bcc"}) in appels   # ses relectures seulement
+    contexte = systemes[0]["messages"][-1]["content"][0]["text"]
+    assert "## Tes consignes actives pour Fabienne\n- Proposer le pont Hellinger." in contexte
+
+
+def test_a_propos_de_x_une_reponse_coupee_ne_pose_rien(monkeypatch):
+    appels, _, _ = _accompagnement_a_propos(monkeypatch, "Consignes pour Fabienne :\n- Laisser venir la colère avant", stop="max_tokens")
     assert not [c for n, c in appels if n == "digisha_consignes_poser"]
+
+
+def test_la_coulisse_reconnait_les_consignes_lisibles_et_tait_l_echange():
+    assert "Consignes pour" in d.RELECTURE_COULISSE and "ne se cite ni ne se résume jamais" in d.RELECTURE_COULISSE
+    assert "Consignes retirées pour" in d.RELECTURE_CADRE and "Ne recopie pas les consignes actives" in d.RELECTURE_CADRE
