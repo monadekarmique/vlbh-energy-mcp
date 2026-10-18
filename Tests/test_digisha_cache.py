@@ -190,7 +190,7 @@ def test_a_propos_de_x_la_consigne_ne_bouge_plus_d_un_tour_a_l_autre(monkeypatch
     async def relecture(sujet=None, svlbh=None, auteur=None):
         return "relectures : " + " / ".join(depots)
 
-    async def deposer(auth, cible, canal, q, r, mode):
+    async def deposer(auth, cible, canal, q, r, mode, pour_elle=False):
         depots.append(f"{q}→{r}")
         return "seance"
 
@@ -350,3 +350,95 @@ def test_a_propos_de_x_une_reponse_coupee_ne_pose_rien(monkeypatch):
 def test_la_coulisse_reconnait_les_consignes_lisibles_et_tait_l_echange():
     assert "Consignes pour" in d.RELECTURE_COULISSE and "ne se cite ni ne se résume jamais" in d.RELECTURE_COULISSE
     assert "Consignes retirées pour" in d.RELECTURE_CADRE and "Ne recopie pas les consignes actives" in d.RELECTURE_CADRE
+
+
+# ── 18.10.2026 : « À propos de » fait les deux — relecture réservée (défaut) ou décodage POUR elle ─────────────────────
+def test_depot_pour_elle_va_dans_ses_pages_pas_dans_la_relecture(monkeypatch):
+    appels = []
+
+    async def personne(authorization, nom, corps, timeout=10):
+        appels.append((nom, corps))
+        return "seance"
+    monkeypatch.setattr(d, "_rpc_personne", personne)
+    x = "433bbdd5-74c5-49f0-82f6-68e7678acde5"
+    asyncio.run(d.fil_digisha_deposer("Bearer t", x, "z2", "Q", "R", "accompagnement", pour_elle=True))
+    asyncio.run(d.fil_digisha_deposer("Bearer t", x, "z2", "Q", "R", "accompagnement"))
+    assert appels[0][0] == "digisha_fil_deposer" and appels[0][1]["p_consultante"] == x
+    assert appels[1][0] == "digisha_relecture_deposer" and appels[1][1]["p_sujet"] == x
+
+
+def test_a_propos_en_mode_decodage(monkeypatch):
+    depots, reprises, systemes, appels = [], [], [], []
+
+    async def rien(*a, **k):
+        return None
+
+    async def ident(*a, **k):
+        return {"svlbh_id": "52adbc98-d2b0-4444-b89c-b1311a02a983", "uid": "306c2408-b200-4a52-971b-c77c53d31573", "stx": "ST6"}
+
+    async def prompt():
+        return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
+
+    async def historique(client, key, msgs):
+        return None, msgs, 0
+
+    async def canal(*a, **k):
+        return "z2"
+
+    async def reprise(auth, cible, canal):
+        reprises.append((cible, canal))
+        return "ses séances"
+
+    async def vide(*a, **k):
+        return ""
+
+    async def zero(*a, **k):
+        return 0
+
+    async def liste(*a, **k):
+        return []
+
+    async def deposer(auth, cible, canal, q, r, mode, pour_elle=False):
+        depots.append((cible, canal, mode, pour_elle))
+        return "seance"
+
+    async def personne(authorization, nom, corps, timeout=10):
+        appels.append(nom)
+        return None
+
+    class Client:
+        async def post(self, url, json=None, headers=None, timeout=None):
+            systemes.append(json)
+
+            class R:
+                status_code = 200
+                text = ""
+
+                def json(self_inner):
+                    return {"content": [{"type": "text", "text": "Consignes pour Giulia :\n- Ne doit pas partir chez elle."}],
+                            "stop_reason": "end_turn", "usage": {"input_tokens": 1, "output_tokens": 1}}
+            return R()
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    for nom, f in {"authorize_caller": rien, "gate_subscription": ident, "fetch_prompt": prompt, "_compter_accompagnement": zero,
+                   "preparer_historique": historique, "canal_digisha": canal, "fil_digisha_reprise": reprise, "relecture_pour": vide,
+                   "peut_relire": rien, "savoir_pour": vide, "fetch_banque_qr": liste, "journaliser_cout": rien, "log_exchange": rien,
+                   "fil_digisha_deposer": deposer, "_rpc_service": rien, "_rpc_personne": personne}.items():
+        monkeypatch.setattr(d, nom, f)
+    monkeypatch.setattr(d, "refuser_st1", lambda ident: None)
+    monkeypatch.setattr(d, "journaliser_usage", lambda *a, **k: None)
+    monkeypatch.setattr(d, "passer_en_5_5", lambda payload, svlbh: payload["model"])
+    monkeypatch.setattr(d, "_http", lambda: Client())
+    x = "433bbdd5-74c5-49f0-82f6-68e7678acde5"
+    corps = d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="Décodage pour Giulia : cœur et poumon gauche")],
+                                    fil_consultante_id=x, a_propos="decodage")
+    asyncio.run(d.digisha_accompagnement(request=None, body=corps, x_digisha_token=None, authorization="Bearer t"))
+    assert depots == [(x, "z2", "accompagnement", True)]                 # dans SES pages, au canal du soin
+    assert reprises == [(x, None)]                                        # ses séances, tous canaux
+    textes = [b["text"] for b in systemes[0]["system"]]
+    assert d.DECODAGE_POUR_CADRE in textes and d.RELECTURE_CADRE not in textes
+    assert "digisha_consignes_poser" not in appels and "digisha_consignes_contexte" not in appels
+    assert d.SES_SEANCES_CADRE in systemes[0]["messages"][-1]["content"][0]["text"]
+    # sans a_propos : relecture, comme avant
+    assert not d.decoder_pour_elle(d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="x")], fil_consultante_id=x))
+    assert not d.decoder_pour_elle(d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="x")], a_propos="decodage"))

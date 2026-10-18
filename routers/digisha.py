@@ -913,10 +913,10 @@ async def fil_digisha_reprise(authorization: str | None, consultante_id: str | N
 
 
 async def fil_digisha_deposer(authorization: str | None, consultante_id: str | None, canal: str,
-                              question: str, reponse: str, mode: str) -> str | None:
+                              question: str, reponse: str, mode: str, pour_elle: bool = False) -> str | None:
     """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
     tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant."""
-    if consultante_id and mode != "formation_m1":
+    if consultante_id and mode != "formation_m1" and not pour_elle:
         # « À propos de » une autre fiche (accompagnement, mode « fil ») : c'est une RELECTURE — elle se dépose chez celle qui
         # relit, jamais dans le fil de la personne relue (migration 2026-10-17k ; sur sa propre fiche, le dépôt d'avant).
         r = await _rpc_personne(authorization, "digisha_relecture_deposer",
@@ -1026,6 +1026,11 @@ _TETE = re.compile(r"^[#>*_\s]*consignes?\s+(retir[ée]es?\s+)?pour\s+(.+?)\s*:?
 _PUCE = re.compile(r"^\s*(?:[-•*–—‑]|\d+[.)])\s+(.+?)\s*$")
 
 
+def decoder_pour_elle(body) -> bool:
+    """« À propos de X » en mode décodage POUR elle (et non relecture réservée), 18.10.2026."""
+    return bool(getattr(body, "fil_consultante_id", None)) and (getattr(body, "a_propos", None) or "").strip().lower() in ("decodage", "décodage")
+
+
 def consignes_du_texte(texte: str, prenom: str | None = None) -> tuple[list[str], list[str]]:
     """(nouvelles, retirées) des blocs « Consignes pour <prénom> : » et « Consignes retirées pour <prénom> : » d'une réponse
     « à propos de » (2026-10-18f). Un bloc adressé à un autre prénom est ignoré ; deux blocs de même sorte = rien (ambigu)."""
@@ -1067,6 +1072,19 @@ RELECTURE_SEANCES = (
     "## Ses séances DiGiSha — ce qu'elle a décodé (la relecture porte sur ces tours)\n"
     "Les derniers tours de ses séances, tous canaux. Celle qui te parle les relit pour y poser ce qu'elle ressent : "
     "aide-la à situer chaque ressenti dans ce qui a été décodé (date, heure, mesure).\n\n"
+)
+
+
+DECODAGE_POUR_CADRE = (
+    "## « À propos de » — un décodage POUR elle\n"
+    "Celle qui te parle (sa praticienne, ou Patrick) décode POUR cette personne : c'est ELLE le sujet, la fiche est la sienne. "
+    "Accompagne ce décodage comme une séance — mesures, lignées, canal — en t'appuyant sur ses séances ci-dessous. Ce qui "
+    "s'écrit ici va dans SES pages DiGiSha et elle le lira : écris pour qu'elle puisse le recevoir, sans jugement sur elle et "
+    "sans rien de ce que la praticienne garde pour elle (ce qui est réservé passe par une relecture, pas ici).\n\n"
+)
+SES_SEANCES_CADRE = (
+    "## Ses séances DiGiSha — ce qui a déjà été décodé pour elle\n"
+    "Les derniers tours de ses pages, tous canaux : pars de là, ne redemande pas ce qui est déjà posé.\n\n"
 )
 
 
@@ -1583,6 +1601,10 @@ class AccompagnementRequest(BaseModel):
     # smart » ; « les deux avec le même QR » — l'autrice, l'apprenante, la consultante). Réclamé d'abord par
     # decodage_reprendre(jeton) (migration 2026-10-17j) ; le serveur le relit avec le jeton de la personne (RLS).
     decodage_id: str | None = None
+    # « À propos de X » fait deux choses (Patrick, 18.10.2026 04h0x : « A propos devrait me permettre de faire les deux
+    # choses : écrire une relecture réservée et écrire un décodage pour la personne ») : "relecture" (défaut, réservée,
+    # 2026-10-17k/18c/18f) ou "decodage" (un décodage POUR elle, déposé dans SES pages DiGiSha, qu'elle lit).
+    a_propos: str | None = None
 
 
 FIL_CADRE_ACCOMPAGNEMENT = """## Passages du fil de la personne dont on parle
@@ -1691,7 +1713,7 @@ async def digisha_accompagnement(
         # « À propos de X » = un retour et des consignes de Patrick pour le profil X, pas la matière de la réponse (fiche
         # 2329fddd, 17.10.2026 14h30). Plus de passages du fil cherchés pour répondre ; ses séances restent plus bas, pour
         # situer ce qu'il cite (RELECTURE_SEANCES).
-        system_blocks.append({"type": "text", "text": RELECTURE_CADRE})
+        system_blocks.append({"type": "text", "text": DECODAGE_POUR_CADRE if decoder_pour_elle(body) else RELECTURE_CADRE})
     # La reprise du fil DiGiSha AVANT la réponse — mesuré le 17.10.2026 09h24 chez Patrick (z12, 7 tours déposés)
     # : « Je n'ai pas de trace de notre échange précédent ». Ce chemin déposait chaque tour sans jamais le relire ;
     # seul le chemin formation M1 de /chat le faisait. Même fiche et même canal que le dépôt, plus bas.
@@ -1702,7 +1724,13 @@ async def digisha_accompagnement(
     if moi_acc:
         canal_acc = await canal_digisha(authorization, moi_acc, sur_soi=(cible_acc is None),
                                         choisi=body.canal, stx=(ident or {}).get("stx"))
-        if cible_acc:
+        if cible_acc and decoder_pour_elle(body):
+            # Décodage POUR elle (18.10.2026) : ses séances en mémoire ; le tour ira dans SES pages (dépôt plus bas).
+            reprise = await fil_digisha_reprise(authorization, cible_acc, None)
+            mesure_fil += f" decodage_pour=1 reprise_car={len(reprise)}"
+            if reprise:
+                system_blocks.append(du_tour(SES_SEANCES_CADRE + reprise))
+        elif cible_acc:
             # Relecture (2026-10-17k) : DiGiSha relit SES séances, tous canaux, et ce qui a déjà été relu d'elle.
             reprise = await fil_digisha_reprise(authorization, cible_acc, None)
             deja = await relecture_pour(sujet=cible_acc, auteur=moi_acc) if await peut_relire(authorization, cible_acc) else ""
@@ -1784,8 +1812,9 @@ async def digisha_accompagnement(
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if moi_acc and canal_acc:
-        seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement")
-        if cible_acc and prenom_cible:
+        seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement",
+                                           pour_elle=decoder_pour_elle(body))
+        if cible_acc and prenom_cible and not decoder_pour_elle(body):
             # 2026-10-18f : les consignes du bloc adressé à SON prénom deviennent lisibles par la mentorée (porte du dépôt, jeton
             # de l'autrice) ; une réponse coupée ne pose rien.
             nouvelles, retirees = consignes_du_texte(text, prenom_cible)
