@@ -340,6 +340,21 @@ async def resolve_uid(authorization: str | None) -> str | None:
         return None
 
 
+async def _quota(key: str, limit: int) -> None:
+    """Le quota par heure, tenu EN BASE (migration 2026-10-18m, digisha_appel_heure_incr) : il survit à un redéploiement et le
+    web pro lit le même compteur (clé = uid, ou « ip:… »). Base injoignable → la fenêtre en mémoire, comme avant (jamais ouvert
+    sans compte). fable, 18.10.2026, fiche 9714894f."""
+    r = await _rpc_service("digisha_appel_heure_incr", {"p_cle": key, "p_limite": limit}, timeout=5)
+    if isinstance(r, dict) and "ok" in r:
+        if not r.get("ok"):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Trop d'appels sur cette heure — réessaie plus tard.",
+            )
+        return
+    _rate_check(key, limit)
+
+
 async def authorize_caller(
     request: Request,
     x_digisha_token: str | None,
@@ -352,7 +367,7 @@ async def authorize_caller(
     """
     uid = await resolve_uid(authorization)
     if uid:
-        _rate_check(f"uid:{uid}", RATE_USER_PER_HOUR)
+        await _quota(uid, RATE_USER_PER_HOUR)          # même clé que le web pro : l'uid seul
         return uid
     verify_digisha_token(x_digisha_token or "")
     ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
@@ -361,7 +376,7 @@ async def authorize_caller(
         "digisha: appel au jeton statique SANS session (ip=%s path=%s ua=%s)",
         ip, request.url.path, request.headers.get("user-agent", "?"),
     )
-    _rate_check(f"ip:{ip}", RATE_ANON_PER_HOUR)
+    await _quota(f"ip:{ip}", RATE_ANON_PER_HOUR)
     return None
 
 
