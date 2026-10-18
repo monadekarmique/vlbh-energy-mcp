@@ -1002,10 +1002,35 @@ RELECTURE_CADRE = (
     "Patrick a choisi cette personne pour te faire un retour avec des consignes propres à son accompagnement (Patrick, 17.10.2026 : "
     "« apropose ne sert pas à chosiir sur quoi tu te bases pour me répondre mais sur quel profile je fais te faire un feedback "
     "avec des instructions spécifiques à ce profile »). Tu ne cherches pas dans son fil de quoi lui répondre et tu ne fais pas "
-    "d'analyse d'elle qu'il ne t'a pas demandée. Tu REÇOIS : reformule chaque consigne en une ligne claire, demande une précision "
-    "si elle est ambiguë, dis en une phrase comment tu l'appliqueras à sa prochaine séance. Ce qu'il écrit ici t'accompagnera, en "
-    "coulisse, à chacune de ses séances ; elle ne le voit pas.\n\n"
+    "d'analyse d'elle qu'il ne t'a pas demandée. Tu REÇOIS : demande une précision si une consigne est ambiguë, dis en une phrase "
+    "comment tu l'appliqueras à sa prochaine séance. Ce qu'il écrit ici t'accompagnera, en coulisse, à chacune de ses séances.\n"
+    "CE QU'ELLE LIRA (Patrick, 18.10.2026 : « Les consignes seulement ») : cet échange reste entre lui et toi ; seules les "
+    "consignes lui deviennent lisibles. Quand il t'en pose une ou plusieurs, termine ta réponse par ce bloc, exactement :\n"
+    "Consignes pour <son prénom> :\n- <une consigne par ligne>\n"
+    "Écris chaque ligne pour qu'ELLE puisse la recevoir : ce que tu feras autrement avec elle, sans jugement sur elle ni détail de "
+    "cet échange. Une consigne par ligne, déjà posée ou nouvelle ; pas de bloc s'il n'a posé aucune consigne.\n\n"
 )
+
+
+def consignes_du_texte(texte: str) -> list[str]:
+    """Les lignes du bloc « Consignes pour <prénom> : » à la fin d'une réponse « à propos de » (2026-10-18f)."""
+    lignes = (texte or "").splitlines()
+    debut = None
+    for i, l in enumerate(lignes):
+        if re.match(r"^\W{0,4}consignes pour [^:\n]{1,60}:\W{0,4}$", l.strip(), re.I):
+            debut = i
+    if debut is None:
+        return []
+    out = []
+    for l in lignes[debut + 1:]:
+        m = re.match(r"^\s*(?:[-•*–]|\d+[.)])\s+(.+?)\s*$", l)
+        if m:
+            t = m.group(1).strip().strip("*").strip()
+            if len(t) >= 3:
+                out.append(t[:600])
+        elif l.strip():
+            break
+    return out[:12]
 RELECTURE_PRECEDENTES = (
     "## Tes relectures précédentes de cette personne\n"
     "Ce que tu as déjà posé en relisant ses décodages ; pars de là, ne le redemande pas.\n\n"
@@ -1722,6 +1747,13 @@ async def digisha_accompagnement(
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     if moi_acc and canal_acc:
         seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement")
+        if cible_acc:
+            # 2026-10-18f : les consignes du bloc deviennent lisibles par la mentorée (même porte que le dépôt, son jeton à elle).
+            consignes = consignes_du_texte(text)
+            if consignes:
+                n = await _rpc_personne(authorization, "digisha_consignes_poser",
+                                        {"p_sujet": cible_acc, "p_textes": consignes, "p_session": seance})
+                log.info("digisha — consignes=%d posees=%s sujet=%s", len(consignes), n, cible_acc[:8])
         if pieces_du_dernier(body):
             n_gardees = await ranger_pieces(seance, body.messages[-1].content)
             log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])

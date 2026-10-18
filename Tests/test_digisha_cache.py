@@ -233,3 +233,86 @@ def test_a_propos_de_x_la_consigne_ne_bouge_plus_d_un_tour_a_l_autre(monkeypatch
     p2 = json.loads(_prefixe_cache(envois[1]))
     p3 = json.loads(_prefixe_cache(envois[2]))
     assert p3["messages"][:len(p2["messages"])] == p2["messages"]
+
+
+# ── 2026-10-18f : les consignes « à propos de X » lisibles par X (Patrick : « Les consignes seulement ») ──────────────────
+def test_consignes_du_texte_lit_le_bloc_de_fin():
+    r = ("Reçu. Je l'appliquerai dès sa prochaine séance.\n\n**Consignes pour Fabienne :**\n"
+         "- Ne plus proposer le pont Hellinger : elle ne le reconnaît pas.\n• Laisser venir la colère avant la tristesse.\n"
+         "2) Demander sa mesure avant chaque pont.\n\nBelle nuit.")
+    assert d.consignes_du_texte(r) == ["Ne plus proposer le pont Hellinger : elle ne le reconnaît pas.",
+                                       "Laisser venir la colère avant la tristesse.", "Demander sa mesure avant chaque pont."]
+    assert d.consignes_du_texte("Aucune consigne ici.\n- une liste qui n'en est pas") == []
+    assert d.consignes_du_texte("") == []
+    assert d.consignes_du_texte("Consignes pour elle :\n- ok") == []           # trop court : ignoré
+    assert len(d.consignes_du_texte("Consignes pour X :\n" + "\n".join(f"- consigne {i}" for i in range(20)))) == 12
+
+
+def test_a_propos_de_x_les_consignes_partent_vers_la_base(monkeypatch):
+    appels = []
+
+    async def rien(*a, **k):
+        return None
+
+    async def ident(*a, **k):
+        return {"svlbh_id": "52adbc98-d2b0-4444-b89c-b1311a02a983", "uid": "306c2408-b200-4a52-971b-c77c53d31573", "stx": "ST6"}
+
+    async def prompt():
+        return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
+
+    async def historique(client, key, msgs):
+        return None, msgs, 0
+
+    async def canal(*a, **k):
+        return "z12"
+
+    async def vide(*a, **k):
+        return ""
+
+    async def zero(*a, **k):
+        return 0
+
+    async def liste(*a, **k):
+        return []
+
+    async def vrai(*a, **k):
+        return True
+
+    async def deposer(*a, **k):
+        return "seance-1"
+
+    async def personne(authorization, nom, corps, timeout=10):
+        appels.append((nom, corps))
+        return 2
+
+    class Client:
+        async def post(self, url, json=None, headers=None, timeout=None):
+            class R:
+                status_code = 200
+                text = ""
+
+                def json(self_inner):
+                    return {"content": [{"type": "text", "text": "Reçu.\n\nConsignes pour Fabienne :\n- Ne plus proposer le pont Hellinger.\n- Laisser venir la colère."}],
+                            "stop_reason": "end_turn", "usage": {"input_tokens": 1, "output_tokens": 1}}
+            return R()
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    for nom, f in {"authorize_caller": rien, "gate_subscription": ident, "fetch_prompt": prompt, "_compter_accompagnement": zero,
+                   "preparer_historique": historique, "canal_digisha": canal, "fil_digisha_reprise": vide, "relecture_pour": vide,
+                   "peut_relire": vrai, "savoir_pour": vide, "fetch_banque_qr": liste, "journaliser_cout": rien, "log_exchange": rien,
+                   "fil_digisha_deposer": deposer, "_rpc_service": rien, "_rpc_personne": personne}.items():
+        monkeypatch.setattr(d, nom, f)
+    monkeypatch.setattr(d, "refuser_st1", lambda ident: None)
+    monkeypatch.setattr(d, "journaliser_usage", lambda *a, **k: None)
+    monkeypatch.setattr(d, "passer_en_5_5", lambda payload, svlbh: payload["model"])
+    monkeypatch.setattr(d, "_http", lambda: Client())
+    x = "688a23c1-f09e-48d7-be5b-dd24c101c1c1"
+    corps = d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="Ne lui propose plus Hellinger.")], fil_consultante_id=x)
+    asyncio.run(d.digisha_accompagnement(request=None, body=corps, x_digisha_token=None, authorization="Bearer t"))
+    poses = [c for n, c in appels if n == "digisha_consignes_poser"]
+    assert poses == [{"p_sujet": x, "p_textes": ["Ne plus proposer le pont Hellinger.", "Laisser venir la colère."], "p_session": "seance-1"}]
+    # sans « à propos de » (sur soi), aucun dépôt de consignes
+    appels.clear()
+    corps2 = d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="Bonjour")])
+    asyncio.run(d.digisha_accompagnement(request=None, body=corps2, x_digisha_token=None, authorization="Bearer t"))
+    assert not [c for n, c in appels if n == "digisha_consignes_poser"]
