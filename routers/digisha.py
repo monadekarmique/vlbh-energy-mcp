@@ -363,12 +363,19 @@ async def authorize_caller(
     """Autorise l'appel et applique le quota. Renvoie l'uid s'il y en a un.
 
     Session valide → on passe, quota généreux, le jeton n'est même pas regardé.
-    Pas de session → le jeton statique reste accepté, quota bas par IP + trace.
+    Pas de session → refusé (401) depuis le 19.10 ; DIGISHA_JETON_SEUL=oui rouvre le jeton statique, quota bas par IP + trace.
     """
     uid = await resolve_uid(authorization)
     if uid:
         await _quota(uid, RATE_USER_PER_HOUR)          # même clé que le web pro : l'uid seul
         return uid
+    # 19.10.2026 (fiche 271f6a10) : le jeton statique SEUL ne suffit plus. Il était dans l'APK Priv-1 téléchargeable sans
+    # connexion (v2.5.1, remplacée le 18.10) ; mesuré au journal Render du 14.10 au 19.10 : AUCUN appel « jeton sans session ».
+    # Filet : DIGISHA_JETON_SEUL=oui (variable Render) rouvre l'ancien passage sans toucher au code.
+    if os.environ.get("DIGISHA_JETON_SEUL", "").lower() not in ("oui", "1", "true"):
+        log.warning("digisha: appel SANS session refusé (path=%s ua=%s)", request.url.path, request.headers.get("user-agent", "?"))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Connexion requise pour DiGiSha — reconnecte-toi dans l'app.")
     verify_digisha_token(x_digisha_token or "")
     ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
         or (request.client.host if request.client else "unknown")
