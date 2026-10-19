@@ -493,7 +493,10 @@ ACCOMPAGNEMENT_MODEL_PROFONDEUR = "claude-opus-4-8"
 # d'abord (DIGISHA_MODELES_5_5 : liste de svlbh_id, ou « tous ») pour mesurer le coût réel avant les apprenantes.
 MODELES_5_5 = {"claude-opus-4-8": "claude-opus-5-5", "claude-sonnet-4-6": "claude-sonnet-5-5"}
 EFFORT_5_5 = {"claude-opus-5-5": "medium", "claude-sonnet-5-5": "low"}
-ESSAI_5_5_DEFAUT = "52adbc98-d2b0-4444-b89c-b1311a02a983"     # Patrick
+# 19.10.2026 : l'essai restait sur le seul compte de Patrick (5 tours en deux jours, aucune carte pour le clore). Banc de rejeu du
+# 19.10 (contexte de la personne, migration 2026-10-19b) : Sonnet 5.5 0/3 « Mesure : » en boucle, propose 2/3 et 3/3, 0,040 $ l'appel
+# (Sonnet 4.6 : 2/3 en boucle, 0,034 $) ; Opus 5.5 0,080 $ (Opus 4.8 : 0,079 $). Sur son « ok » du 17.10 : toutes.
+ESSAI_5_5_DEFAUT = "tous"
 
 
 def essai_5_5(svlbh: str | None) -> bool:

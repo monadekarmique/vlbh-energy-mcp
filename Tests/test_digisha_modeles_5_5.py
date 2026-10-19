@@ -18,8 +18,9 @@ def test_patrick_passe_en_5_5_avec_effort_et_plafond(monkeypatch):
     assert d.passer_en_5_5(q, PATRICK.upper()) == "claude-sonnet-5-5" and q["output_config"] == {"effort": "low"}
 
 
-def test_les_autres_restent_tant_que_l_essai_dure(monkeypatch):
-    monkeypatch.delenv("DIGISHA_MODELES_5_5", raising=False)
+def test_un_essai_restreint_ne_sert_que_sa_liste(monkeypatch):
+    # 19.10.2026 : par défaut c'est « tous » ; une liste réglée sur Render restreint encore (ici : Patrick seul).
+    monkeypatch.setenv("DIGISHA_MODELES_5_5", "52adbc98-d2b0-4444-b89c-b1311a02a983")
     p = {"model": "claude-opus-4-8", "max_tokens": 2048}
     assert d.passer_en_5_5(p, FABIENNE) == "claude-opus-4-8" and "output_config" not in p
     assert d.passer_en_5_5({"model": "claude-sonnet-4-6"}, None) == "claude-sonnet-4-6"

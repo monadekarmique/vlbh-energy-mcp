@@ -72,3 +72,13 @@ def test_le_plafond_de_depenses_donne_le_message_doux():
     # partait vers les apprenantes. Le même message doux que pour le crédit épuisé.
     src = open("routers/digisha.py").read()
     assert src.count('"usage limit" in low') == src.count('"credit" in low')
+
+
+def test_les_modeles_5_5_pour_toutes(monkeypatch):
+    # 19.10.2026 : l'essai 5.5 était resté sur le seul compte de Patrick ; sur son « ok » du 17.10 et le banc du 19.10, toutes.
+    monkeypatch.delenv("DIGISHA_MODELES_5_5", raising=False)
+    p = {"model": "claude-sonnet-4-6", "max_tokens": 2048}
+    assert digisha.passer_en_5_5(p, "8f494efd-df0c-4f07-bbb1-8ff7a2a44892") == "claude-sonnet-5-5"
+    assert p["output_config"] == {"effort": "low"} and p["max_tokens"] == 8192
+    q = {"model": "claude-opus-4-8", "max_tokens": 2048}
+    assert digisha.passer_en_5_5(q, None) == "claude-opus-5-5"
