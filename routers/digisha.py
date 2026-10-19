@@ -36,6 +36,7 @@ from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_contexte import mettre_en_forme, sans_relances
+from routers.digisha_release import release_courante
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
 from routers.digisha_cache import du_tour, partage, ranger_pour_cache
 
@@ -709,6 +710,7 @@ async def journaliser_cout(source: str, mode: str, model: str, data: dict,
 class ChatResponse(BaseModel):
     reply: str
     model: str
+    release: str | None = None      # « DiGiSha 2.6 » dans la fenêtre (carte 9331e3e6, migration 2026-10-19e)
 
 
 async def fetch_proche_parcours(consultante_id: str, authorization: str | None) -> str:
@@ -1599,7 +1601,7 @@ async def digisha_chat(
             prompt_version=version, etat=body.etat.model_dump(),
             supabase_user_id=caller_uid,
         )
-    return ChatResponse(reply=text, model=model)
+    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service))
 
 
 class CompareRequest(BaseModel):
@@ -1894,4 +1896,4 @@ async def digisha_accompagnement(
             svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
             supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
         )
-    return ChatResponse(reply=text, model=model)
+    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service))
