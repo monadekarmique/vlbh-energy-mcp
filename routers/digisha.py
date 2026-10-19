@@ -1550,7 +1550,7 @@ async def digisha_chat(
     )
     if resp.status_code != 200:
         low = resp.text.lower()
-        if "credit" in low or "billing" in low:
+        if "credit" in low or "billing" in low or "usage limit" in low:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Le tuteur est momentanément en pause (crédit API épuisé) — "
@@ -1830,7 +1830,7 @@ async def digisha_accompagnement(
     )
     if resp.status_code != 200:
         low = resp.text.lower()
-        if "credit" in low or "billing" in low:
+        if "credit" in low or "billing" in low or "usage limit" in low:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Le tuteur est momentanément en pause (crédit API épuisé) — "

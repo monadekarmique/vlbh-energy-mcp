@@ -65,3 +65,10 @@ def test_avec_la_fonction_en_base_elle_seule_sert():
         t = asyncio.run(digisha.contexte_personne("Bearer x", "433bbdd5", "z3"))
     assert "nœud COEX" in t and "ANCIEN" not in t
     assert rpc.call_args.args[1] == "digisha_contexte" and rpc.call_args.args[2] == {"p_consultante": "433bbdd5"}
+
+
+def test_le_plafond_de_depenses_donne_le_message_doux():
+    # 19.10.2026 08h09 : « You have reached your specified API usage limits » — ni « credit » ni « billing » : l'erreur brute
+    # partait vers les apprenantes. Le même message doux que pour le crédit épuisé.
+    src = open("routers/digisha.py").read()
+    assert src.count('"usage limit" in low') == src.count('"credit" in low')
