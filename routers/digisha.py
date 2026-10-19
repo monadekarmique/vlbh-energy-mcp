@@ -34,6 +34,7 @@ from pydantic import BaseModel, Field, field_validator
 from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
+from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
 from routers.digisha_cache import du_tour, partage, ranger_pour_cache
@@ -1523,7 +1524,8 @@ async def digisha_chat(
                  ensure_ascii=False)),
         ] + ([du_tour(CONTEXTE_CADRE + reprise)] if reprise else []) \
           + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) \
-          + ([du_tour(SAVOIR_CADRE + savoir)] if savoir else []) + resume_blocks
+          + ([du_tour(SAVOIR_CADRE + savoir)] if savoir else []) + resume_blocks \
+          + [du_tour(APPRENDRE_CADRE + (("\n" + lex) if (lex := await lexique_patrick(_rpc_service)) else ""))]
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
@@ -1572,6 +1574,13 @@ async def digisha_chat(
                       qui=(caller_uid or "anon")[:8], extra=usage_extra)
     await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    # 19.10.2026 (carte 6f1ef080) : ce qu'elle ne sait pas expliquer part à Patrick ; la ligne ne s'affiche ni ne se dépose.
+    text, a_apprendre = extraire_a_apprendre(text)
+    if a_apprendre:
+        notes = await noter_a_apprendre(_rpc_service, a_apprendre, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
+                                        (depot_fil[0] if depot_fil else None), derniere_question(body), text)
+        usage_extra += f" a_apprendre={len(a_apprendre)}"
+        log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
     if depot_fil is None and moi:
         cible = body.fil_consultante_id if body.mode == "fil" else None
         depot_fil = (cible, await canal_digisha(authorization, moi, sur_soi=(cible is None),
@@ -1804,6 +1813,8 @@ async def digisha_accompagnement(
         if savoir:
             system_blocks.append(du_tour(SAVOIR_CADRE + savoir))
             mesure_fil += f" savoir_car={len(savoir)}"
+    lex = await lexique_patrick(_rpc_service)
+    system_blocks.append(du_tour(APPRENDRE_CADRE + (("\n" + lex) if lex else "")))
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
     if body.decodage_id:
@@ -1855,6 +1866,11 @@ async def digisha_accompagnement(
         supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
+    # 19.10.2026 (carte 6f1ef080) : ce qu'elle ne sait pas expliquer part à Patrick ; la ligne ne s'affiche ni ne se dépose.
+    text, a_apprendre = extraire_a_apprendre(text)
+    if a_apprendre:
+        notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)
+        log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
     if moi_acc and canal_acc:
         seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement",
                                            pour_elle=decoder_pour_elle(body))
