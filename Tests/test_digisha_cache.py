@@ -438,7 +438,7 @@ def test_a_propos_en_mode_decodage(monkeypatch):
     textes = [b["text"] for b in systemes[0]["system"]]
     assert d.DECODAGE_POUR_CADRE in textes and d.RELECTURE_CADRE not in textes
     assert "digisha_consignes_poser" not in appels and "digisha_consignes_contexte" not in appels
-    assert d.SES_SEANCES_CADRE in systemes[0]["messages"][-1]["content"][0]["text"]
+    assert d.CONTEXTE_CADRE in systemes[0]["messages"][-1]["content"][0]["text"]       # 19.10 : ce qu'on sait d'elle (c4b0a17e)
     # sans a_propos : relecture, comme avant
     assert not d.decoder_pour_elle(d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="x")], fil_consultante_id=x))
     assert not d.decoder_pour_elle(d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="x")], a_propos="decodage"))

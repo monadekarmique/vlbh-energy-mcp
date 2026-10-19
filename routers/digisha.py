@@ -34,6 +34,7 @@ from pydantic import BaseModel, Field, field_validator
 from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
+from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
 from routers.digisha_cache import du_tour, partage, ranger_pour_cache
 
@@ -934,6 +935,24 @@ async def fil_digisha_reprise(authorization: str | None, consultante_id: str | N
     return "\n\n".join(f"**{r.get('titre')}** ({r.get('jour')})\n{r.get('corps')}" for r in rows)
 
 
+CONTEXTE_CADRE = (
+    "## Ce que tu sais d'elle — tout ce qui a été décodé et discuté pour elle\n"
+    "Les décodages posés sur sa fiche, ses dernières discussions, ses séances DiGiSha. C'est ta base : ce qui y est posé fait "
+    "foi, tu le cites tel quel au lieu de le paraphraser, tu ne redemandes pas ce qui y est déjà mesuré, tu relies ce qu'elle "
+    "apporte à ce qui y est décodé. Ce qui n'y est pas et qu'elle n'a pas mesuré, tu ne l'inventes pas.\n\n"
+)
+
+
+async def contexte_personne(authorization: str | None, consultante_id: str | None, canal: str | None) -> str:
+    """Ce que DiGiSha sait de la personne (migration 2026-10-19b, digisha_contexte ; carte c4b0a17e) : ses jours de fil, ses
+    séances DiGiSha et les décodages posés sur sa fiche par une autre personne, les relances de DiGiSha retirées
+    (routers/digisha_contexte.py). Tant que la fonction manque en base : l'ancienne reprise du canal, relances retirées."""
+    rows = await _rpc_personne(authorization, "digisha_contexte", {"p_consultante": consultante_id or None}, timeout=15)
+    if isinstance(rows, list):
+        return mettre_en_forme(rows)
+    return sans_relances(await fil_digisha_reprise(authorization, consultante_id, canal))
+
+
 async def fil_digisha_deposer(authorization: str | None, consultante_id: str | None, canal: str,
                               question: str, reponse: str, mode: str, pour_elle: bool = False) -> str | None:
     """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
@@ -1475,7 +1494,7 @@ async def digisha_chat(
         if sur_soi:
             usage_extra += " sur_soi=1"
         canal_fil = await canal_digisha(authorization, moi, sur_soi, choisi=body.canal, stx=(ident or {}).get("stx"))
-        reprise = await fil_digisha_reprise(authorization, body.proche_consultante_id, canal_fil)
+        reprise = await contexte_personne(authorization, body.proche_consultante_id, canal_fil)
         usage_extra += f" canal={canal_fil} reprise_car={len(reprise)}"
         coulisse = await relecture_pour(sujet=body.proche_consultante_id) if sur_soi else ""
         savoir = await savoir_pour(derniere_question(body), exclure_fiche=body.proche_consultante_id)
@@ -1499,7 +1518,7 @@ async def digisha_chat(
                   "canal": canal_fil,
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
                  ensure_ascii=False)),
-        ] + ([du_tour(FIL_REPRISE_CADRE + reprise)] if reprise else []) \
+        ] + ([du_tour(CONTEXTE_CADRE + reprise)] if reprise else []) \
           + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) \
           + ([du_tour(SAVOIR_CADRE + savoir)] if savoir else []) + resume_blocks
         depot_fil = (body.proche_consultante_id, canal_fil)
@@ -1748,13 +1767,13 @@ async def digisha_accompagnement(
                                         choisi=body.canal, stx=(ident or {}).get("stx"))
         if cible_acc and decoder_pour_elle(body):
             # Décodage POUR elle (18.10.2026) : ses séances en mémoire ; le tour ira dans SES pages (dépôt plus bas).
-            reprise = await fil_digisha_reprise(authorization, cible_acc, None)
+            reprise = await contexte_personne(authorization, cible_acc, None)
             mesure_fil += f" decodage_pour=1 reprise_car={len(reprise)}"
             if reprise:
-                system_blocks.append(du_tour(SES_SEANCES_CADRE + reprise))
+                system_blocks.append(du_tour(CONTEXTE_CADRE + reprise))
         elif cible_acc:
             # Relecture (2026-10-17k) : DiGiSha relit SES séances, tous canaux, et ce qui a déjà été relu d'elle.
-            reprise = await fil_digisha_reprise(authorization, cible_acc, None)
+            reprise = await contexte_personne(authorization, cible_acc, None)
             deja = await relecture_pour(sujet=cible_acc, auteur=moi_acc) if await peut_relire(authorization, cible_acc) else ""
             ctx_consignes = await _rpc_personne(authorization, "digisha_consignes_contexte", {"p_sujet": cible_acc})
             if isinstance(ctx_consignes, dict):
@@ -1768,11 +1787,11 @@ async def digisha_accompagnement(
             if deja:
                 system_blocks.append(du_tour(RELECTURE_PRECEDENTES + deja))
         else:
-            reprise = await fil_digisha_reprise(authorization, cible_acc, canal_acc)
+            reprise = await contexte_personne(authorization, cible_acc, canal_acc)
             coulisse = await relecture_pour(svlbh=moi_acc)
             mesure_fil += f" canal={canal_acc} reprise_car={len(reprise)}" + (f" relecture_car={len(coulisse)}" if coulisse else "")
             if reprise:
-                system_blocks.append(du_tour(FIL_REPRISE_CADRE + reprise))
+                system_blocks.append(du_tour(CONTEXTE_CADRE + reprise))
             if coulisse:
                 system_blocks.append({"type": "text", "text": RELECTURE_COULISSE + coulisse})
                 await _rpc_service("digisha_relecture_servie", {"p_svlbh": moi_acc})
