@@ -35,6 +35,7 @@ from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import journaliser_usage, preparer_historique
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
+from routers.digisha_apprendre import apprendre_en_seance, extraire_appris
 from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_release import release_courante
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
@@ -1577,6 +1578,10 @@ async def digisha_chat(
     await journaliser_cout("render-tuteur", body.mode, model, data, supabase_user_id=caller_uid)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     # 19.10.2026 (carte 6f1ef080) : ce qu'elle ne sait pas expliquer part à Patrick ; la ligne ne s'affiche ni ne se dépose.
+    text, appris = extraire_appris(text)
+    if appris and await _rpc_personne(authorization, "is_owner_st6", {}) is True:      # 2026-10-20j : Patrick seul
+        log.info("digisha — appris %s → %s", appris, await apprendre_en_seance(
+            _rpc_service, appris, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None), derniere_question(body)))
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
@@ -1869,6 +1874,9 @@ async def digisha_accompagnement(
     )
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     # 19.10.2026 (carte 6f1ef080) : ce qu'elle ne sait pas expliquer part à Patrick ; la ligne ne s'affiche ni ne se dépose.
+    text, appris = extraire_appris(text)
+    if appris and await _rpc_personne(authorization, "is_owner_st6", {}) is True:      # 2026-10-20j : Patrick seul
+        log.info("digisha — appris %s → %s", appris, await apprendre_en_seance(_rpc_service, appris, moi_acc, derniere_question(body)))
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)

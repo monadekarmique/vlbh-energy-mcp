@@ -118,3 +118,25 @@ def test_accompagnement_retire_la_ligne_avant_affichage_et_depot(monkeypatch):
     assert notes == ["COEX"]
     dernier = systemes[0]["messages"][-1]["content"][0]["text"]
     assert "Ce que tu ne sais pas expliquer" in dernier and "**logoïque** : projection mentale" in dernier
+
+
+def test_appris_retire_la_ligne_et_rend_le_terme():
+    propre, termes = a.extraire_appris("Rangé, Patrick.\n⟦Appris : égo errant⟧\n⟦Appris : Égo errant⟧\n⟦Appris : b⟧\n⟦Appris : c⟧")
+    assert propre == "Rangé, Patrick." and termes == ["égo errant", "b"]
+    assert a.extraire_appris("Bonjour.") == ("Bonjour.", [])
+
+
+def test_apprendre_en_seance_passe_son_message_tel_quel():
+    appels = []
+
+    async def rpc(nom, corps):
+        appels.append((nom, corps))
+        return "appris"
+    msg = "Un Egor en errance qui ne provient pas d’une lignée  et une projection logoïque"
+    assert asyncio.run(a.apprendre_en_seance(rpc, ["égo errant"], "52adbc98", msg)) == ["appris"]
+    assert appels == [("digisha_a_apprendre_appris_en_seance", {"p_terme": "égo errant", "p_texte": msg, "p_svlbh": "52adbc98"})]
+    assert asyncio.run(a.apprendre_en_seance(rpc, ["x"], None, msg)) == [] and len(appels) == 1
+
+
+def test_le_cadre_annonce_la_ligne_appris():
+    assert "⟦Appris : <le terme>⟧" in a.APPRENDRE_CADRE

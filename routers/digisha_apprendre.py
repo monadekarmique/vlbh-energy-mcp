@@ -17,7 +17,13 @@ APPRENDRE_CADRE = (
     "(« je ne sais pas encore l'expliquer ; je le demande à Patrick ») et tu continues avec ce que tu sais. Puis, À LA TOUTE FIN "
     "de ta réponse, une ligne par terme (deux au plus) :\n"
     "⟦À apprendre : <le terme> — <ce qui te manque pour l'expliquer>⟧\n"
-    "Cette ligne n'est pas montrée : elle part à Patrick, qui te l'apprendra.\n"
+    "Cette ligne n'est pas montrée : elle part à Patrick, qui te l'apprendra.\n\n"
+    "## Quand Patrick te donne lui-même une définition\n"
+    "Si c'est Patrick qui, dans ce dernier message, te donne lui-même le sens d'un terme (souvent un terme que tu viens de dire "
+    "ne pas savoir), termine ta réponse par une ligne :\n"
+    "⟦Appris : <le terme>⟧\n"
+    "Le serveur range alors SON message, tel quel, dans ton lexique, et ferme la question. Tu n'écris jamais que tu as rangé ou "
+    "retenu une définition dans le lexique sans cette ligne.\n"
 )
 LEXIQUE_CADRE = (
     "## Lexique de Patrick — ce qu'il t'a appris (fait foi)\n"
@@ -38,6 +44,29 @@ def extraire(texte: str) -> tuple[str, list[tuple[str, str]]]:
             termes.append((t, (m.group("manque") or "").strip()))
     propre = _LIGNE.sub("", texte or "").rstrip()
     return propre, termes
+
+
+# 20.10.2026 (migration 2026-10-20j) — Patrick : « je viens de répondre dans une carte à égo errant et en revoila une autre ».
+# Il avait défini le terme DANS DiGiSha ; elle avait écrit « rangé dans ton lexique » sans que rien ne soit écrit.
+_APPRIS = re.compile(r"\n?[ \t]*⟦\s*Appris\s*:\s*(?P<terme>[^⟧\n]{1,120}?)\s*⟧[ \t]*")
+
+
+def extraire_appris(texte: str) -> tuple[str, list[str]]:
+    """(le texte sans les lignes ⟦Appris : …⟧, [termes]) — deux au plus, sans doublon."""
+    termes: list[str] = []
+    for m in _APPRIS.finditer(texte or ""):
+        t = m.group("terme").strip().strip("«»\"' ")
+        if t and t.lower() not in {x.lower() for x in termes} and len(termes) < 2:
+            termes.append(t)
+    return _APPRIS.sub("", texte or "").rstrip(), termes
+
+
+async def apprendre_en_seance(rpc_service, termes, svlbh: str | None, message: str) -> list:
+    """Le message de Patrick, TEL QUEL, devient la réponse de chaque terme (la base refuse tout autre que lui)."""
+    if not svlbh or not (message or "").strip():
+        return []
+    return [await rpc_service("digisha_a_apprendre_appris_en_seance", {"p_terme": t, "p_texte": message, "p_svlbh": svlbh})
+            for t in termes]
 
 
 _cache: dict = {"t": 0.0, "bloc": ""}
