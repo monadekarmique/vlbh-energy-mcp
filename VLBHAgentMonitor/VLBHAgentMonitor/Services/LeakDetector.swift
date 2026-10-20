@@ -88,7 +88,7 @@ final class LeakDetector: ObservableObject {
 
         let pipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = Pipe()
+        task.standardError = FileHandle.nullDevice
 
         do {
             try task.run()
@@ -176,7 +176,7 @@ final class LeakDetector: ObservableObject {
 
         let pipe = Pipe()
         task.standardOutput = pipe
-        task.standardError = Pipe()
+        task.standardError = FileHandle.nullDevice
 
         do {
             try task.run()
