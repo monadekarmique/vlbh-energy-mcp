@@ -33,13 +33,21 @@ async def lifespan(app: FastAPI):
     await digisha.close_http()
 
 
+def docs_urls(env: dict | None = None) -> dict:
+    """/docs, /redoc and /openapi.json are served only when EXPOSE_API_DOCS=1 (local development).
+    fastapi-mcp builds its tools from the routes (get_openapi), not from /openapi.json: /mcp is unaffected."""
+    valeur = (env if env is not None else os.environ).get("EXPOSE_API_DOCS", "")
+    if valeur.strip().lower() in ("1", "true", "yes", "oui"):
+        return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+    return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+
 app = FastAPI(
     title="VLBH Energy MCP",
     description="MCP server for SVLBHPanel — Scores de Lumière sync via Make.com + iTherapeut 6.0",
     version="2.3.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url=None,
+    **docs_urls(),
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
