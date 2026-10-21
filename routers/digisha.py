@@ -653,6 +653,15 @@ class ChatRequest(BaseModel):
     decodage_id: str | None = None
 
 
+def journal_permis(body) -> bool:
+    """Le tour entre-t-il dans digisha_chat_log ? Jamais quand la praticienne a coupé (no_log), jamais quand le fil d'une
+    personne est en contexte (carte b8d68119) : la réponse peut le citer. Une seule règle, décidée par le serveur quoi
+    qu'envoie l'écran : /chat en mode « fil » et /accompagnement avec fil_consultante_id."""
+    if body.no_log:
+        return False
+    return getattr(body, "mode", None) != "fil" and not getattr(body, "fil_consultante_id", None)
+
+
 async def log_exchange(source: str, mode: str, user_message: str, reply: str,
                        model: str, prompt_version: str, etat: dict | None = None,
                        svlbh_id: str | None = None,
@@ -1613,7 +1622,7 @@ async def digisha_chat(
         if pieces_du_dernier(body):
             n_gardees = await ranger_pieces(seance, body.messages[-1].content)
             log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
-    if not body.no_log:
+    if journal_permis(body):
         await log_exchange(
             "render-tuteur",
             body.mode if body.mode in ("formation_m1", "fil") else body.parcours,
@@ -1861,7 +1870,7 @@ async def digisha_accompagnement(
             n_gardees = await ranger_pieces(seance, body.messages[-1].content)
             log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
-    if not body.no_log and not body.fil_consultante_id:
+    if journal_permis(body):
         await log_exchange(
             "render-accompagnement", "accompagnement",
             derniere_question(body), text,
