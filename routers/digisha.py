@@ -643,7 +643,8 @@ class ChatRequest(BaseModel):
     fil_consultante_id: str | None = None
     # Le canal du soin choisi dans l'app (DEC Patrick 17.10.2026 : « ajouter sur DiGiSha les z1 à z12 de l'accueil de
     # Chroma 5 ») : « z1 » … « z12 », le sélecteur de canal de l'accueil Chroma 5 porté dans le socle. Honoré dès ST3
-    # (canal_choisi) ; une ST2 travaille sur son Âme, en z1, quoi qu'envoie l'écran. Absent = la règle de la base.
+    # (canal_choisi), si c'est une porte qu'elle peut choisir (canal_permis) ; une ST2 travaille sur son Âme, en z1, quoi
+    # qu'envoie l'écran. Absent ou refusé = la règle de la base.
     canal: str | None = None
     # Le décodage que la personne poursuit (QR « Poursuivre avec DiGiSha », DEC Patrick 17.10.2026 : « via QR code serait
     # smart » ; « les deux avec le même QR » — l'autrice, l'apprenante, la consultante). Réclamé d'abord par
@@ -882,15 +883,63 @@ def canal_choisi(choisi: str | None, stx: str | None) -> str | None:
     return c
 
 
+def porte_permise(portes, canal: str, proxy: bool | None) -> bool:
+    """La règle du sélecteur (SVLBHPorteCourante.portesAutorisees, svlbh-core ; portesAutorisees, canal.ts) appliquée par le
+    serveur : le canal est une porte de list_portes() ; une proxy ne choisit que le segment B2C (DEC Patrick 04.09 : « Anne
+    ne devrait voir ni z3, ni z4, ni z5 »). Le menu cache, le serveur ferme. Rôle illisible (None) = seul le B2C passe. Pur."""
+    if not isinstance(portes, list):
+        return False
+    porte = next((p for p in portes if isinstance(p, dict) and str(p.get("id") or "").strip().lower() == canal), None)
+    if porte is None:
+        return False
+    return porte.get("segment") == "B2C" or proxy is False
+
+
+async def est_proxy(authorization: str | None) -> bool | None:
+    """Le rôle de l'identité EFFECTIVE (fiche_role, comme l'écran : en « voir comme » Anne, la règle est la sienne), lu avec
+    le jeton de la personne. True / False ; None si illisible."""
+    identite = await _rpc_personne(authorization, "effective_svlbh_id", {})
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not isinstance(identite, str) or not identite or not supa_url or not supa_key:
+        return None
+    token = (authorization or "").split(" ", 1)[-1].strip()
+    try:
+        r = await _http().get(
+            f"{supa_url}/rest/v1/fiche_role",
+            params={"svlbh_id": f"eq.{identite.lower()}", "select": "role", "limit": 1},
+            headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            return None
+        lignes = r.json()
+        return bool(lignes) and isinstance(lignes[0], dict) and lignes[0].get("role") == "proxy"
+    except Exception:
+        return None
+
+
+async def canal_permis(authorization: str | None, canal: str) -> bool:
+    """Le canal choisi par l'écran est-il une porte que cette personne peut choisir ? list_portes() et, hors B2C, son rôle,
+    lus avec SON jeton. Toute panne = non : la base décide alors du canal (digisha_canal), le tour n'est jamais perdu."""
+    portes = await _rpc_personne(authorization, "list_portes", {})
+    if porte_permise(portes, canal, proxy=None):          # porte B2C : ouverte à toutes, le rôle n'est pas lu
+        return True
+    if not porte_permise(portes, canal, proxy=False):     # pas une porte du sélecteur (ou catalogue illisible)
+        return False
+    return porte_permise(portes, canal, await est_proxy(authorization))
+
+
 async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: bool,
                         choisi: str | None = None, stx: str | None = None) -> str:
     """Le canal où la conversation a lieu — d'abord celui que l'écran a choisi, s'il est recevable (canal_choisi,
-    17.10.2026) ; sinon lu en base (digisha_canal, migration 2026-10-16j) : le canal posé par Patrick pour la
+    17.10.2026) et permis (canal_permis : une porte du sélecteur, B2C seul pour une proxy) ; sinon lu en base
+    (digisha_canal, migration 2026-10-16j) : le canal posé par Patrick pour la
     praticienne (Anne z2, Giulia z3, Cornelia z4, Patrick z12 — « pour moi z5, z6, z8 et z9 qui vont dans mon user …
     dans le canal z12 », 16.10.2026), sinon z1 sur soi (« tu discutes avec ton âme »), sinon le canal de la
     praticienne, sinon z2. Panne = le même calcul ici, sans la table."""
     voulu = canal_choisi(choisi, stx)
-    if voulu:
+    if voulu and await canal_permis(authorization, voulu):
         return voulu
     canal = await _rpc_personne(authorization, "digisha_canal", {"p_svlbh": moi, "p_sur_soi": sur_soi}) if moi else None
     if isinstance(canal, str) and re.fullmatch(r"z\d+", canal):
