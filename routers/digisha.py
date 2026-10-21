@@ -1609,46 +1609,6 @@ async def digisha_chat(
     return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service))
 
 
-class CompareRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=4000)
-
-
-@router.post("/compare")
-async def digisha_compare(
-    request: Request,
-    body: CompareRequest,
-    x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
-    authorization: str | None = Header(None),
-) -> dict:
-    """Comparateur sonnet vs opus (exemple parlant pour l'option Profondeur).
-    Même system prompt accompagnement, même question, les deux modèles en parallèle."""
-    await authorize_caller(request, x_digisha_token, authorization)
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
-    prompt = await fetch_prompt()
-    system = (prompt["core"] + "\n\n" + (prompt.get("accompagnement_frame") or "")
-              + "\n\n" + (prompt.get("st3") or "")) if prompt else ACCOMPAGNEMENT_FALLBACK
-    import asyncio
-
-    async def ask(model: str) -> str:
-        client = _http()
-        r = await client.post(ANTHROPIC_URL, json={
-            "model": model, "max_tokens": 2048, "system": system,
-            "messages": [{"role": "user", "content": body.message}],
-        }, headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"}, timeout=120)
-        if r.status_code != 200:
-            return f"[erreur {r.status_code}]"
-        return "".join(b.get("text", "") for b in r.json().get("content", [])
-                       if b.get("type") == "text")
-
-    inclus, profondeur = await asyncio.gather(
-        ask(ACCOMPAGNEMENT_MODEL_INCLUS), ask(ACCOMPAGNEMENT_MODEL_PROFONDEUR))
-    return {"question": body.message,
-            "inclus": {"model": ACCOMPAGNEMENT_MODEL_INCLUS, "reply": inclus},
-            "profondeur": {"model": ACCOMPAGNEMENT_MODEL_PROFONDEUR, "reply": profondeur}}
-
-
 class AccompagnementRequest(BaseModel):
     messages: list[ChatTurn] = Field(min_length=1, max_length=60)
     no_log: bool = False        # opt-out praticienne (DEC Patrick 2026-06-13)
