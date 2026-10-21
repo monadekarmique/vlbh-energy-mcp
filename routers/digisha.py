@@ -39,7 +39,7 @@ from routers.digisha_apprendre import apprendre_en_seance, extraire_appris
 from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_release import release_courante
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
-from routers.digisha_cache import du_tour, partage, ranger_pour_cache
+from routers.digisha_cache import donnees_de_tiers, du_tour, partage, ranger_pour_cache
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
@@ -938,7 +938,7 @@ def bloc_decodage(d: dict | None) -> str:
             f"« {d.get('menu') or 'Décodage'} » du {quand}" + (f" — {pour}" if pour else "")
             + (f" (outil : {d.get('provenance')})" if d.get("provenance") else "") + ".\n"
             "Elle vient de scanner le QR de ce décodage pour le poursuivre avec toi. Pars de ce qu'il contient : nomme où il en "
-            "est, ne lui redemande pas ce qui y est déjà mesuré. Le contenu, tel qu'enregistré :\n\n" + contenu)
+            "est, ne lui redemande pas ce qui y est déjà mesuré. Le contenu, tel qu'enregistré :\n\n" + donnees_de_tiers("decodage", contenu))
 
 
 def ajouter_au_systeme(payload: dict, texte: str) -> None:
@@ -1491,7 +1491,7 @@ async def digisha_chat(
         system_blocks = [
             {"type": "text", "text": base},
             partage({"type": "text", "text": FIL_CADRE}),
-            du_tour("## Passages du fil\n\n" + contexte_fil),
+            du_tour("## Passages du fil\n\n" + (donnees_de_tiers("fil_whatsapp", contexte_fil) if passages else contexte_fil)),
         ] + resume_blocks
         payload = {
             "model": model,
@@ -1550,9 +1550,9 @@ async def digisha_chat(
                   "canal": canal_fil,
                   "maintenant": datetime.now(ZoneInfo("Europe/Zurich")).strftime("%A %d.%m.%Y %H:%M")},
                  ensure_ascii=False)),
-        ] + ([du_tour(CONTEXTE_CADRE + reprise)] if reprise else []) \
+        ] + ([du_tour(CONTEXTE_CADRE + donnees_de_tiers("reprise_des_seances", reprise))] if reprise else []) \
           + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) \
-          + ([du_tour(SAVOIR_CADRE + savoir)] if savoir else []) + resume_blocks \
+          + ([du_tour(SAVOIR_CADRE + donnees_de_tiers("savoir_du_cercle", savoir))] if savoir else []) + resume_blocks \
           + [du_tour(APPRENDRE_CADRE + (("\n" + lex) if (lex := await lexique_patrick(_rpc_service)) else ""))]
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
@@ -1764,7 +1764,7 @@ async def digisha_accompagnement(
             reprise = await contexte_personne(authorization, cible_acc, None)
             mesure_fil += f" decodage_pour=1 reprise_car={len(reprise)}"
             if reprise:
-                system_blocks.append(du_tour(CONTEXTE_CADRE + reprise))
+                system_blocks.append(du_tour(CONTEXTE_CADRE + donnees_de_tiers("reprise_des_seances", reprise)))
         elif cible_acc:
             # Relecture (2026-10-17k) : DiGiSha relit SES séances, tous canaux, et ce qui a déjà été relu d'elle.
             reprise = await contexte_personne(authorization, cible_acc, None)
@@ -1777,15 +1777,15 @@ async def digisha_accompagnement(
                                              + ("\n".join(f"- {c}" for c in actives) if actives else "(aucune pour l'instant)")))
             mesure_fil += f" relecture=1 reprise_car={len(reprise)} relecture_car={len(deja)}"
             if reprise:
-                system_blocks.append(du_tour(RELECTURE_SEANCES + reprise))
+                system_blocks.append(du_tour(RELECTURE_SEANCES + donnees_de_tiers("reprise_des_seances", reprise)))
             if deja:
-                system_blocks.append(du_tour(RELECTURE_PRECEDENTES + deja))
+                system_blocks.append(du_tour(RELECTURE_PRECEDENTES + donnees_de_tiers("relectures_precedentes", deja)))
         else:
             reprise = await contexte_personne(authorization, cible_acc, canal_acc)
             coulisse = await relecture_pour(svlbh=moi_acc)
             mesure_fil += f" canal={canal_acc} reprise_car={len(reprise)}" + (f" relecture_car={len(coulisse)}" if coulisse else "")
             if reprise:
-                system_blocks.append(du_tour(CONTEXTE_CADRE + reprise))
+                system_blocks.append(du_tour(CONTEXTE_CADRE + donnees_de_tiers("reprise_des_seances", reprise)))
             if coulisse:
                 system_blocks.append({"type": "text", "text": RELECTURE_COULISSE + coulisse})
                 await _rpc_service("digisha_relecture_servie", {"p_svlbh": moi_acc})
@@ -1793,7 +1793,7 @@ async def digisha_accompagnement(
         savoir = await savoir_pour(derniere_question(body), exclure_fiche=cible_acc,
                                    exclure_svlbh=(None if cible_acc else moi_acc))
         if savoir:
-            system_blocks.append(du_tour(SAVOIR_CADRE + savoir))
+            system_blocks.append(du_tour(SAVOIR_CADRE + donnees_de_tiers("savoir_du_cercle", savoir)))
             mesure_fil += f" savoir_car={len(savoir)}"
     lex = await lexique_patrick(_rpc_service)
     system_blocks.append(du_tour(APPRENDRE_CADRE + (("\n" + lex) if lex else "")))

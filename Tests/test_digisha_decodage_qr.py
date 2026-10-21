@@ -24,7 +24,8 @@ def test_le_bloc_nomme_le_soin_et_borne_le_contenu():
     b = bloc_decodage(d)
     assert b.startswith("## Le soin décodé que la personne poursuit")
     assert "« Décodage composé » du 15.10.2026 — auto-soin (outil : vifa_essentielles)" in b
-    assert b.endswith("…(tronqué)") and len(b) < DECODAGE_MAX_CAR + 800
+    assert b.endswith("…(tronqué)\n</donnees_de_tiers>") and len(b) < DECODAGE_MAX_CAR + 800
+    assert '<donnees_de_tiers source="decodage">\n{"wu_shen_stones"' in b
     assert bloc_decodage(None) == ""
 
 
