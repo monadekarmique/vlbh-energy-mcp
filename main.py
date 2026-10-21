@@ -34,13 +34,26 @@ async def lifespan(app: FastAPI):
     await digisha.close_http()
 
 
+def _active(env: dict | None, nom: str) -> bool:
+    valeur = (env if env is not None else os.environ).get(nom, "")
+    return valeur.strip().lower() in ("1", "true", "yes", "oui")
+
+
 def docs_urls(env: dict | None = None) -> dict:
-    """/docs, /redoc and /openapi.json are served only when EXPOSE_API_DOCS=1 (local development).
-    fastapi-mcp builds its tools from the routes (get_openapi), not from /openapi.json: /mcp is unaffected."""
-    valeur = (env if env is not None else os.environ).get("EXPOSE_API_DOCS", "")
-    if valeur.strip().lower() in ("1", "true", "yes", "oui"):
+    """/docs, /redoc and /openapi.json are served only when EXPOSE_API_DOCS=1 (local development)."""
+    if _active(env, "EXPOSE_API_DOCS"):
         return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
     return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+
+def monter_mcp(app: FastAPI, env: dict | None = None) -> FastApiMCP | None:
+    """/mcp (every route as an MCP tool) is mounted only when EXPOSE_MCP=1 (local development).
+    fastapi-mcp builds its tools from the routes (get_openapi), not from /openapi.json."""
+    if not _active(env, "EXPOSE_MCP"):
+        return None
+    serveur = FastApiMCP(app)
+    serveur.mount()
+    return serveur
 
 
 app = FastAPI(
@@ -75,8 +88,7 @@ app.include_router(tarif590.router)
 # digiSha — tuteur formation « Les 26 ponts » + accompagnement (auth X-DigiSha-Token)
 app.include_router(digisha.router)
 
-mcp = FastApiMCP(app)
-mcp.mount()
+mcp = monter_mcp(app)
 
 
 @app.get("/health", tags=["System"], summary="Render health check")
