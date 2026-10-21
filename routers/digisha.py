@@ -671,7 +671,7 @@ class ChatRequest(BaseModel):
     # Le canal du soin choisi dans l'app (DEC Patrick 17.10.2026 : « ajouter sur DiGiSha les z1 à z12 de l'accueil de
     # Chroma 5 ») : « z1 » … « z12 », le sélecteur de canal de l'accueil Chroma 5 porté dans le socle. Honoré dès ST3
     # (canal_choisi), si c'est une porte qu'elle peut choisir (canal_permis) ; une ST2 travaille sur son Âme, en z1, quoi
-    # qu'envoie l'écran. Absent ou refusé = la règle de la base.
+    # qu'envoie l'écran ; z6 à z12 au propriétaire seul (21.10.2026). Absent ou refusé = la règle de la base.
     canal: str | None = None
     # Le décodage que la personne poursuit (QR « Poursuivre avec DiGiSha », DEC Patrick 17.10.2026 : « via QR code serait
     # smart » ; « les deux avec le même QR » — l'autrice, l'apprenante, la consultante). Réclamé d'abord par
@@ -957,15 +957,26 @@ async def canal_permis(authorization: str | None, canal: str) -> bool:
     return porte_permise(portes, canal, await est_proxy(authorization))
 
 
+CANAL_PROPRIETAIRE = re.compile(r"z(?:[6-9]|1[0-2])")
+
+
+def canal_reserve(canal: str | None) -> bool:
+    """z6 à z12 : réservés au propriétaire (DEC Patrick 21.10.2026, « Canaux a) »). z1 à z5 ne changent pas. Pur."""
+    return bool(canal) and CANAL_PROPRIETAIRE.fullmatch(canal) is not None
+
+
 async def canal_digisha(authorization: str | None, moi: str | None, sur_soi: bool,
                         choisi: str | None = None, stx: str | None = None) -> str:
     """Le canal où la conversation a lieu — d'abord celui que l'écran a choisi, s'il est recevable (canal_choisi,
-    17.10.2026) et permis (canal_permis : une porte du sélecteur, B2C seul pour une proxy) ; sinon lu en base
+    17.10.2026) et permis (canal_permis : une porte du sélecteur, B2C seul pour une proxy ; z6–z12 au propriétaire
+    seul, is_owner_st6 lu avec SON jeton, 21.10.2026) ; sinon lu en base
     (digisha_canal, migration 2026-10-16j) : le canal posé par Patrick pour la
     praticienne (Anne z2, Giulia z3, Cornelia z4, Patrick z12 — « pour moi z5, z6, z8 et z9 qui vont dans mon user …
     dans le canal z12 », 16.10.2026), sinon z1 sur soi (« tu discutes avec ton âme »), sinon le canal de la
     praticienne, sinon z2. Panne = le même calcul ici, sans la table."""
     voulu = canal_choisi(choisi, stx)
+    if canal_reserve(voulu) and await _rpc_personne(authorization, "is_owner_st6", {}) is not True:
+        voulu = None          # z6–z12 choisi par une autre personne (ou propriété illisible) : ignoré, la base décide
     if voulu and await canal_permis(authorization, voulu):
         return voulu
     canal = await _rpc_personne(authorization, "digisha_canal", {"p_svlbh": moi, "p_sur_soi": sur_soi}) if moi else None

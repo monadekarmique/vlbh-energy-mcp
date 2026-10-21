@@ -32,6 +32,8 @@ def test_forme_invalide_ignoree():
 # ── Le serveur ferme ce que le menu cache : une porte de list_portes(), B2C seul pour une proxy ───────────────────
 import asyncio  # noqa: E402
 
+import pytest  # noqa: E402
+
 from routers import digisha as d  # noqa: E402
 
 PORTES = [{"id": "z1", "libelle": "L'Âme", "segment": "B2C", "zone": None},
@@ -124,3 +126,59 @@ def test_est_proxy_lit_le_role_de_l_identite_effective(monkeypatch):
         return None
     monkeypatch.setattr(d, "_rpc_personne", sans_identite)
     assert asyncio.run(d.est_proxy("Bearer jeton-perso")) is None
+
+
+# ── Canaux a) (DEC Patrick 21.10.2026) : z6 à z12 au propriétaire seul ; z1 à z5 inchangés ─────────────────────────
+# La base d'avant la migration 2026-10-21zz rend z6–z12 dans list_portes() à toute ST3+ : le serveur ferme quand même.
+PORTES_TOUTES = PORTES[:3] + [{"id": "z5", "libelle": "z5", "segment": "Hotline", "zone": "cornelia-yoga"}] + [
+    {"id": f"z{n}", "libelle": f"z{n}", "segment": None, "zone": f"z{n}"} for n in range(6, 13)]
+
+
+def test_canal_reserve_z6_a_z12():
+    assert all(d.canal_reserve(f"z{n}") for n in range(6, 13))
+    assert not any(d.canal_reserve(f"z{n}") for n in range(1, 6))
+    assert not d.canal_reserve("z13") and not d.canal_reserve("z60") and not d.canal_reserve(None)
+
+
+def _base_proprio(monkeypatch, proprio, appels):
+    async def rpc(auth, nom, corps, timeout=10):
+        appels.append(nom)
+        return {"list_portes": PORTES_TOUTES, "digisha_canal": "z4", "is_owner_st6": proprio}.get(nom)
+
+    async def proxy(auth):
+        appels.append("fiche_role")
+        return False
+
+    monkeypatch.setattr(d, "_rpc_personne", rpc)
+    monkeypatch.setattr(d, "est_proxy", proxy)
+
+
+@pytest.mark.parametrize("choisi", [f"z{n}" for n in range(6, 13)])
+def test_z6_a_z12_ignore_pour_une_autre_personne(monkeypatch, choisi):
+    appels = []
+    _base_proprio(monkeypatch, False, appels)
+    assert _canal(choisi) == "z4"                                      # ignoré : la base décide
+    assert appels == ["is_owner_st6", "digisha_canal"]                 # le catalogue n'est même pas lu
+
+
+def test_z6_a_z12_proprietaire_illisible_ignore(monkeypatch):
+    appels = []
+    _base_proprio(monkeypatch, None, appels)                           # is_owner_st6 en panne : pas le propriétaire
+    assert _canal("z12", stx="ST6") == "z4"
+
+
+def test_z6_a_z12_honore_pour_le_proprietaire(monkeypatch):
+    appels = []
+    _base_proprio(monkeypatch, True, appels)
+    assert _canal("z12", stx="ST6") == "z12"
+    assert appels == ["is_owner_st6", "list_portes", "fiche_role"]
+    appels.clear()
+    assert _canal("z8", stx="ST6") == "z8"
+
+
+@pytest.mark.parametrize("choisi", ["z1", "z2", "z3", "z4", "z5"])
+def test_z1_a_z5_inchanges_sans_lire_la_propriete(monkeypatch, choisi):
+    appels = []
+    _base_proprio(monkeypatch, False, appels)
+    assert _canal(choisi) == choisi
+    assert "is_owner_st6" not in appels
