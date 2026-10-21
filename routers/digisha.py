@@ -33,7 +33,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block
-from routers.digisha_memoire import journaliser_usage, preparer_historique
+from routers.digisha_memoire import extrait_journal, journaliser_usage, preparer_historique
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_apprendre import apprendre_en_seance, extraire_appris
 from routers.digisha_contexte import mettre_en_forme, sans_relances
@@ -273,7 +273,7 @@ def erreur_du_modele(resp: httpx.Response, route: str) -> HTTPException:
     if not isinstance(erreur, dict):
         erreur = {}
     log.warning("%s : modèle HTTP %s type=%s request_id=%s message=%s", route, resp.status_code,
-                erreur.get("type", "?"), resp.headers.get("request-id", "?"), str(erreur.get("message", ""))[:160])
+                erreur.get("type", "?"), resp.headers.get("request-id", "?"), extrait_journal(erreur.get("message", ""), 160))
     return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail)
 
 
@@ -402,16 +402,14 @@ async def authorize_caller(
     # connexion (v2.5.1, remplacée le 18.10) ; mesuré au journal Render du 14.10 au 19.10 : AUCUN appel « jeton sans session ».
     # Filet : DIGISHA_JETON_SEUL=oui (variable Render) rouvre l'ancien passage sans toucher au code.
     if os.environ.get("DIGISHA_JETON_SEUL", "").lower() not in ("oui", "1", "true"):
-        log.warning("digisha: appel SANS session refusé (path=%s ua=%s)", request.url.path, request.headers.get("user-agent", "?"))
+        # Ni IP ni user-agent au journal : le chemin suffit à compter les appels refusés.
+        log.warning("digisha: appel SANS session refusé (path=%s)", request.url.path)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Connexion requise pour DiGiSha — reconnecte-toi dans l'app.")
     verify_digisha_token(x_digisha_token or "")
     ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
         or (request.client.host if request.client else "unknown")
-    log.warning(
-        "digisha: appel au jeton statique SANS session (ip=%s path=%s ua=%s)",
-        ip, request.url.path, request.headers.get("user-agent", "?"),
-    )
+    log.warning("digisha: appel au jeton statique SANS session (path=%s)", request.url.path)
     await _quota(f"ip:{ip}", RATE_ANON_PER_HOUR)
     return None
 
@@ -577,7 +575,7 @@ async def _compter_accompagnement(svlbh_id: str) -> int:
         )
         if r.status_code == 200:
             return max(int(r.json()), n_mem)
-        log.warning("digisha_usage_incr refusé : HTTP %s %s", r.status_code, r.text[:200])
+        log.warning("digisha_usage_incr refusé : HTTP %s %s", r.status_code, extrait_journal(r.text))
     except Exception as exc:
         log.warning("digisha_usage_incr impossible : %r", exc)
     return n_mem
@@ -695,7 +693,7 @@ async def log_exchange(source: str, mode: str, user_message: str, reply: str,
             timeout=10,
         )
         if r.status_code >= 300:
-            log.warning("digisha_chat_log non écrit : HTTP %s %s", r.status_code, r.text[:200])
+            log.warning("digisha_chat_log non écrit : HTTP %s %s", r.status_code, extrait_journal(r.text))
     except Exception as exc:  # best effort, jamais bloquant — mais jamais muet
         log.warning("digisha_chat_log non écrit : %r", exc)
 
@@ -737,7 +735,7 @@ async def journaliser_cout(source: str, mode: str, model: str, data: dict,
             timeout=10,
         )
         if r.status_code >= 300:
-            log.warning("digisha_cout_appel non écrit : HTTP %s %s", r.status_code, r.text[:200])
+            log.warning("digisha_cout_appel non écrit : HTTP %s %s", r.status_code, extrait_journal(r.text))
     except Exception as exc:
         log.warning("digisha_cout_appel non écrit : %r", exc)
 
@@ -863,7 +861,7 @@ async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeou
             timeout=timeout,
         )
         if r.status_code != 200:
-            log.warning("digisha — rpc %s HTTP %s : %s", nom, r.status_code, r.text[:200])
+            log.warning("digisha — rpc %s HTTP %s : %s", nom, r.status_code, extrait_journal(r.text))
             return None
         return r.json()
     except Exception as exc:
@@ -1041,7 +1039,7 @@ async def ranger_pieces(session_id: str | None, contenu) -> int:
                                    headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}", "Content-Type": mt},
                                    timeout=30)
             if r.status_code not in (200, 201):
-                log.warning("digisha — pièce non gardée HTTP %s : %s", r.status_code, r.text[:200])
+                log.warning("digisha — pièce non gardée HTTP %s : %s", r.status_code, extrait_journal(r.text))
                 continue
         except Exception as exc:
             log.warning("digisha — pièce non gardée : %r", exc)
@@ -1064,7 +1062,7 @@ async def _rpc_service(nom: str, corps: dict, timeout: int = 10):
                                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
                                         "Content-Type": "application/json"}, timeout=timeout)
         if r.status_code != 200:
-            log.warning("digisha — rpc service %s HTTP %s : %s", nom, r.status_code, r.text[:200])
+            log.warning("digisha — rpc service %s HTTP %s : %s", nom, r.status_code, extrait_journal(r.text))
             return None
         return r.json()
     except Exception as exc:
@@ -1307,7 +1305,7 @@ async def fetch_passages_semantiques(
         log.warning("digisha — recherche sémantique en erreur, lexicale seule : %r", exc)
         return None
     if r.status_code != 200:
-        log.warning("digisha — recherche sémantique HTTP %s, lexicale seule : %s", r.status_code, r.text[:200])
+        log.warning("digisha — recherche sémantique HTTP %s, lexicale seule : %s", r.status_code, extrait_journal(r.text))
         return None
     return r.json() or []
 

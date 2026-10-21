@@ -108,3 +108,49 @@ def test_journal_permis_une_seule_regle():
     assert not d.journal_permis(d.ChatRequest(messages=TOUR, mode="fil", fil_consultante_id=X))
     assert d.journal_permis(d.AccompagnementRequest(messages=TOUR))
     assert not d.journal_permis(d.AccompagnementRequest(messages=TOUR, fil_consultante_id=X))
+
+
+# ── Journal Render : identifiants masqués, ni IP ni user-agent ──────────────────────────────────────────────────
+
+def test_extrait_journal_masque_les_uuid_avant_de_couper():
+    from routers.digisha_memoire import extrait_journal
+    corps = '{"message":"aucune fiche « soi » pour 52adbc98-d2b0-4444-b89c-b1311a02a983","code":"P0001"}'
+    assert extrait_journal(corps) == '{"message":"aucune fiche « soi » pour 52adbc98…","code":"P0001"}'
+    assert extrait_journal("A 688A23C1-F09E-48D7-BE5B-DD24C101C1C1 B") == "A 688A23C1… B"
+    # Un UUID à cheval sur la limite : masqué d'abord, coupé ensuite — rien au-delà des 8 premiers caractères.
+    tranche = extrait_journal("x" * 190 + " " + X, 200)
+    assert len(tranche) <= 200 and "f09e" not in tranche and "688a23c1" in tranche
+    assert extrait_journal(None) == "" and extrait_journal("court") == "court"
+    assert len(extrait_journal("y" * 5000)) == 200
+
+
+def _requete():
+    from starlette.requests import Request
+    return Request({"type": "http", "method": "POST", "path": "/digisha/chat", "query_string": b"",
+                    "headers": [(b"user-agent", b"SondeUA/9.9"), (b"x-forwarded-for", b"203.0.113.77")],
+                    "client": ("203.0.113.77", 4242)})
+
+
+def test_appel_sans_session_refuse_sans_ip_ni_ua(monkeypatch, caplog):
+    monkeypatch.delenv("DIGISHA_JETON_SEUL", raising=False)
+    with caplog.at_level("WARNING", logger="digisha"):
+        with pytest.raises(d.HTTPException):
+            asyncio.run(d.authorize_caller(_requete(), None, None))
+    assert "/digisha/chat" in caplog.text
+    assert "SondeUA" not in caplog.text and "203.0.113.77" not in caplog.text
+
+
+def test_jeton_statique_sans_ip_ni_ua(monkeypatch, caplog):
+    cles = []
+
+    async def quota(cle, limite):
+        cles.append(cle)
+
+    monkeypatch.setenv("DIGISHA_JETON_SEUL", "oui")
+    monkeypatch.setattr(d, "verify_digisha_token", lambda t: None)
+    monkeypatch.setattr(d, "_quota", quota)
+    with caplog.at_level("WARNING", logger="digisha"):
+        assert asyncio.run(d.authorize_caller(_requete(), "jeton", None)) is None
+    assert "jeton statique SANS session" in caplog.text
+    assert "SondeUA" not in caplog.text and "203.0.113.77" not in caplog.text
+    assert cles == ["ip:203.0.113.77"]          # le quota par IP reste, hors journal

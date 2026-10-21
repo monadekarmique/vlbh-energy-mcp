@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from collections import OrderedDict
 
 import httpx
@@ -30,6 +31,15 @@ import httpx
 from routers.digisha_pieces import texte_de
 
 log = logging.getLogger("digisha")
+
+_UUID = re.compile(r"\b([0-9a-fA-F]{8})-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")
+
+
+def extrait_journal(texte, n: int = 200) -> str:
+    """Un extrait de corps d'erreur (Supabase, Anthropic) pour le journal Render : chaque UUID (svlbh_id, fiche, séance…)
+    réduit à ses 8 premiers caractères suivis de « … », comme qui= dans journaliser_usage, PUIS coupé à n caractères.
+    Masqué avant la coupe : un UUID tranché à la limite ne laisse rien passer."""
+    return _UUID.sub(r"\1…", str(texte or "")[: n * 10])[:n]
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 RESUME_MODEL = "claude-sonnet-4-6"
@@ -107,7 +117,7 @@ async def resumer_bloc(client: httpx.AsyncClient, api_key: str, bloc: list[dict]
         log.warning("resume bloc impossible : %r", exc)
         return None
     if r.status_code != 200:
-        log.warning("resume bloc refusé : HTTP %s %s", r.status_code, r.text[:200])
+        log.warning("resume bloc refusé : HTTP %s %s", r.status_code, extrait_journal(r.text))
         return None
     data = r.json()
     texte = "".join(
