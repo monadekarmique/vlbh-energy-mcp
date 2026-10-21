@@ -15,6 +15,7 @@ from routers import auth
 from routers import invite
 from routers import tarif590
 from routers import digisha
+from routers.digisha_corps import LimiteCorpsDigisha
 from routers import digisha_semantique
 from routers import comms
 from services.make_service import MakeService
@@ -49,6 +50,9 @@ app = FastAPI(
     lifespan=lifespan,
     **docs_urls(),
 )
+
+# /digisha/* : body size checked before authentication and before the JSON is read (413).
+app.add_middleware(LimiteCorpsDigisha)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(dashboard.router)
