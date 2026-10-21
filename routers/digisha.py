@@ -252,6 +252,31 @@ if not log.handlers:  # uvicorn ne touche pas au root logger : sans ceci, rien s
     log.propagate = False
 
 
+MODELE_EN_PAUSE = ("Le tuteur est momentanément en pause (crédit API épuisé) — "
+                   "Patrick est prévenu, réessaie un peu plus tard 🙏")
+MODELE_INDISPONIBLE = "DiGiSha n'a pas pu répondre pour le moment — réessaie dans un instant 🙏"
+
+
+def erreur_du_modele(resp: httpx.Response, route: str) -> HTTPException:
+    """Réponse non-200 du fournisseur de modèle → un message générique en français, même code (502). Le corps de
+    l'erreur ne part jamais vers le client ; le journal serveur garde le statut, le type, l'identifiant de requête et
+    un début du message d'erreur — jamais la conversation."""
+    low = resp.text.lower()
+    if "credit" in low or "billing" in low or "usage limit" in low:
+        detail = MODELE_EN_PAUSE
+    else:
+        detail = MODELE_INDISPONIBLE
+    try:
+        erreur = (resp.json() or {}).get("error") or {}
+    except ValueError:
+        erreur = {}
+    if not isinstance(erreur, dict):
+        erreur = {}
+    log.warning("%s : modèle HTTP %s type=%s request_id=%s message=%s", route, resp.status_code,
+                erreur.get("type", "?"), resp.headers.get("request-id", "?"), str(erreur.get("message", ""))[:160])
+    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail)
+
+
 def _role_de_cle(cle: str) -> str:
     """Rôle porté par une clé Supabase, sans jamais l'afficher : JWT hérité
     (claim `role`) ou nouvelle clé `sb_secret_…` / `sb_publishable_…`."""
@@ -1557,17 +1582,7 @@ async def digisha_chat(
         timeout=120,
     )
     if resp.status_code != 200:
-        low = resp.text.lower()
-        if "credit" in low or "billing" in low or "usage limit" in low:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Le tuteur est momentanément en pause (crédit API épuisé) — "
-                       "Patrick est prévenu, réessaie un peu plus tard 🙏",
-            )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
-        )
+        raise erreur_du_modele(resp, "chat")
     data = resp.json()
     if pieces_du_dernier(body):
         usage_extra += f" pieces={pieces_du_dernier(body)}"
@@ -1810,17 +1825,7 @@ async def digisha_accompagnement(
         timeout=120,
     )
     if resp.status_code != 200:
-        low = resp.text.lower()
-        if "credit" in low or "billing" in low or "usage limit" in low:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Le tuteur est momentanément en pause (crédit API épuisé) — "
-                       "Patrick est prévenu, réessaie un peu plus tard 🙏",
-            )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Anthropic API error {resp.status_code}: {resp.text[:300]}",
-        )
+        raise erreur_du_modele(resp, "accompagnement")
     data = resp.json()
     if data.get("stop_reason") not in (None, "end_turn"):
         mesure_fil += f" stop={data.get('stop_reason')}"
