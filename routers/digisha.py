@@ -414,6 +414,34 @@ async def authorize_caller(
     return None
 
 
+STADE_INDISPONIBLE = "DiGiSha est momentanément indisponible, réessaie dans un instant."
+
+
+def _stade_illisible(etape: str, cause: str) -> HTTPException:
+    """Le stade d'une session ne se lit pas : 503 pour TOUTES (DEC Patrick 21.10.2026, « ST1 a) »). Au journal : l'étape et
+    la cause (code HTTP ou classe d'erreur), jamais le jeton ni l'identité."""
+    log.warning("digisha: stade illisible (%s : %s) — 503", etape, cause)
+    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=STADE_INDISPONIBLE)
+
+
+async def _lignes_profil(client, url: str, params: dict, headers: dict, etape: str) -> list[dict]:
+    """Une lecture PostgREST du gate : la liste de lignes, ou 503 si elle ne se lit pas (réseau, code ≠ 200, corps qui
+    n'est pas une liste d'objets). Une liste vide est une réponse : « pas de ligne », pas une panne."""
+    try:
+        r = await client.get(url, params=params, headers=headers, timeout=10)
+    except Exception as exc:
+        raise _stade_illisible(etape, type(exc).__name__)
+    if r.status_code != 200:
+        raise _stade_illisible(etape, f"HTTP {r.status_code}")
+    try:
+        lignes = r.json()
+    except Exception as exc:
+        raise _stade_illisible(etape, type(exc).__name__)
+    if not isinstance(lignes, list) or not all(isinstance(x, dict) for x in lignes):
+        raise _stade_illisible(etape, "réponse inexploitable")
+    return lignes
+
+
 async def gate_subscription(authorization: str | None) -> dict | None:
     """Gate abonnement Phase 1 (DEC Patrick 2026-06-16).
 
@@ -421,8 +449,14 @@ async def gate_subscription(authorization: str | None) -> dict | None:
     canonique), on vérifie pro_status : un compte praticienne explicitement
     désactivé (SUSPENDED/REVOKED) reçoit 402. Sans Bearer (Cercle Lumière, pas
     de session utilisateur) ou sans praticienne_profile (patiente / membre ST2),
-    on laisse passer. Fail-open : toute erreur de validation/réseau ne bloque
-    PAS DiGiSha — le gate ne retire l'accès qu'aux comptes désactivés.
+    on laisse passer.
+
+    Plus de fail-open (DEC Patrick 21.10.2026, « ST1 a) ») : quand le stade d'une
+    session ne se lit pas (erreur réseau, 5xx, réponse inexploitable), TOUT LE
+    MONDE reçoit 503 « réessaie dans un instant » — ST1 reste fermée même quand
+    la base flanche. Une session que l'auth refuse (4xx hors 429) n'est pas une
+    panne : rien à lire, comme avant (authorize_caller a déjà refusé l'appel
+    sans session en 401 ; seul le filet DIGISHA_JETON_SEUL arrive jusqu'ici).
     """
     if not authorization or not authorization.lower().startswith("bearer "):
         return
@@ -433,49 +467,42 @@ async def gate_subscription(authorization: str | None) -> dict | None:
     supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
     if not supa_url or not supa_key:
         return
+    client = _http()
     try:
-        client = _http()
         ur = await client.get(
             f"{supa_url}/auth/v1/user",
             headers={"apikey": supa_key, "Authorization": f"Bearer {token}"},
             timeout=10,
         )
-        if ur.status_code != 200:
-            return
+    except Exception as exc:
+        raise _stade_illisible("auth", type(exc).__name__)
+    if 400 <= ur.status_code < 500 and ur.status_code != 429:
+        return None                                   # session refusée par l'auth : pas une panne
+    if ur.status_code != 200:
+        raise _stade_illisible("auth", f"HTTP {ur.status_code}")
+    try:
         uid = ur.json().get("id")
-        if not uid:
-            return
-        profile_select = "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until"
-        pr = await client.get(
-            f"{supa_url}/rest/v1/praticienne_profile",
-            params={"supabase_user_id": f"eq.{uid}",
-                    "select": profile_select,
-                    "limit": 1},
-            headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
-        )
-        rows = pr.json() if pr.status_code == 200 else []
-        if not rows:
-            # Doctrine #11 : multi-comptes → 1 svlbh_id canonique. Si le slot
-            # direct ne matche pas, résoudre via praticienne_user_alias pour
-            # ne pas perdre l'exemption ST5+/profondeur des comptes secondaires.
-            al = await client.get(
-                f"{supa_url}/rest/v1/praticienne_user_alias",
-                params={"supabase_user_id": f"eq.{uid}", "select": "svlbh_id", "limit": 1},
-                headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
-            )
-            alias_rows = al.json() if al.status_code == 200 else []
-            alias_svlbh = alias_rows[0].get("svlbh_id") if alias_rows else None
-            if alias_svlbh:
-                pr2 = await client.get(
-                    f"{supa_url}/rest/v1/praticienne_profile",
-                    params={"svlbh_id": f"eq.{alias_svlbh}",
-                            "select": profile_select,
-                            "limit": 1},
-                    headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"},
-                )
-                rows = pr2.json() if pr2.status_code == 200 else []
-    except Exception:
-        return None
+    except Exception as exc:
+        raise _stade_illisible("auth", type(exc).__name__)
+    if not uid:
+        raise _stade_illisible("auth", "réponse inexploitable")
+    service = {"apikey": supa_key, "Authorization": f"Bearer {supa_key}"}
+    profile_select = "svlbh_id,pro_status,stx,digisha_profondeur,digisha_profondeur_trial_until"
+    rows = await _lignes_profil(client, f"{supa_url}/rest/v1/praticienne_profile",
+                                {"supabase_user_id": f"eq.{uid}", "select": profile_select, "limit": 1},
+                                service, "profil")
+    if not rows:
+        # Doctrine #11 : multi-comptes → 1 svlbh_id canonique. Si le slot
+        # direct ne matche pas, résoudre via praticienne_user_alias pour
+        # ne pas perdre l'exemption ST5+/profondeur des comptes secondaires.
+        alias_rows = await _lignes_profil(client, f"{supa_url}/rest/v1/praticienne_user_alias",
+                                          {"supabase_user_id": f"eq.{uid}", "select": "svlbh_id", "limit": 1},
+                                          service, "alias")
+        alias_svlbh = alias_rows[0].get("svlbh_id") if alias_rows else None
+        if alias_svlbh:
+            rows = await _lignes_profil(client, f"{supa_url}/rest/v1/praticienne_profile",
+                                        {"svlbh_id": f"eq.{alias_svlbh}", "select": profile_select, "limit": 1},
+                                        service, "profil_alias")
     status_val = rows[0].get("pro_status") if rows else None
     if status_val in ("SUSPENDED", "REVOKED"):
         raise HTTPException(
@@ -1493,6 +1520,10 @@ async def digisha_chat(
     authorization: str | None = Header(None),
 ) -> ChatResponse:
     caller_uid = await authorize_caller(request, x_digisha_token, authorization)
+    # Le stade AVANT tout le reste (21.10.2026, « ST1 a) ») : une ST1, un compte désactivé ou un stade illisible (503) ne
+    # déclenchent ni lecture de prompt ni résumé d'historique par le modèle — même ordre que /accompagnement.
+    ident = await gate_subscription(authorization)
+    refuser_st1(ident)
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -1529,8 +1560,6 @@ async def digisha_chat(
     # Expérience de Patrick (16.10.2026 22h4x) : « toute utilisation de DiGiSha répond dès maintenant dans le canal qui
     # correspond au soin ». Chaque tour, quel que soit le mode, se dépose dans le fil : la fiche visée (proche, fil) ou,
     # sans fiche, la sienne ; le canal est celui de la praticienne (digisha_canal). Jamais bloquant.
-    ident = await gate_subscription(authorization)
-    refuser_st1(ident)
     moi = str((ident or {}).get("svlbh_id") or "").lower() or None
     depot_fil: tuple[str | None, str] | None = None   # (fiche ou None = la sienne, canal)
     if body.mode == "fil":
