@@ -36,6 +36,7 @@ from routers.digisha_formation_m1 import m1_system_block
 from routers.digisha_memoire import extrait_journal, journaliser_usage, preparer_historique
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_apprendre import apprendre_en_seance, extraire_appris
+from routers.digisha_apprendre import extraire_montrer, illustrations as illustrations_du_lexique, marques as marques_illustrations
 from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_release import release_courante
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
@@ -772,6 +773,9 @@ class ChatResponse(BaseModel):
     reply: str
     model: str
     release: str | None = None      # « DiGiSha 2.6 » dans la fenêtre (carte 9331e3e6, migration 2026-10-19e)
+    # 04.11.2026 (migration 2026-11-04c, carte 0eceae35) : les images des termes que DiGiSha a désignés (⟦Montrer : terme⟧),
+    # forme exacte d'une pièce gardée {heure, genre, chemin, media_type, titre} ; seau « digisha-pieces », dossier lexique/.
+    illustrations: list[dict] | None = None
 
 
 async def fetch_proche_parcours(consultante_id: str, authorization: str | None) -> str:
@@ -1136,6 +1140,19 @@ async def ranger_pieces(session_id: str | None, contenu) -> int:
     if gardees:
         await _rpc_service("digisha_page_pieces_ajouter", {"p_session": session_id, "p_pieces": gardees})
     return len(gardees)
+
+
+async def deposer_illustrations(session_id: str | None, pieces: list[dict]) -> int | None:
+    """Les illustrations du tour rejoignent les pièces de la page du jour, avec role « digisha » : à la relecture, l'app les
+    rattache à la bulle de DiGiSha qui porte la marque « [illustration : terme] » (migration 2026-11-04c). Jamais bloquant."""
+    if not session_id or not pieces:
+        return None
+    return await _rpc_service("digisha_page_pieces_ajouter",
+                              {"p_session": session_id, "p_pieces": [dict(p, role="digisha") for p in pieces]})
+
+
+def heure_zurich() -> str:
+    return datetime.now(ZoneInfo("Europe/Zurich")).strftime("%Hh%M")
 
 
 async def _rpc_service(nom: str, corps: dict, timeout: int = 10):
@@ -1699,16 +1716,21 @@ async def digisha_chat(
                                         (depot_fil[0] if depot_fil else None), derniere_question(body), text)
         usage_extra += f" a_apprendre={len(a_apprendre)}"
         log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
+    text, montrer = extraire_montrer(text)
+    illus = illustrations_du_lexique(montrer, heure_zurich())
+    if montrer:
+        log.info("digisha — montrer %s → %d image(s)", montrer, len(illus))
     if depot_fil is None and moi:
         cible = body.fil_consultante_id if body.mode == "fil" else None
         depot_fil = (cible, await canal_digisha(authorization, moi, sur_soi=(cible is None),
                                                 choisi=body.canal, stx=(ident or {}).get("stx")))
     if depot_fil and moi:
-        seance = await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1],
-                                           derniere_question(body), text, body.mode)
+        seance = await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1], derniere_question(body),
+                                           text + ("\n" + marques_illustrations(illus) if illus else ""), body.mode)
         if pieces_du_dernier(body):
             n_gardees = await ranger_pieces(seance, body.messages[-1].content)
             log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
+        await deposer_illustrations(seance, illus)
     if journal_permis(body):
         await log_exchange(
             "render-tuteur",
@@ -1717,7 +1739,7 @@ async def digisha_chat(
             prompt_version=version, etat=body.etat.model_dump(),
             supabase_user_id=caller_uid,
         )
-    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service))
+    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None)
 
 
 class AccompagnementRequest(BaseModel):
@@ -1942,8 +1964,13 @@ async def digisha_accompagnement(
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)
         log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
+    text, montrer = extraire_montrer(text)
+    illus = illustrations_du_lexique(montrer, heure_zurich())
+    if montrer:
+        log.info("digisha — montrer %s → %d image(s)", montrer, len(illus))
     if moi_acc and canal_acc:
-        seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body), text, "accompagnement",
+        seance = await fil_digisha_deposer(authorization, cible_acc, canal_acc, derniere_question(body),
+                                           text + ("\n" + marques_illustrations(illus) if illus else ""), "accompagnement",
                                            pour_elle=decoder_pour_elle(body))
         if cible_acc and prenom_cible and not decoder_pour_elle(body):
             # 2026-10-18f : les consignes du bloc adressé à SON prénom deviennent lisibles par la mentorée (porte du dépôt, jeton
@@ -1956,6 +1983,7 @@ async def digisha_accompagnement(
         if pieces_du_dernier(body):
             n_gardees = await ranger_pieces(seance, body.messages[-1].content)
             log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
+        await deposer_illustrations(seance, illus)
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
     if journal_permis(body):
         await log_exchange(
@@ -1965,4 +1993,4 @@ async def digisha_accompagnement(
             svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
             supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
         )
-    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service))
+    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None)

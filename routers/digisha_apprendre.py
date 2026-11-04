@@ -9,6 +9,7 @@ réponses reviennent ici par digisha_lexique() et sont données au modèle à ch
 """
 import re
 import time
+import unicodedata
 
 APPRENDRE_CADRE = (
     "## Ce que tu ne sais pas expliquer\n"
@@ -69,15 +70,73 @@ async def apprendre_en_seance(rpc_service, termes, svlbh: str | None, message: s
             for t in termes]
 
 
-_cache: dict = {"t": 0.0, "bloc": ""}
+_cache: dict = {"t": 0.0, "bloc": "", "illus": {}}
+
+# 04.11.2026 (migration 2026-11-04c, carte 0eceae35) — Patrick : « y-a-t-il possibilité d'ajouter des images ou des stickers à
+# cette explication ? ». Un terme du lexique peut porter une illustration (seau « digisha-pieces », dossier lexique/) ; DiGiSha
+# la désigne par une ligne ⟦Montrer : terme⟧, retirée comme les autres, et la réponse rend l'image à côté du texte.
+MONTRER_CADRE = (
+    "## Montrer une illustration\n"
+    "Quelques termes du lexique portent une illustration de Patrick (marqués « illustration : ⟦Montrer : <terme>⟧ »). Quand ta "
+    "réponse explique un de ces termes, termine-la par cette ligne, telle quelle (deux au plus). Elle n'est pas montrée : l'app "
+    "affiche l'image sous ta réponse, et tu peux y renvoyer (« regarde l'illustration sous ma réponse »). Tu ne décris pas "
+    "l'image au-delà de ce que dit le lexique. Pour un terme sans illustration, pas de ligne.\n\n"
+)
+_MONTRER = re.compile(r"\n?[ \t]*⟦\s*Montrer\s*:\s*(?P<terme>[^⟧\n]{1,120}?)\s*⟧[ \t]*")
 
 
-def bloc_lexique(lignes) -> str:
+def cle(terme: str) -> str:
+    """La clé large d'un terme, comme digisha_terme_cle_large en base : sans accents, minuscules, lettres et chiffres seuls."""
+    t = unicodedata.normalize("NFD", terme or "")
+    return re.sub(r"[^a-z0-9]", "", "".join(c for c in t if unicodedata.category(c) != "Mn").lower())
+
+
+def extraire_montrer(texte: str) -> tuple[str, list[str]]:
+    """(le texte sans les lignes ⟦Montrer : …⟧, [termes]) — deux au plus, sans doublon."""
+    termes: list[str] = []
+    for m in _MONTRER.finditer(texte or ""):
+        t = m.group("terme").strip().strip("«»\"' ")
+        if t and cle(t) and cle(t) not in {cle(x) for x in termes} and len(termes) < 2:
+            termes.append(t)
+    return _MONTRER.sub("", texte or "").rstrip(), termes
+
+
+def illustrations(termes, heure: str) -> list[dict]:
+    """Les images des termes désignés, dans la forme d'une pièce gardée (heure, genre, chemin, media_type, titre)."""
+    sortie, vus = [], set()
+    for t in termes or []:
+        for p in _cache["illus"].get(cle(t), []):
+            if p.get("chemin") and p["chemin"] not in vus:
+                vus.add(p["chemin"])
+                sortie.append({"heure": heure, "genre": "photo", "chemin": p["chemin"], "media_type": p.get("media_type"),
+                               "titre": p.get("titre") or t})
+    return sortie
+
+
+def marques(pieces) -> str:
+    """Les lignes-marques du tour déposé : « [illustration : Gui] » — l'app y rattache l'image à la relecture."""
+    return "\n".join(f"[illustration : {p['titre']}]" for p in pieces or [])
+
+
+def _illustrations_par_cle(lignes) -> dict:
+    par_cle: dict = {}
+    for l in lignes if isinstance(lignes, list) else []:
+        if isinstance(l, dict) and l.get("terme") and l.get("chemin"):
+            par_cle.setdefault(cle(l["terme"]), []).append(l)
+    return par_cle
+
+
+def bloc_lexique(lignes, illus: dict | None = None) -> str:
     if not isinstance(lignes, list):
         return ""
-    entrees = [f"- **{l.get('terme')}** : {l.get('explication')}" for l in lignes
-               if isinstance(l, dict) and l.get("terme") and l.get("explication")]
-    return (LEXIQUE_CADRE + "\n".join(entrees)) if entrees else ""
+    illus = illus or {}
+    entrees = [f"- **{l.get('terme')}** : {l.get('explication')}"
+               + (f" (illustration : ⟦Montrer : {l.get('terme')}⟧)" if cle(l.get("terme")) in illus else "")
+               for l in lignes if isinstance(l, dict) and l.get("terme") and l.get("explication")]
+    if not entrees:
+        return ""
+    return (MONTRER_CADRE if any(cle(l.get("terme")) in illus for l in lignes if isinstance(l, dict)) else "") \
+        + LEXIQUE_CADRE + "\n".join(entrees)
 
 
 async def lexique(rpc_service, ttl: int = 300) -> str:
@@ -87,7 +146,10 @@ async def lexique(rpc_service, ttl: int = 300) -> str:
     lignes = await rpc_service("digisha_lexique", {})
     if lignes is None:
         return _cache["bloc"]                     # panne : on garde le dernier lexique connu
-    _cache.update(t=time.monotonic(), bloc=bloc_lexique(lignes))
+    illus = await rpc_service("digisha_lexique_illustrations", {})
+    if illus is not None:                         # panne : on garde les dernières illustrations connues
+        _cache["illus"] = _illustrations_par_cle(illus)
+    _cache.update(t=time.monotonic(), bloc=bloc_lexique(lignes, _cache["illus"]))
     return _cache["bloc"]
 
 
