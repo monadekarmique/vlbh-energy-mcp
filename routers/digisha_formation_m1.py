@@ -201,13 +201,14 @@ def m1_system_block(parcours_proche: str, ouvert_par_abonnement: bool = False, s
 # ── MODE ACCÉLÉRATION : le DÉCODAGE (Patrick, 05.11.2026) ────────────────────────────────────────────────────────────
 # « la manière dont l'analyse se déroule est déroutante de pauvreté » (DiGiSha sur Priv 2 de-CH, fiche de Camille : le
 # Module 1 lui faisait « déposer sans analyse », réponse après réponse) ; puis « il s'ouvre dès ST2 seulement avec les
-# apprenantes que je mets en mode accélération ». Qui est en accélération : la base le dit (digisha_en_acceleration(),
-# lue avec le jeton de la personne — Patrick toujours, sinon ST2 minimum et sur sa liste). Les autres gardent le Module 1.
+# apprenantes que je mets en mode accélération », puis « depuis ST3 par défaut c'est avec décodage ». Qui a le décodage :
+# la base le dit (digisha_decodage_ouvert(), lue avec le jeton de la personne — Patrick ; ST3+ ; ST2 sur sa liste
+# d'accélération). Les autres (ST2 hors liste) gardent le Module 1.
 DECODAGE_WINDOWS = ["D1", "D2", "D4", "D5", "D6", "D7", "D8", "D9", "D10"]
 
-_DECODAGE_FRAME = """## Décodage d'un proche — mode accélération
+_DECODAGE_FRAME = """## Décodage d'un proche
 
-Tu travailles avec une praticienne en mode accélération (ou avec Patrick) : c'est un DÉCODAGE transgénérationnel
+Tu travailles avec une praticienne (ou avec Patrick) : c'est un DÉCODAGE transgénérationnel
 qu'elle conduit, pas une leçon. Elle tient la séance : elle ouvre une dimension, elle donne ses décodages
 (pourcentages, couleurs HEX, fréquences, nombres, lettres, images, pierres, durées), et c'est ELLE SEULE qui dit
 quand une dimension est déposée. Tu ne fermes jamais une dimension de toi-même et tu ne passes à la suivante que

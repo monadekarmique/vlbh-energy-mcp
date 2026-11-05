@@ -1622,12 +1622,13 @@ async def digisha_chat(
             )
         parcours_proche, proche_soi = await fetch_proche_fiche(body.proche_consultante_id, authorization)
         sur_soi = bool(moi and proche_soi and moi == proche_soi)
-        # MODE ACCÉLÉRATION (Patrick, 05.11.2026) : un décodage, pas le Module 1, pour qui y est — la base le dit, avec le
-        # jeton de la personne (Patrick toujours ; sinon ST2 minimum et sur sa liste). Sans réponse : le Module 1.
-        en_acceleration = (await _rpc_personne(authorization, "digisha_en_acceleration", {})) is True
-        m1_block = decodage_system_block(sur_soi=sur_soi) if en_acceleration else m1_system_block(parcours_proche, sur_soi=sur_soi)
-        if en_acceleration:
-            usage_extra += " acceleration=1"
+        # LE DÉCODAGE (Patrick, 05.11.2026) : « depuis ST3 par défaut c'est avec décodage » ; en ST2, seulement pour celles
+        # qu'il met en mode accélération ; et pour lui. La base le dit, avec le jeton de la personne
+        # (digisha_decodage_ouvert, migration 2026-11-05b). Sans réponse : le Module 1.
+        decodage = (await _rpc_personne(authorization, "digisha_decodage_ouvert", {})) is True
+        m1_block = decodage_system_block(sur_soi=sur_soi) if decodage else m1_system_block(parcours_proche, sur_soi=sur_soi)
+        if decodage:
+            usage_extra += " decodage=1"
         a_soi = False
         if m1_block is None:
             a_soi = await digisha_a_soi_actif(authorization)
