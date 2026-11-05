@@ -32,7 +32,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from routers import digisha_semantique
-from routers.digisha_formation_m1 import m1_system_block
+from routers.digisha_formation_m1 import m1_system_block, decodage_system_block
 from routers.digisha_memoire import extrait_journal, journaliser_usage, preparer_historique
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_apprendre import apprendre_en_seance, extraire_appris
@@ -1622,7 +1622,12 @@ async def digisha_chat(
             )
         parcours_proche, proche_soi = await fetch_proche_fiche(body.proche_consultante_id, authorization)
         sur_soi = bool(moi and proche_soi and moi == proche_soi)
-        m1_block = m1_system_block(parcours_proche, sur_soi=sur_soi)
+        # MODE ACCÉLÉRATION (Patrick, 05.11.2026) : un décodage, pas le Module 1, pour qui y est — la base le dit, avec le
+        # jeton de la personne (Patrick toujours ; sinon ST2 minimum et sur sa liste). Sans réponse : le Module 1.
+        en_acceleration = (await _rpc_personne(authorization, "digisha_en_acceleration", {})) is True
+        m1_block = decodage_system_block(sur_soi=sur_soi) if en_acceleration else m1_system_block(parcours_proche, sur_soi=sur_soi)
+        if en_acceleration:
+            usage_extra += " acceleration=1"
         a_soi = False
         if m1_block is None:
             a_soi = await digisha_a_soi_actif(authorization)
