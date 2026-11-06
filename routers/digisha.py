@@ -35,7 +35,9 @@ from routers import digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block, decodage_system_block
 from routers.digisha_memoire import extrait_journal, journaliser_usage, preparer_historique
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
-from routers.digisha_apprendre import apprendre_en_seance, extraire_appris
+from routers.digisha_apprendre import apprendre_en_seance, extraire_appris, corriger_en_seance, extraire_corrige
+from routers.digisha_savoirs import SAVOIRS_CADRE, appeler_avec_savoirs, stade_de
+from routers.digisha_envoi import une_seule_fois
 from routers.digisha_apprendre import extraire_montrer, illustrations as illustrations_du_lexique, marques as marques_illustrations
 from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_release import release_courante
@@ -1540,12 +1542,29 @@ def build_system(base: str, parcours: str, etat: MemberState) -> list[dict]:
     ]
 
 
+def _envoi(valeur) -> str | None:
+    """L'en-tête X-DiGiSha-Envoi, ou None (appel direct dans un test : la valeur par défaut est l'objet Header)."""
+    return valeur if isinstance(valeur, str) else None
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def digisha_chat(
     request: Request,
     body: ChatRequest,
     x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
     authorization: str | None = Header(None),
+    x_digisha_envoi: str | None = Header(None, alias="X-DiGiSha-Envoi"),
+) -> ChatResponse:
+    # Une réponse coupée en route se redemande avec la même clé et revient telle quelle (digisha_envoi, 06.11.2026).
+    return await une_seule_fois(authorization or x_digisha_token, _envoi(x_digisha_envoi),
+                                lambda: _digisha_chat(request, body, x_digisha_token, authorization))
+
+
+async def _digisha_chat(
+    request: Request,
+    body: ChatRequest,
+    x_digisha_token: str | None,
+    authorization: str | None,
 ) -> ChatResponse:
     caller_uid = await authorize_caller(request, x_digisha_token, authorization)
     # Le stade AVANT tout le reste (21.10.2026, « ST1 a) ») : une ST1, un compte désactivé ou un stade illisible (503) ne
@@ -1691,18 +1710,28 @@ async def digisha_chat(
         texte_dec = bloc_decodage(await fetch_decodage(authorization, body.decodage_id))
         ajouter_au_systeme(payload, texte_dec)
         usage_extra += f" decodage={body.decodage_id[:8]} decodage_car={len(texte_dec)}"
+    # Les savoirs des apps (06.11.2026) : DiGiSha va les chercher lui-même, à son stade (digisha_savoirs).
+    stade = stade_de((ident or {}).get("stx"))
+    ajouter_au_systeme(payload, SAVOIRS_CADRE if stade >= 2 else "")
     model = passer_en_5_5(payload, moi)
     ranger_pour_cache(payload)
     client = _http()
-    resp = await client.post(
-        ANTHROPIC_URL,
-        json=payload,
-        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
-        timeout=120,
-    )
-    if resp.status_code != 200:
-        raise erreur_du_modele(resp, "chat")
-    data = resp.json()
+
+    async def poster(p: dict) -> dict:
+        resp = await client.post(
+            ANTHROPIC_URL,
+            json=p,
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+            timeout=120,
+        )
+        if resp.status_code != 200:
+            raise erreur_du_modele(resp, "chat")
+        return resp.json()
+
+    data, recherches = await appeler_avec_savoirs(poster, payload, stade)
+    if recherches:
+        usage_extra += f" savoirs={len(recherches)}"
+        log.info("digisha — savoirs %s", recherches)
     if pieces_du_dernier(body):
         usage_extra += f" pieces={pieces_du_dernier(body)}"
     if data.get("stop_reason") not in (None, "end_turn"):
@@ -1716,6 +1745,12 @@ async def digisha_chat(
     if appris and await _rpc_personne(authorization, "is_owner_st6", {}) is True:      # 2026-10-20j : Patrick seul
         log.info("digisha — appris %s → %s", appris, await apprendre_en_seance(
             _rpc_service, appris, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None), derniere_question(body)))
+    # 06.11.2026 : ses corrections en direct se rangent dans le lexique (⟦Corrigé : …⟧, Patrick seul).
+    text, corriges = extraire_corrige(text)
+    if corriges and await _rpc_personne(authorization, "is_owner_st6", {}) is True:
+        log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], await corriger_en_seance(
+            _rpc_service, corriges, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
+            derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y")))
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
@@ -1832,8 +1867,19 @@ async def digisha_accompagnement(
     body: AccompagnementRequest,
     x_digisha_token: str | None = Header(None, alias="X-DigiSha-Token"),
     authorization: str | None = Header(None),
+    x_digisha_envoi: str | None = Header(None, alias="X-DiGiSha-Envoi"),
 ) -> ChatResponse:
     """DiGiSha — ton accompagnement Digital Shaman (port Cercle Lumière)."""
+    return await une_seule_fois(authorization or x_digisha_token, _envoi(x_digisha_envoi),
+                                lambda: _digisha_accompagnement(request, body, x_digisha_token, authorization))
+
+
+async def _digisha_accompagnement(
+    request: Request,
+    body: AccompagnementRequest,
+    x_digisha_token: str | None,
+    authorization: str | None,
+) -> ChatResponse:
     await authorize_caller(request, x_digisha_token, authorization)
     ident = await gate_subscription(authorization)
     refuser_st1(ident)
@@ -1939,18 +1985,27 @@ async def digisha_accompagnement(
         "system": system_blocks,
         "messages": _cache_history(recents),
     }
+    stade = stade_de((ident or {}).get("stx"))
+    ajouter_au_systeme(payload, SAVOIRS_CADRE if stade >= 2 else "")
     model = passer_en_5_5(payload, str((ident or {}).get("svlbh_id") or "") or None)
     ranger_pour_cache(payload)
     client = _http()
-    resp = await client.post(
-        ANTHROPIC_URL,
-        json=payload,
-        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
-        timeout=120,
-    )
-    if resp.status_code != 200:
-        raise erreur_du_modele(resp, "accompagnement")
-    data = resp.json()
+
+    async def poster(p: dict) -> dict:
+        resp = await client.post(
+            ANTHROPIC_URL,
+            json=p,
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+            timeout=120,
+        )
+        if resp.status_code != 200:
+            raise erreur_du_modele(resp, "accompagnement")
+        return resp.json()
+
+    data, recherches = await appeler_avec_savoirs(poster, payload, stade)
+    if recherches:
+        mesure_fil += f" savoirs={len(recherches)}"
+        log.info("digisha — savoirs %s", recherches)
     if data.get("stop_reason") not in (None, "end_turn"):
         mesure_fil += f" stop={data.get('stop_reason')}"
     journaliser_usage("accompagnement", "accompagnement", model, data, len(recents), n_blocs,
@@ -1966,6 +2021,10 @@ async def digisha_accompagnement(
     text, appris = extraire_appris(text)
     if appris and await _rpc_personne(authorization, "is_owner_st6", {}) is True:      # 2026-10-20j : Patrick seul
         log.info("digisha — appris %s → %s", appris, await apprendre_en_seance(_rpc_service, appris, moi_acc, derniere_question(body)))
+    text, corriges = extraire_corrige(text)
+    if corriges and await _rpc_personne(authorization, "is_owner_st6", {}) is True:
+        log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], await corriger_en_seance(
+            _rpc_service, corriges, moi_acc, derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y")))
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)

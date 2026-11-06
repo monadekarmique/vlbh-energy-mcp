@@ -24,7 +24,14 @@ APPRENDRE_CADRE = (
     "ne pas savoir), termine ta réponse par une ligne :\n"
     "⟦Appris : <le terme>⟧\n"
     "Le serveur range alors SON message, tel quel, dans ton lexique, et ferme la question. Tu n'écris jamais que tu as rangé ou "
-    "retenu une définition dans le lexique sans cette ligne.\n"
+    "retenu une définition dans le lexique sans cette ligne.\n\n"
+    "## Quand Patrick te corrige\n"
+    "Si c'est Patrick qui, dans ce dernier message, corrige ce que tu as dit ou ce que tu sais — une explication, une "
+    "correspondance, une table, un point, une lecture (souvent il commence par « Correction », « non », « c'est faux ») — tu "
+    "reprends avec SA correction, sans te justifier, et tu termines ta réponse par une ligne :\n"
+    "⟦Corrigé : <le sujet, en quelques mots> — <ce qui est juste désormais, en une phrase, avec ses mots>⟧\n"
+    "Le serveur range alors SON message, tel quel, avec cette phrase, dans ton lexique : cela fait foi ensuite, pour toutes. "
+    "Une correction par sujet, deux au plus. Tu n'écris jamais que tu as retenu une correction sans cette ligne.\n"
 )
 LEXIQUE_CADRE = (
     "## Lexique de Patrick — ce qu'il t'a appris (fait foi)\n"
@@ -60,6 +67,39 @@ def extraire_appris(texte: str) -> tuple[str, list[str]]:
         if t and t.lower() not in {x.lower() for x in termes} and len(termes) < 2:
             termes.append(t)
     return _APPRIS.sub("", texte or "").rstrip(), termes
+
+
+# 06.11.2026 — Patrick : « comment puis-je corriger ce que DiGiSha me dit en live pour qu'il consolide ce savoir ? ». Mesuré
+# ce matin-là (06h55) : « Correction : pour l'absinthe la Tables des Dark entities - Rose des Vents - HVLBH Priv-6 … » ; rien
+# ne la gardait, elle se perdait avec la conversation. La ligne ⟦Corrigé : sujet — ce qui est juste⟧ la range dans le lexique.
+_CORRIGE = re.compile(r"\n?[ \t]*⟦\s*Corrigé\s*:\s*(?P<sujet>[^⟧\n]{1,120}?)(?:\s+[—–-]\s+(?P<juste>[^⟧\n]{0,600}))?\s*⟧[ \t]*")
+
+
+def extraire_corrige(texte: str) -> tuple[str, list[tuple[str, str]]]:
+    """(le texte sans les lignes ⟦Corrigé : …⟧, [(sujet, ce qui est juste)]) — deux au plus, sans doublon."""
+    corrections: list[tuple[str, str]] = []
+    for m in _CORRIGE.finditer(texte or ""):
+        s = m.group("sujet").strip().strip("«»\"' ")
+        if s and cle(s) and cle(s) not in {cle(x) for x, _ in corrections} and len(corrections) < 2:
+            corrections.append((s, (m.group("juste") or "").strip()))
+    return _CORRIGE.sub("", texte or "").rstrip(), corrections
+
+
+def texte_de_correction(message: str, juste: str, jour: str) -> str:
+    """SES mots d'abord, tels quels ; la phrase de DiGiSha ensuite, marquée comme la sienne."""
+    t = f"Correction de Patrick du {jour} : « {(message or '').strip()} »"
+    return t + (f" — retenu : {juste}" if juste else "")
+
+
+async def corriger_en_seance(rpc_service, corrections, svlbh: str | None, message: str, jour: str) -> list:
+    """Chaque correction devient l'entrée de son sujet dans le lexique (la base refuse tout autre que Patrick)."""
+    if not svlbh or not (message or "").strip():
+        return []
+    sorties = [await rpc_service("digisha_a_apprendre_appris_en_seance",
+                                 {"p_terme": s, "p_texte": texte_de_correction(message, j, jour), "p_svlbh": svlbh})
+               for s, j in corrections]
+    _cache["t"] = 0.0          # le lexique se relit au tour suivant, pas cinq minutes plus tard
+    return sorties
 
 
 async def apprendre_en_seance(rpc_service, termes, svlbh: str | None, message: str) -> list:
