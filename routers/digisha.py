@@ -43,6 +43,8 @@ from routers.digisha_contexte import mettre_en_forme, sans_relances
 from routers.digisha_release import release_courante
 from routers.digisha_pieces import Contenu, compter_pieces, marquer_cache, texte_de, valider_contenu
 from routers.digisha_cache import donnees_de_tiers, du_tour, partage, ranger_pour_cache
+from routers.digisha_impasse import COMPTE_RENDU_CADRE, IMPASSE_CADRE, dit_impasse, extraire_impasse, impasse_de_secours, impasses as impasses_de, noter_impasses
+from routers.digisha_heures import avec_heures, heure_cadre, sans_heure_en_tete
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONTENT = json.loads((DATA_DIR / "formation_26_ponts.json").read_text())
@@ -630,6 +632,9 @@ class ChatTurn(BaseModel):
     role: Literal["user", "assistant"]
     # Le texte, ou des blocs (text / image / document en base64 — digisha_pieces, 17.10.2026) passés tels quels au modèle.
     content: Contenu
+    # 07.11.2026 (Patrick : « voir l'heure de tes interventions ») : l'heure du tour telle que l'app l'affiche (« 21h36 »),
+    # facultative ; le serveur la place entre crochets en tête du tour pour le modèle (digisha_heures).
+    heure: str | None = None
 
     @field_validator("content")
     @classmethod
@@ -640,6 +645,12 @@ class ChatTurn(BaseModel):
 def derniere_question(body) -> str:
     """Le texte du dernier tour (les pièces y deviennent « [photo] » / « [document : titre] »)."""
     return texte_de(body.messages[-1].content) if body.messages else ""
+
+
+def reponse_precedente(body) -> str:
+    """La réponse de DiGiSha juste avant le dernier message (celle qu'une « Impasse » abandonne)."""
+    m = body.messages[-2] if len(body.messages) >= 2 else None
+    return texte_de(m.content) if m is not None and m.role == "assistant" else ""
 
 
 def pieces_du_dernier(body) -> int:
@@ -778,6 +789,7 @@ class ChatResponse(BaseModel):
     # 04.11.2026 (migration 2026-11-04c, carte 0eceae35) : les images des termes que DiGiSha a désignés (⟦Montrer : terme⟧),
     # forme exacte d'une pièce gardée {heure, genre, chemin, media_type, titre} ; seau « digisha-pieces », dossier lexique/.
     illustrations: list[dict] | None = None
+    heure: str | None = None        # 07.11.2026 : l'heure de la réponse (« 21h36 »), que l'app affiche et renvoie avec l'historique
 
 
 async def fetch_proche_parcours(consultante_id: str, authorization: str | None) -> str:
@@ -1047,6 +1059,39 @@ def ajouter_au_systeme(payload: dict, texte: str) -> None:
     systeme = payload.get("system")
     blocs = [{"type": "text", "text": systeme}] if isinstance(systeme, str) else list(systeme or [])
     payload["system"] = blocs + [{"type": "text", "text": texte}]
+
+
+def ajouter_du_tour(payload: dict, texte: str) -> None:
+    """Comme ajouter_au_systeme, pour ce qui change à chaque tour (l'heure, les impasses) : le bloc va dans le dernier
+    message (ranger_pour_cache) et ne casse pas le cache de la consigne."""
+    if not texte:
+        return
+    systeme = payload.get("system")
+    blocs = [{"type": "text", "text": systeme}] if isinstance(systeme, str) else list(systeme or [])
+    payload["system"] = blocs + [du_tour(texte)]
+
+
+async def cadres_de_seance(payload: dict, authorization: str | None, auteur: str | None, consultante: str | None) -> bool:
+    """L'heure pour toutes ; pour le propriétaire, ses mots codes « Impasse » et « Compte-rendu », et les chemins qu'il a
+    fermés. → propriétaire ?"""
+    ajouter_du_tour(payload, heure_cadre(heure_zurich()))
+    proprio = await _rpc_personne(authorization, "is_owner_st6", {}) is True
+    if proprio:
+        fermes = await impasses_de(_rpc_service, auteur, consultante)
+        ajouter_du_tour(payload, IMPASSE_CADRE + COMPTE_RENDU_CADRE + (("\n" + fermes) if fermes else ""))
+    return proprio
+
+
+async def garder_impasses(text: str, body, proprio: bool, auteur: str | None, consultante: str | None) -> str:
+    """Retire les lignes ⟦Impasse : …⟧ ; pour le propriétaire, garde l'impasse — même si la ligne manque et que le mot y est."""
+    text, dites = extraire_impasse(text)
+    question = derniere_question(body)
+    if proprio and not dites and dit_impasse(question):
+        dites = [impasse_de_secours(question, reponse_precedente(body))]
+    if proprio and dites:
+        log.info("digisha — impasse %s → %s", [c for c, _ in dites],
+                 await noter_impasses(_rpc_service, dites, auteur, consultante, question))
+    return sans_heure_en_tete(text)
 
 
 FIL_REPRISE_CADRE = (
@@ -1600,7 +1645,7 @@ async def _digisha_chat(
         )
     # Historique : au-delà de 20 messages, les tours anciens sont résumés par
     # blocs (cache) et seuls les derniers restent bruts — voir digisha_memoire.
-    raw_messages = [t.model_dump(exclude_none=True) for t in body.messages]
+    raw_messages = avec_heures([t.model_dump(exclude_none=True) for t in body.messages])
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     resume_blocks = [resume_block] if resume_block else []
     usage_extra = ""
@@ -1713,6 +1758,8 @@ async def _digisha_chat(
     # Les savoirs des apps (06.11.2026) : DiGiSha va les chercher lui-même, à son stade (digisha_savoirs).
     stade = stade_de((ident or {}).get("stx"))
     ajouter_au_systeme(payload, SAVOIRS_CADRE if stade >= 2 else "")
+    cible_imp = getattr(body, "proche_consultante_id", None) or (body.fil_consultante_id if body.mode == "fil" else None)
+    proprio = await cadres_de_seance(payload, authorization, moi, cible_imp)
     model = passer_en_5_5(payload, moi)
     ranger_pour_cache(payload)
     client = _http()
@@ -1751,6 +1798,8 @@ async def _digisha_chat(
         log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], await corriger_en_seance(
             _rpc_service, corriges, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
             derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y")))
+    # 07.11.2026 : « Impasse », le mot code de Patrick — le chemin abandonné est gardé et lui sera rappelé comme fermé.
+    text = await garder_impasses(text, body, proprio, moi, cible_imp)
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
@@ -1780,7 +1829,8 @@ async def _digisha_chat(
             prompt_version=version, etat=body.etat.model_dump(),
             supabase_user_id=caller_uid,
         )
-    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None)
+    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None,
+                        heure=heure_zurich())
 
 
 class AccompagnementRequest(BaseModel):
@@ -1908,7 +1958,7 @@ async def _digisha_accompagnement(
         used = await _compter_accompagnement(str(ident["svlbh_id"]))
     if ident and ident.get("profondeur") and ident.get("svlbh_id") and used <= PROFONDEUR_FAIR_USE:
         model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
-    raw_messages = [t.model_dump(exclude_none=True) for t in body.messages]
+    raw_messages = avec_heures([t.model_dump(exclude_none=True) for t in body.messages])
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
     system_blocks = [partage({"type": "text", "text": system})]
     if resume_block:
@@ -1987,6 +2037,7 @@ async def _digisha_accompagnement(
     }
     stade = stade_de((ident or {}).get("stx"))
     ajouter_au_systeme(payload, SAVOIRS_CADRE if stade >= 2 else "")
+    proprio = await cadres_de_seance(payload, authorization, moi_acc, cible_acc)
     model = passer_en_5_5(payload, str((ident or {}).get("svlbh_id") or "") or None)
     ranger_pour_cache(payload)
     client = _http()
@@ -2025,6 +2076,7 @@ async def _digisha_accompagnement(
     if corriges and await _rpc_personne(authorization, "is_owner_st6", {}) is True:
         log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], await corriger_en_seance(
             _rpc_service, corriges, moi_acc, derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y")))
+    text = await garder_impasses(text, body, proprio, moi_acc, cible_acc)
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)
@@ -2058,4 +2110,5 @@ async def _digisha_accompagnement(
             svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
             supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
         )
-    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None)
+    return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None,
+                        heure=heure_zurich())
