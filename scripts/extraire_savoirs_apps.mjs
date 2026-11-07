@@ -2,7 +2,7 @@
 // Les savoirs des apps, pour DiGiSha (fable, 06.11.2026 — Patrick : « je trouve que DiGiSha n'utilise pas encore assez les
 // savoirs croisés de mes app » ; « oui tu construis la marque corrigé et les 5 savoirs »).
 //
-// Extrait TELS QUELS les cinq savoirs les plus croisés des dépôts des apps (~/Developer) vers data/savoirs_apps.json :
+// Extrait TELS QUELS les six savoirs les plus croisés des dépôts des apps (~/Developer) vers data/savoirs_apps.json :
 // rien n'est recopié à la main, rien n'est réécrit. Chaque version porte le STADE à partir duquel elle se lit — Patrick,
 // 06.11 : « les 3 savoirs ne se contredisent pas - ils sont le savoir au stade ST2, ST3 et ST4 ». Le stade d'une version
 // est celui du canal de l'app qui la porte (table canal_app, relevée le 06.11 : Priv 1 à 5 et Priv Core en z2 → ST2 ;
@@ -36,6 +36,11 @@ const S = {
   dimModeles: ['svlbh-pro-core-android', 'src/dimensionModels.ts', 'SVLBH Pro Core', 4],
   chakrasPro: ['svlbh-pro-core-android', 'src/chakraCatalog.ts', 'SVLBH Pro Core', 4],
   portes: ['svlbh-core', 'Sources/SVLBHCore/Models/SVLBHPorteEnergetique.swift', 'Portes énergétiques (socle)', 2],
+  // 07.11.2026 — Patrick : « j'ai besoin que DiGiSha puisse apprendre le savoir des faces Dodécaèdre qui contient l'app
+  // svlbh-pro-1 - la face 5 fenêtre 7h-9h Na Zi Fa Chén 5ème des 12 branches terrestres ». Trois niveaux, GATÉS par stade
+  // (DEC Patrick 04.08.2026 : Niveau 1 = ST2 · Niveau 2 = ST3 · Niveau 3 = ST5) : le stade de la version est celui du niveau.
+  dodeca: ['svlbh-core', 'Sources/SVLBHCore/Models/SVLBHEarthlyBranches.swift', 'VLBH Chroma 5 Abondance (dodécaèdre)', 2],
+  dodecaVue: ['svlbh-pro-1', 'ios-app/SVLBHPro1App/Dodecaedre/PentagonEditorView.swift', 'VLBH Chroma 5 Abondance (dodécaèdre)', 5],
 };
 
 const chemin = (k) => join(DEV, S[k][0], S[k][1]);
@@ -220,12 +225,94 @@ async function hdom() {
   };
 }
 
+// ── Le dodécaèdre : les 12 faces = les 12 branches terrestres ─────────────────────────────────────────────────────
+// Le fichier Swift du socle est COMPILÉ tel quel (swiftc) et écrit lui-même ses douze faces : aucune table recopiée.
+const GEN_DODECA = `import Foundation
+struct Face: Encodable { let face: Int; let branche: String; let rang: String; let fenetre: String; let meridien: String
+  let meridien_fr: String; let element: String; let grenier: Bool; let harmonie: String; let opposition: String
+  let triangle: String; let linggui: Int }
+struct Sortie: Encodable { let faces: [Face]; let pointes: [String]; let contraintes: [String]; let appariement: String
+  let formule: String; let diviseur: String; let reste: String; let provenance: String; let confluence: [String]
+  let but: String; let valeurs: [[String]]; let niveaux: [[String]] }
+let s = Sortie(
+  faces: EarthlyBranch.allCases.map { b in Face(face: b.face, branche: b.title, rang: b.rankLabel, fenetre: b.hourLabel,
+    meridien: b.meridianCode, meridien_fr: b.meridianLabel, element: b.elementLabel, grenier: b.isEarthGranary,
+    harmonie: b.harmony.title, opposition: b.opposition.title, triangle: b.triangleLabel, linggui: b.lingguiValue) },
+  pointes: DodecaedreDoctrine.pointes, contraintes: DodecaedreDoctrine.contraintes, appariement: DodecaedreDoctrine.appariement,
+  formule: LingguiBafa.formula, diviseur: LingguiBafa.divisor, reste: LingguiBafa.remainderRule,
+  provenance: LingguiBafa.provenance, confluence: LingguiBafa.confluentPoints, but: LingguiBafa.purpose,
+  valeurs: LingguiBafa.valueGroups.map { ["\\($0.value)", $0.stems, $0.branches] },
+  niveaux: SavoirNiveau.allCases.map { [$0.titre, $0.stadeLabel, $0.destinataire] })
+let e = JSONEncoder(); e.outputFormatting = [.sortedKeys]
+print(String(data: try! e.encode(s), encoding: .utf8)!)
+`;
+
+// Les phrases d'un bloc("<titre>", [ … ]) de l'écran de Chroma 5, telles quelles (concaténations Swift jointes).
+function blocVue(swift, titre) {
+  const debut = swift.indexOf(`bloc("${titre}", [`);
+  if (debut < 0) throw new Error(`bloc introuvable dans l'écran du dodécaèdre : ${titre}`);
+  let i = swift.indexOf('[', debut) + 1, prof = 1, dans = false, cour = '', elements = [], lit = '';
+  for (; i < swift.length && prof > 0; i++) {
+    const c = swift[i];
+    if (dans) { if (c === '\\' && swift[i + 1] === '"') { lit += '"'; i++; } else if (c === '"') { dans = false; cour += lit; lit = ''; } else lit += c; continue; }
+    if (c === '"') dans = true;
+    else if (c === '[' || c === '(') prof++;
+    else if (c === ']' || c === ')') prof--;
+    else if (c === ',' && prof === 1) { elements.push(cour); cour = ''; }
+  }
+  if (cour) elements.push(cour);
+  return elements.map((e) => e.trim()).filter(Boolean);
+}
+
+async function dodecaedre() {
+  writeFileSync(join(COPIES, 'main.swift'), GEN_DODECA);
+  const bin = join(COPIES, 'dodeca');
+  execFileSync('swiftc', ['-O', chemin('dodeca'), join(COPIES, 'main.swift'), '-o', bin], { stdio: ['ignore', 'ignore', 'inherit'] });
+  const d = JSON.parse(execFileSync(bin, { encoding: 'utf8' }));
+  const source = lire('dodeca');
+  const doctrine = (source.match(/Doctrine validée par Patrick[\s\S]*?portail du miroir\./) || [''])[0].replace(/\n\/\/\s*/g, ' ');
+  const vue = lire('dodecaVue');
+  const porte = blocVue(vue, "La branche comme porte d'organe");
+  const modes = blocVue(vue, "Les deux modes d'ouverture");
+  const pourFace = (t, f) => t.replace(/\\\(branch\.title\)/g, f.branche).replace(/\\\(branch\.meridianCode\)/g, f.meridien)
+    .replace(/\\\(branch\.hourLabel\)/g, f.fenetre);
+  const cle = (f) => `Face ${f.face} — ${f.branche}`;
+  const n1 = (f) => ({ cle: cle(f), face: f.face, branche: f.branche, rang: f.rang, fenetre: `${f.fenetre} (Na Zi Fa)`,
+    meridien: `${f.meridien} — ${f.meridien_fr}`, ligne_du_temps: `face ${f.face} du dodécaèdre`,
+    la_face: [`5 pointes — ${d.pointes.join(' · ')}`, '5 arêtes — les 5 Wu-Shen'], ce_que_la_geometrie_impose: d.contraintes });
+  const n2 = (f) => ({ ...n1(f), element: f.element,
+    ...(f.grenier ? { terre: 'Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la '
+      + "mémoire de l'élément qui s'achève. Nuance déterminante en décodage." } : {}),
+    harmonie_六合: f.harmonie, opposition_六沖: f.opposition, triangle_三合: f.triangle, appariement: d.appariement });
+  const n3 = (f) => ({ ...n2(f), porte_d_organe: porte.map((t) => pourFace(t, f)), modes_d_ouverture: modes,
+    linggui_bafa: { calcul: [d.formule, d.diviseur, d.reste], valeur_de_la_branche: f.linggui,
+      valeurs: d.valeurs.map(([v, troncs, branches]) => `${v} = ${troncs} / ${branches}`), provenance: d.provenance },
+    points_de_confluence: d.confluence, but: d.but });
+  const doc = { cle: 'Dodécaèdre — les 12 faces', doctrine, niveaux: d.niveaux.map(([t, st, qui]) => `${t} : à partir de ${st} — ${qui}`) };
+  const niveau = (nom, stade, faire) => ({ ...version('dodeca', nom, [doc, ...d.faces.map(faire)]), stade });
+  return {
+    titre: 'Dodécaèdre — les 12 faces, les 12 branches terrestres (地支) et le Linggui Bafa',
+    memes_cles: true,      // une face porte la même clé aux trois niveaux : le niveau le plus haut lisible la remplace
+    description: 'Les 12 faces pentagonales du dodécaèdre de Chroma 5 = les 12 branches terrestres = les 12 lignes des temps : '
+      + 'branche (Zǐ…Hài), rang, fenêtre horaire Na Zi Fa et méridien (face 5 = 辰 Chén, 7 h – 9 h, ST Estomac) ; puis '
+      + "élément, branches de Terre, harmonies 六合, oppositions 六沖, triangles 三合 ; puis l'usage opératoire : porte "
+      + "d'organe, Na Zi / Na Jia, calcul Linggui Bafa, points de confluence.",
+    versions: [
+      niveau("Niveau 1 — L'image (face, branche, fenêtre, méridien)", 2, n1),
+      niveau('Niveau 2 — La structure (élément, harmonie, opposition, triangle)', 3, n2),
+      { ...niveau("Niveau 3 — L'usage opératoire (porte d'organe, Na Zi / Na Jia, Linggui Bafa)", 5, n3),
+        source: `${S.dodeca[0]}/${S.dodeca[1]} · ${S.dodecaVue[0]}/${S.dodecaVue[1]}` },
+    ],
+  };
+}
+
 const savoirs = {
   rose_des_vents: await rose(),
   types_de_lmasc: await lmasc(),
   sephiroth_chromatique: await sephiroth(),
   wu_shen_dynapathomu: await wuShen(),
   hdom_phantom: await hdom(),
+  dodecaedre_branches: await dodecaedre(),
 };
 const texte = JSON.stringify({ genere_par: 'scripts/extraire_savoirs_apps.mjs', savoirs }, null, 1) + '\n';
 if (process.argv.includes('--verifier')) {

@@ -15,11 +15,21 @@ def _premier(savoir, requete, stade):
     return r, (r["resultats"][0]["entree"] if r.get("resultats") else None)
 
 
-def test_les_cinq_savoirs_sont_charges():
+def test_les_six_savoirs_sont_charges():
     assert set(sv.SAVOIRS) == {"rose_des_vents", "types_de_lmasc", "sephiroth_chromatique", "wu_shen_dynapathomu",
-                               "hdom_phantom"}
+                               "hdom_phantom", "dodecaedre_branches"}
     for s in sv.SAVOIRS.values():
-        assert s["versions"] and all(v["entrees"] and v["source"] and v["stade"] in (2, 3, 4) for v in s["versions"])
+        assert s["versions"] and all(v["entrees"] and v["source"] and v["stade"] in (2, 3, 4, 5) for v in s["versions"])
+
+
+def test_le_dodecaedre_par_niveau():
+    """07.11.2026 — Patrick : « la face 5 fenêtre 7h-9h Na Zi Fa Chén 5ème des 12 branches terrestres ». Niveau 1 = ST2,
+    Niveau 2 = ST3, Niveau 3 = ST5 (DEC Patrick 04.08.2026)."""
+    face5 = lambda st: _premier("dodecaedre_branches", "face 5 Chén", st)[1]
+    assert face5(2)["fenetre"] == "7 h – 9 h (Na Zi Fa)" and face5(2)["meridien"] == "ST — Estomac" and "harmonie_六合" not in face5(2)
+    assert face5(3)["harmonie_六合"] == "酉 Yǒu" and "linggui_bafa" not in face5(3)
+    assert face5(5)["linggui_bafa"]["valeur_de_la_branche"] == 10 and face5(6)["opposition_六沖"] == "戌 Xū"
+    assert [v["stade"] for v in sv.SAVOIRS["dodecaedre_branches"]["versions"]] == [2, 3, 5]
 
 
 def test_une_cle_se_trouve_en_premier():

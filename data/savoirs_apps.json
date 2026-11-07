@@ -1386,7 +1386,7 @@
      "app": "VLBH Chroma 2 Thyro",
      "nom": "10 types renseignés",
      "source": "vlbh-chroma2-thyro/App/Data/typesDE_Lmasc.json",
-     "commit": "",
+     "commit": "4058350 2026-11-07",
      "entrees": [
       {
        "cle": "KI-DE-01",
@@ -5586,6 +5586,1251 @@
        "dimension": "D99 — Architecture Galactique",
        "num": 34,
        "nom": "Système Source — Origine primordiale"
+      }
+     ]
+    }
+   ]
+  },
+  "dodecaedre_branches": {
+   "titre": "Dodécaèdre — les 12 faces, les 12 branches terrestres (地支) et le Linggui Bafa",
+   "memes_cles": true,
+   "description": "Les 12 faces pentagonales du dodécaèdre de Chroma 5 = les 12 branches terrestres = les 12 lignes des temps : branche (Zǐ…Hài), rang, fenêtre horaire Na Zi Fa et méridien (face 5 = 辰 Chén, 7 h – 9 h, ST Estomac) ; puis élément, branches de Terre, harmonies 六合, oppositions 六沖, triangles 三合 ; puis l'usage opératoire : porte d'organe, Na Zi / Na Jia, calcul Linggui Bafa, points de confluence.",
+   "versions": [
+    {
+     "stade": 2,
+     "app": "VLBH Chroma 5 Abondance (dodécaèdre)",
+     "nom": "Niveau 1 — L'image (face, branche, fenêtre, méridien)",
+     "source": "svlbh-core/Sources/SVLBHCore/Models/SVLBHEarthlyBranches.swift",
+     "commit": "9383863 2026-08-10",
+     "entrees": [
+      {
+       "cle": "Dodécaèdre — les 12 faces",
+       "doctrine": "Doctrine validée par Patrick le 2026-08-01 : les 12 faces pentagonales du dodécaèdre SONT les 12 branches terrestres, donc les 12 lignes des temps. Il n'existe pas de 13e branche — une 13e accumulation ne trouve pas de face libre, elle se replie sur la première, et ce repli est le portail du miroir.",
+       "niveaux": [
+        "Niveau 1 — L'image : à partir de ST2 — suffit pour une consultante",
+        "Niveau 2 — La structure : à partir de ST3 — socle de lecture d'une praticienne en formation",
+        "Niveau 3 — L'usage opératoire : à partir de ST5 — suppose la maîtrise des codes méridiens et du calendrier chinois"
+       ]
+      },
+      {
+       "cle": "Face 1 — 子 Zǐ",
+       "face": 1,
+       "branche": "子 Zǐ",
+       "rang": "1ʳᵉ des 12 branches terrestres",
+       "fenetre": "23 h – 1 h (Na Zi Fa)",
+       "meridien": "GB — Vésicule biliaire",
+       "ligne_du_temps": "face 1 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 2 — 丑 Chǒu",
+       "face": 2,
+       "branche": "丑 Chǒu",
+       "rang": "2ᵉ des 12 branches terrestres",
+       "fenetre": "1 h – 3 h (Na Zi Fa)",
+       "meridien": "LR — Foie",
+       "ligne_du_temps": "face 2 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 3 — 寅 Yín",
+       "face": 3,
+       "branche": "寅 Yín",
+       "rang": "3ᵉ des 12 branches terrestres",
+       "fenetre": "3 h – 5 h (Na Zi Fa)",
+       "meridien": "LU — Poumon",
+       "ligne_du_temps": "face 3 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 4 — 卯 Mǎo",
+       "face": 4,
+       "branche": "卯 Mǎo",
+       "rang": "4ᵉ des 12 branches terrestres",
+       "fenetre": "5 h – 7 h (Na Zi Fa)",
+       "meridien": "LI — Gros intestin",
+       "ligne_du_temps": "face 4 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 5 — 辰 Chén",
+       "face": 5,
+       "branche": "辰 Chén",
+       "rang": "5ᵉ des 12 branches terrestres",
+       "fenetre": "7 h – 9 h (Na Zi Fa)",
+       "meridien": "ST — Estomac",
+       "ligne_du_temps": "face 5 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 6 — 巳 Sì",
+       "face": 6,
+       "branche": "巳 Sì",
+       "rang": "6ᵉ des 12 branches terrestres",
+       "fenetre": "9 h – 11 h (Na Zi Fa)",
+       "meridien": "SP — Rate-Pancréas",
+       "ligne_du_temps": "face 6 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 7 — 午 Wǔ",
+       "face": 7,
+       "branche": "午 Wǔ",
+       "rang": "7ᵉ des 12 branches terrestres",
+       "fenetre": "11 h – 13 h (Na Zi Fa)",
+       "meridien": "HT — Cœur",
+       "ligne_du_temps": "face 7 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 8 — 未 Wèi",
+       "face": 8,
+       "branche": "未 Wèi",
+       "rang": "8ᵉ des 12 branches terrestres",
+       "fenetre": "13 h – 15 h (Na Zi Fa)",
+       "meridien": "SI — Intestin grêle",
+       "ligne_du_temps": "face 8 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 9 — 申 Shēn",
+       "face": 9,
+       "branche": "申 Shēn",
+       "rang": "9ᵉ des 12 branches terrestres",
+       "fenetre": "15 h – 17 h (Na Zi Fa)",
+       "meridien": "BL — Vessie",
+       "ligne_du_temps": "face 9 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 10 — 酉 Yǒu",
+       "face": 10,
+       "branche": "酉 Yǒu",
+       "rang": "10ᵉ des 12 branches terrestres",
+       "fenetre": "17 h – 19 h (Na Zi Fa)",
+       "meridien": "KI — Rein",
+       "ligne_du_temps": "face 10 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 11 — 戌 Xū",
+       "face": 11,
+       "branche": "戌 Xū",
+       "rang": "11ᵉ des 12 branches terrestres",
+       "fenetre": "19 h – 21 h (Na Zi Fa)",
+       "meridien": "PC — Maître-Cœur",
+       "ligne_du_temps": "face 11 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      },
+      {
+       "cle": "Face 12 — 亥 Hài",
+       "face": 12,
+       "branche": "亥 Hài",
+       "rang": "12ᵉ des 12 branches terrestres",
+       "fenetre": "21 h – 23 h (Na Zi Fa)",
+       "meridien": "TE — Triple Réchauffeur",
+       "ligne_du_temps": "face 12 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ]
+      }
+     ]
+    },
+    {
+     "stade": 3,
+     "app": "VLBH Chroma 5 Abondance (dodécaèdre)",
+     "nom": "Niveau 2 — La structure (élément, harmonie, opposition, triangle)",
+     "source": "svlbh-core/Sources/SVLBHCore/Models/SVLBHEarthlyBranches.swift",
+     "commit": "9383863 2026-08-10",
+     "entrees": [
+      {
+       "cle": "Dodécaèdre — les 12 faces",
+       "doctrine": "Doctrine validée par Patrick le 2026-08-01 : les 12 faces pentagonales du dodécaèdre SONT les 12 branches terrestres, donc les 12 lignes des temps. Il n'existe pas de 13e branche — une 13e accumulation ne trouve pas de face libre, elle se replie sur la première, et ce repli est le portail du miroir.",
+       "niveaux": [
+        "Niveau 1 — L'image : à partir de ST2 — suffit pour une consultante",
+        "Niveau 2 — La structure : à partir de ST3 — socle de lecture d'une praticienne en formation",
+        "Niveau 3 — L'usage opératoire : à partir de ST5 — suppose la maîtrise des codes méridiens et du calendrier chinois"
+       ]
+      },
+      {
+       "cle": "Face 1 — 子 Zǐ",
+       "face": 1,
+       "branche": "子 Zǐ",
+       "rang": "1ʳᵉ des 12 branches terrestres",
+       "fenetre": "23 h – 1 h (Na Zi Fa)",
+       "meridien": "GB — Vésicule biliaire",
+       "ligne_du_temps": "face 1 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Eau yang",
+       "harmonie_六合": "丑 Chǒu",
+       "opposition_六沖": "午 Wǔ",
+       "triangle_三合": "申 Shēn · 子 Zǐ · 辰 Chén → Eau",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 2 — 丑 Chǒu",
+       "face": 2,
+       "branche": "丑 Chǒu",
+       "rang": "2ᵉ des 12 branches terrestres",
+       "fenetre": "1 h – 3 h (Na Zi Fa)",
+       "meridien": "LR — Foie",
+       "ligne_du_temps": "face 2 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yin",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "子 Zǐ",
+       "opposition_六沖": "未 Wèi",
+       "triangle_三合": "巳 Sì · 酉 Yǒu · 丑 Chǒu → Métal",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 3 — 寅 Yín",
+       "face": 3,
+       "branche": "寅 Yín",
+       "rang": "3ᵉ des 12 branches terrestres",
+       "fenetre": "3 h – 5 h (Na Zi Fa)",
+       "meridien": "LU — Poumon",
+       "ligne_du_temps": "face 3 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Bois yang",
+       "harmonie_六合": "亥 Hài",
+       "opposition_六沖": "申 Shēn",
+       "triangle_三合": "寅 Yín · 午 Wǔ · 戌 Xū → Feu",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 4 — 卯 Mǎo",
+       "face": 4,
+       "branche": "卯 Mǎo",
+       "rang": "4ᵉ des 12 branches terrestres",
+       "fenetre": "5 h – 7 h (Na Zi Fa)",
+       "meridien": "LI — Gros intestin",
+       "ligne_du_temps": "face 4 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Bois yin",
+       "harmonie_六合": "戌 Xū",
+       "opposition_六沖": "酉 Yǒu",
+       "triangle_三合": "亥 Hài · 卯 Mǎo · 未 Wèi → Bois",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 5 — 辰 Chén",
+       "face": 5,
+       "branche": "辰 Chén",
+       "rang": "5ᵉ des 12 branches terrestres",
+       "fenetre": "7 h – 9 h (Na Zi Fa)",
+       "meridien": "ST — Estomac",
+       "ligne_du_temps": "face 5 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yang",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "酉 Yǒu",
+       "opposition_六沖": "戌 Xū",
+       "triangle_三合": "申 Shēn · 子 Zǐ · 辰 Chén → Eau",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 6 — 巳 Sì",
+       "face": 6,
+       "branche": "巳 Sì",
+       "rang": "6ᵉ des 12 branches terrestres",
+       "fenetre": "9 h – 11 h (Na Zi Fa)",
+       "meridien": "SP — Rate-Pancréas",
+       "ligne_du_temps": "face 6 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Feu yin",
+       "harmonie_六合": "申 Shēn",
+       "opposition_六沖": "亥 Hài",
+       "triangle_三合": "巳 Sì · 酉 Yǒu · 丑 Chǒu → Métal",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 7 — 午 Wǔ",
+       "face": 7,
+       "branche": "午 Wǔ",
+       "rang": "7ᵉ des 12 branches terrestres",
+       "fenetre": "11 h – 13 h (Na Zi Fa)",
+       "meridien": "HT — Cœur",
+       "ligne_du_temps": "face 7 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Feu yang",
+       "harmonie_六合": "未 Wèi",
+       "opposition_六沖": "子 Zǐ",
+       "triangle_三合": "寅 Yín · 午 Wǔ · 戌 Xū → Feu",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 8 — 未 Wèi",
+       "face": 8,
+       "branche": "未 Wèi",
+       "rang": "8ᵉ des 12 branches terrestres",
+       "fenetre": "13 h – 15 h (Na Zi Fa)",
+       "meridien": "SI — Intestin grêle",
+       "ligne_du_temps": "face 8 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yin",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "午 Wǔ",
+       "opposition_六沖": "丑 Chǒu",
+       "triangle_三合": "亥 Hài · 卯 Mǎo · 未 Wèi → Bois",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 9 — 申 Shēn",
+       "face": 9,
+       "branche": "申 Shēn",
+       "rang": "9ᵉ des 12 branches terrestres",
+       "fenetre": "15 h – 17 h (Na Zi Fa)",
+       "meridien": "BL — Vessie",
+       "ligne_du_temps": "face 9 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Métal yang",
+       "harmonie_六合": "巳 Sì",
+       "opposition_六沖": "寅 Yín",
+       "triangle_三合": "申 Shēn · 子 Zǐ · 辰 Chén → Eau",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 10 — 酉 Yǒu",
+       "face": 10,
+       "branche": "酉 Yǒu",
+       "rang": "10ᵉ des 12 branches terrestres",
+       "fenetre": "17 h – 19 h (Na Zi Fa)",
+       "meridien": "KI — Rein",
+       "ligne_du_temps": "face 10 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Métal yin",
+       "harmonie_六合": "辰 Chén",
+       "opposition_六沖": "卯 Mǎo",
+       "triangle_三合": "巳 Sì · 酉 Yǒu · 丑 Chǒu → Métal",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 11 — 戌 Xū",
+       "face": 11,
+       "branche": "戌 Xū",
+       "rang": "11ᵉ des 12 branches terrestres",
+       "fenetre": "19 h – 21 h (Na Zi Fa)",
+       "meridien": "PC — Maître-Cœur",
+       "ligne_du_temps": "face 11 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yang",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "卯 Mǎo",
+       "opposition_六沖": "辰 Chén",
+       "triangle_三合": "寅 Yín · 午 Wǔ · 戌 Xū → Feu",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      },
+      {
+       "cle": "Face 12 — 亥 Hài",
+       "face": 12,
+       "branche": "亥 Hài",
+       "rang": "12ᵉ des 12 branches terrestres",
+       "fenetre": "21 h – 23 h (Na Zi Fa)",
+       "meridien": "TE — Triple Réchauffeur",
+       "ligne_du_temps": "face 12 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Eau yin",
+       "harmonie_六合": "寅 Yín",
+       "opposition_六沖": "巳 Sì",
+       "triangle_三合": "亥 Hài · 卯 Mǎo · 未 Wèi → Bois",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120."
+      }
+     ]
+    },
+    {
+     "stade": 5,
+     "app": "VLBH Chroma 5 Abondance (dodécaèdre)",
+     "nom": "Niveau 3 — L'usage opératoire (porte d'organe, Na Zi / Na Jia, Linggui Bafa)",
+     "source": "svlbh-core/Sources/SVLBHCore/Models/SVLBHEarthlyBranches.swift · svlbh-pro-1/ios-app/SVLBHPro1App/Dodecaedre/PentagonEditorView.swift",
+     "commit": "9383863 2026-08-10",
+     "entrees": [
+      {
+       "cle": "Dodécaèdre — les 12 faces",
+       "doctrine": "Doctrine validée par Patrick le 2026-08-01 : les 12 faces pentagonales du dodécaèdre SONT les 12 branches terrestres, donc les 12 lignes des temps. Il n'existe pas de 13e branche — une 13e accumulation ne trouve pas de face libre, elle se replie sur la première, et ce repli est le portail du miroir.",
+       "niveaux": [
+        "Niveau 1 — L'image : à partir de ST2 — suffit pour une consultante",
+        "Niveau 2 — La structure : à partir de ST3 — socle de lecture d'une praticienne en formation",
+        "Niveau 3 — L'usage opératoire : à partir de ST5 — suppose la maîtrise des codes méridiens et du calendrier chinois"
+       ]
+      },
+      {
+       "cle": "Face 1 — 子 Zǐ",
+       "face": 1,
+       "branche": "子 Zǐ",
+       "rang": "1ʳᵉ des 12 branches terrestres",
+       "fenetre": "23 h – 1 h (Na Zi Fa)",
+       "meridien": "GB — Vésicule biliaire",
+       "ligne_du_temps": "face 1 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Eau yang",
+       "harmonie_六合": "丑 Chǒu",
+       "opposition_六沖": "午 Wǔ",
+       "triangle_三合": "申 Shēn · 子 Zǐ · 辰 Chén → Eau",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "子 Zǐ ouvre GB de 23 h – 1 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 7,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 2 — 丑 Chǒu",
+       "face": 2,
+       "branche": "丑 Chǒu",
+       "rang": "2ᵉ des 12 branches terrestres",
+       "fenetre": "1 h – 3 h (Na Zi Fa)",
+       "meridien": "LR — Foie",
+       "ligne_du_temps": "face 2 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yin",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "子 Zǐ",
+       "opposition_六沖": "未 Wèi",
+       "triangle_三合": "巳 Sì · 酉 Yǒu · 丑 Chǒu → Métal",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "丑 Chǒu ouvre LR de 1 h – 3 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 10,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 3 — 寅 Yín",
+       "face": 3,
+       "branche": "寅 Yín",
+       "rang": "3ᵉ des 12 branches terrestres",
+       "fenetre": "3 h – 5 h (Na Zi Fa)",
+       "meridien": "LU — Poumon",
+       "ligne_du_temps": "face 3 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Bois yang",
+       "harmonie_六合": "亥 Hài",
+       "opposition_六沖": "申 Shēn",
+       "triangle_三合": "寅 Yín · 午 Wǔ · 戌 Xū → Feu",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "寅 Yín ouvre LU de 3 h – 5 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 8,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 4 — 卯 Mǎo",
+       "face": 4,
+       "branche": "卯 Mǎo",
+       "rang": "4ᵉ des 12 branches terrestres",
+       "fenetre": "5 h – 7 h (Na Zi Fa)",
+       "meridien": "LI — Gros intestin",
+       "ligne_du_temps": "face 4 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Bois yin",
+       "harmonie_六合": "戌 Xū",
+       "opposition_六沖": "酉 Yǒu",
+       "triangle_三合": "亥 Hài · 卯 Mǎo · 未 Wèi → Bois",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "卯 Mǎo ouvre LI de 5 h – 7 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 8,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 5 — 辰 Chén",
+       "face": 5,
+       "branche": "辰 Chén",
+       "rang": "5ᵉ des 12 branches terrestres",
+       "fenetre": "7 h – 9 h (Na Zi Fa)",
+       "meridien": "ST — Estomac",
+       "ligne_du_temps": "face 5 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yang",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "酉 Yǒu",
+       "opposition_六沖": "戌 Xū",
+       "triangle_三合": "申 Shēn · 子 Zǐ · 辰 Chén → Eau",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "辰 Chén ouvre ST de 7 h – 9 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 10,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 6 — 巳 Sì",
+       "face": 6,
+       "branche": "巳 Sì",
+       "rang": "6ᵉ des 12 branches terrestres",
+       "fenetre": "9 h – 11 h (Na Zi Fa)",
+       "meridien": "SP — Rate-Pancréas",
+       "ligne_du_temps": "face 6 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Feu yin",
+       "harmonie_六合": "申 Shēn",
+       "opposition_六沖": "亥 Hài",
+       "triangle_三合": "巳 Sì · 酉 Yǒu · 丑 Chǒu → Métal",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "巳 Sì ouvre SP de 9 h – 11 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 7,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 7 — 午 Wǔ",
+       "face": 7,
+       "branche": "午 Wǔ",
+       "rang": "7ᵉ des 12 branches terrestres",
+       "fenetre": "11 h – 13 h (Na Zi Fa)",
+       "meridien": "HT — Cœur",
+       "ligne_du_temps": "face 7 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Feu yang",
+       "harmonie_六合": "未 Wèi",
+       "opposition_六沖": "子 Zǐ",
+       "triangle_三合": "寅 Yín · 午 Wǔ · 戌 Xū → Feu",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "午 Wǔ ouvre HT de 11 h – 13 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 7,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 8 — 未 Wèi",
+       "face": 8,
+       "branche": "未 Wèi",
+       "rang": "8ᵉ des 12 branches terrestres",
+       "fenetre": "13 h – 15 h (Na Zi Fa)",
+       "meridien": "SI — Intestin grêle",
+       "ligne_du_temps": "face 8 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yin",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "午 Wǔ",
+       "opposition_六沖": "丑 Chǒu",
+       "triangle_三合": "亥 Hài · 卯 Mǎo · 未 Wèi → Bois",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "未 Wèi ouvre SI de 13 h – 15 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 10,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 9 — 申 Shēn",
+       "face": 9,
+       "branche": "申 Shēn",
+       "rang": "9ᵉ des 12 branches terrestres",
+       "fenetre": "15 h – 17 h (Na Zi Fa)",
+       "meridien": "BL — Vessie",
+       "ligne_du_temps": "face 9 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Métal yang",
+       "harmonie_六合": "巳 Sì",
+       "opposition_六沖": "寅 Yín",
+       "triangle_三合": "申 Shēn · 子 Zǐ · 辰 Chén → Eau",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "申 Shēn ouvre BL de 15 h – 17 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 9,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 10 — 酉 Yǒu",
+       "face": 10,
+       "branche": "酉 Yǒu",
+       "rang": "10ᵉ des 12 branches terrestres",
+       "fenetre": "17 h – 19 h (Na Zi Fa)",
+       "meridien": "KI — Rein",
+       "ligne_du_temps": "face 10 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Métal yin",
+       "harmonie_六合": "辰 Chén",
+       "opposition_六沖": "卯 Mǎo",
+       "triangle_三合": "巳 Sì · 酉 Yǒu · 丑 Chǒu → Métal",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "酉 Yǒu ouvre KI de 17 h – 19 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 9,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 11 — 戌 Xū",
+       "face": 11,
+       "branche": "戌 Xū",
+       "rang": "11ᵉ des 12 branches terrestres",
+       "fenetre": "19 h – 21 h (Na Zi Fa)",
+       "meridien": "PC — Maître-Cœur",
+       "ligne_du_temps": "face 11 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Terre yang",
+       "terre": "Branche de Terre — charnière de saison. Dite « grenier » ou « tombe » : elle absorbe et stocke la mémoire de l'élément qui s'achève. Nuance déterminante en décodage.",
+       "harmonie_六合": "卯 Mǎo",
+       "opposition_六沖": "辰 Chén",
+       "triangle_三合": "寅 Yín · 午 Wǔ · 戌 Xū → Feu",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "戌 Xū ouvre PC de 19 h – 21 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 10,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
+      },
+      {
+       "cle": "Face 12 — 亥 Hài",
+       "face": 12,
+       "branche": "亥 Hài",
+       "rang": "12ᵉ des 12 branches terrestres",
+       "fenetre": "21 h – 23 h (Na Zi Fa)",
+       "meridien": "TE — Triple Réchauffeur",
+       "ligne_du_temps": "face 12 du dodécaèdre",
+       "la_face": [
+        "5 pointes — Âme · Corps · Esprit · Égo · Conscience",
+        "5 arêtes — les 5 Wu-Shen"
+       ],
+       "ce_que_la_geometrie_impose": [
+        "chaque pointe est tenue par 3 faces — jamais travaillée dans une seule ligne",
+        "chaque Wu-Shen est porté par 2 faces — il ne lâche jamais seul, il cède en paire",
+        "l'ouverture se décide par les troncs du jour (Na Jia Fa), pas par l'heure"
+       ],
+       "element": "Eau yin",
+       "harmonie_六合": "寅 Yín",
+       "opposition_六沖": "巳 Sì",
+       "triangle_三合": "亥 Hài · 卯 Mǎo · 未 Wèi → Bois",
+       "appariement": "Un tronc yang ne se combine qu'avec une branche yang, un yin avec un yin — d'où 60 binômes réels et non 120.",
+       "porte_d_organe": [
+        "亥 Hài ouvre TE de 21 h – 23 h — socle du Zi Wu Liu Zhu 子午流注.",
+        "Un symptôme qui revient à heure fixe désigne un méridien ET une branche — donc un élément, une polarité, une position dans les triangles et les oppositions."
+       ],
+       "modes_d_ouverture": [
+        "Na Zi 納子 — par la BRANCHE : on suit l'horloge des méridiens.",
+        "Na Jia 納甲 — par le TRONC du jour, qui désigne le méridien de référence ; les points shu s'ouvrent heure par heure selon la génération des cinq éléments."
+       ],
+       "linggui_bafa": {
+        "calcul": [
+         "Tronc du jour + Branche du jour + Tronc de l'heure + Branche de l'heure",
+         "÷ 9 si le jour est yang · ÷ 6 si le jour est yin",
+         "Le RESTE — pas le quotient — désigne le point d'ouverture."
+        ],
+        "valeur_de_la_branche": 7,
+        "valeurs": [
+         "10 = 甲 jiǎ · 己 jǐ / 辰 chén · 戌 xū · 丑 chǒu · 未 wèi",
+         "9 = 乙 yǐ · 庚 gēng / 申 shēn · 酉 yǒu",
+         "8 = 丁 dīng · 壬 rén / 寅 yín · 卯 mǎo",
+         "7 = 戊 wù · 癸 guǐ · 丙 bǐng · 辛 xīn / 巳 sì · 午 wǔ · 亥 hài · 子 zǐ"
+        ],
+        "provenance": "Valeurs de la littérature classique (mnémonique 甲己辰戌丑未十…), non mesurées VLBH."
+       },
+       "points_de_confluence": [
+        "SP4",
+        "PC6",
+        "SI3",
+        "BL62",
+        "GB41",
+        "TE5",
+        "LU7",
+        "KI6"
+       ],
+       "but": "Le système sexagésimal ne sert pas à dater un blocage : il sert à retrouver la porte qui était ouverte au moment où il s'est formé."
       }
      ]
     }
