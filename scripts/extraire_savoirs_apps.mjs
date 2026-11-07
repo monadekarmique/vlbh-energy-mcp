@@ -42,8 +42,9 @@ const S = {
   dodeca: ['svlbh-core', 'Sources/SVLBHCore/Models/SVLBHEarthlyBranches.swift', 'VLBH Chroma 5 Abondance (dodécaèdre)', 2],
   dodecaVue: ['svlbh-pro-1', 'ios-app/SVLBHPro1App/Dodecaedre/PentagonEditorView.swift', 'VLBH Chroma 5 Abondance (dodécaèdre)', 5],
   // 07.11.2026 — Patrick : « j'ai besoin que DiGiSha puisse ouvrir la table des méridiens dans svlbh-priv-4 pour extraire
-  // les informations Chong Mai ». La table Android est générée octet pour octet depuis MeridiensView.swift (VIFA iPhone).
-  meridiensVifa: ['svlbh-vifa-android', 'src/data/meridiens.ts', 'SVLBH Priv 4 VIFA (table des méridiens)', 2],
+  // les informations Chong Mai », puis « pourquoi la version android ce savoir devrait être un savoir core ? non ? » : la
+  // table est montée au cœur le soir même (svlbh-core v0.198.0, SVLBHMeridiens20, TE et non TH) ; on lit le cœur.
+  meridiensCoeur: ['svlbh-core', 'Sources/SVLBHCore/Models/SVLBHMeridiens20.swift', 'SVLBH Priv 4 VIFA (table des méridiens, cœur)', 2],
 };
 
 const chemin = (k) => join(DEV, S[k][0], S[k][1]);
@@ -310,8 +311,27 @@ async function dodecaedre() {
 }
 
 // ── La table des méridiens de Priv 4 VIFA : 12 méridiens de jour, 8 vaisseaux extraordinaires ────────────────────
+const GEN_MERIDIENS = `import Foundation
+let lignes: [[String: Any]] = SVLBHMeridiens20.tous.map { m in
+  var d: [String: Any] = [:]
+  for c in Mirror(reflecting: m).children { if let k = c.label { d[k] = c.value } }
+  return d
+}
+let data = try! JSONSerialization.data(withJSONObject: lignes, options: [.sortedKeys])
+print(String(data: data, encoding: .utf8)!)
+`;
+
+// Un fichier Swift du cœur, compilé tel quel avec un main qui écrit ses données en JSON.
+function swiftEnJSON(k, principal, nom) {
+  const dossier = mkdtempSync(join(tmpdir(), `savoir-${nom}-`));
+  writeFileSync(join(dossier, 'main.swift'), principal);
+  const bin = join(dossier, nom);
+  execFileSync('swiftc', ['-O', chemin(k), join(dossier, 'main.swift'), '-o', bin], { stdio: ['ignore', 'ignore', 'inherit'] });
+  return JSON.parse(execFileSync(bin, { encoding: 'utf8' }));
+}
+
 async function meridiens() {
-  const { meridiensFull } = await module_('meridiensVifa');
+  const meridiensFull = swiftEnJSON('meridiensCoeur', GEN_MERIDIENS, 'meridiens');
   return {
     titre: 'Table des méridiens de Priv 4 VIFA — 12 méridiens et 8 vaisseaux extraordinaires',
     description: 'Les 20 méridiens MTC de la table VIFA (12 de jour : LU…LR ; 8 vaisseaux extraordinaires de nuit : Ren, Du, '
@@ -319,7 +339,7 @@ async function meridiens() {
       + 'points Yuan, Shu du dos, tonification, moxa, humidité, Luo et leurs actions, notes de protection, réchauffement et '
       + 'assèchement, risque Gu, fragment transgénérationnel, pierre associée.',
     versions: [
-      version('meridiensVifa', `${meridiensFull.length} méridiens · ${meridiensFull.filter((m) => m.isNuit).length} vaisseaux extraordinaires`,
+      version('meridiensCoeur', `${meridiensFull.length} méridiens · ${meridiensFull.filter((m) => m.isNuit).length} vaisseaux extraordinaires`,
         meridiensFull.map(({ color, ...m }) => ({ cle: `${m.abbr} — ${m.fr}`, genre: m.isNuit ? 'vaisseau extraordinaire' : 'méridien de jour', ...m }))),
     ],
   };

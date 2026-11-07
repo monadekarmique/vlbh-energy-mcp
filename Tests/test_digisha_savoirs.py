@@ -27,6 +27,10 @@ def test_la_table_des_meridiens_porte_chong_mai():
     chong = _premier("meridiens_vifa", "Chong Mai", 2)[1]
     assert chong["abbr"] == "Chg" and chong["genre"] == "vaisseau extraordinaire" and chong["yuanPoint"] == "SP4 Gongsun"
     assert "Mer du Sang" in chong["protectionNote"] and "color" not in chong
+    # lue au cœur (svlbh-core SVLBHMeridiens20, v0.198.0) : le Triple Réchauffeur est TE, jamais TH (DEC Patrick 04.08)
+    abbrs = {e["abbr"] for e in sv.SAVOIRS["meridiens_vifa"]["versions"][0]["entrees"]}
+    assert "TE" in abbrs and "TH" not in abbrs and len(abbrs) == 20
+    assert sv.SAVOIRS["meridiens_vifa"]["versions"][0]["source"].startswith("svlbh-core/")
 
 
 def test_le_dodecaedre_par_niveau():
