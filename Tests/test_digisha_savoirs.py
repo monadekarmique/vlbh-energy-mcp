@@ -15,11 +15,18 @@ def _premier(savoir, requete, stade):
     return r, (r["resultats"][0]["entree"] if r.get("resultats") else None)
 
 
-def test_les_six_savoirs_sont_charges():
+def test_les_sept_savoirs_sont_charges():
     assert set(sv.SAVOIRS) == {"rose_des_vents", "types_de_lmasc", "sephiroth_chromatique", "wu_shen_dynapathomu",
-                               "hdom_phantom", "dodecaedre_branches"}
+                               "hdom_phantom", "dodecaedre_branches", "meridiens_vifa"}
     for s in sv.SAVOIRS.values():
         assert s["versions"] and all(v["entrees"] and v["source"] and v["stade"] in (2, 3, 4, 5) for v in s["versions"])
+
+
+def test_la_table_des_meridiens_porte_chong_mai():
+    """07.11.2026 — Patrick : « ouvrir la table des méridiens dans svlbh-priv-4 pour extraire les informations Chong Mai »."""
+    chong = _premier("meridiens_vifa", "Chong Mai", 2)[1]
+    assert chong["abbr"] == "Chg" and chong["genre"] == "vaisseau extraordinaire" and chong["yuanPoint"] == "SP4 Gongsun"
+    assert "Mer du Sang" in chong["protectionNote"] and "color" not in chong
 
 
 def test_le_dodecaedre_par_niveau():

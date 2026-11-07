@@ -2,7 +2,7 @@
 // Les savoirs des apps, pour DiGiSha (fable, 06.11.2026 — Patrick : « je trouve que DiGiSha n'utilise pas encore assez les
 // savoirs croisés de mes app » ; « oui tu construis la marque corrigé et les 5 savoirs »).
 //
-// Extrait TELS QUELS les six savoirs les plus croisés des dépôts des apps (~/Developer) vers data/savoirs_apps.json :
+// Extrait TELS QUELS les sept savoirs les plus croisés des dépôts des apps (~/Developer) vers data/savoirs_apps.json :
 // rien n'est recopié à la main, rien n'est réécrit. Chaque version porte le STADE à partir duquel elle se lit — Patrick,
 // 06.11 : « les 3 savoirs ne se contredisent pas - ils sont le savoir au stade ST2, ST3 et ST4 ». Le stade d'une version
 // est celui du canal de l'app qui la porte (table canal_app, relevée le 06.11 : Priv 1 à 5 et Priv Core en z2 → ST2 ;
@@ -41,6 +41,9 @@ const S = {
   // (DEC Patrick 04.08.2026 : Niveau 1 = ST2 · Niveau 2 = ST3 · Niveau 3 = ST5) : le stade de la version est celui du niveau.
   dodeca: ['svlbh-core', 'Sources/SVLBHCore/Models/SVLBHEarthlyBranches.swift', 'VLBH Chroma 5 Abondance (dodécaèdre)', 2],
   dodecaVue: ['svlbh-pro-1', 'ios-app/SVLBHPro1App/Dodecaedre/PentagonEditorView.swift', 'VLBH Chroma 5 Abondance (dodécaèdre)', 5],
+  // 07.11.2026 — Patrick : « j'ai besoin que DiGiSha puisse ouvrir la table des méridiens dans svlbh-priv-4 pour extraire
+  // les informations Chong Mai ». La table Android est générée octet pour octet depuis MeridiensView.swift (VIFA iPhone).
+  meridiensVifa: ['svlbh-vifa-android', 'src/data/meridiens.ts', 'SVLBH Priv 4 VIFA (table des méridiens)', 2],
 };
 
 const chemin = (k) => join(DEV, S[k][0], S[k][1]);
@@ -306,6 +309,22 @@ async function dodecaedre() {
   };
 }
 
+// ── La table des méridiens de Priv 4 VIFA : 12 méridiens de jour, 8 vaisseaux extraordinaires ────────────────────
+async function meridiens() {
+  const { meridiensFull } = await module_('meridiensVifa');
+  return {
+    titre: 'Table des méridiens de Priv 4 VIFA — 12 méridiens et 8 vaisseaux extraordinaires',
+    description: 'Les 20 méridiens MTC de la table VIFA (12 de jour : LU…LR ; 8 vaisseaux extraordinaires de nuit : Ren, Du, '
+      + 'Chong Mai « Mer du Sang », Dai, Yin/Yang Wei, Yin/Yang Qiao) : élément, yin-yang, horaire, émotion, esprit Shen, '
+      + 'points Yuan, Shu du dos, tonification, moxa, humidité, Luo et leurs actions, notes de protection, réchauffement et '
+      + 'assèchement, risque Gu, fragment transgénérationnel, pierre associée.',
+    versions: [
+      version('meridiensVifa', `${meridiensFull.length} méridiens · ${meridiensFull.filter((m) => m.isNuit).length} vaisseaux extraordinaires`,
+        meridiensFull.map(({ color, ...m }) => ({ cle: `${m.abbr} — ${m.fr}`, genre: m.isNuit ? 'vaisseau extraordinaire' : 'méridien de jour', ...m }))),
+    ],
+  };
+}
+
 const savoirs = {
   rose_des_vents: await rose(),
   types_de_lmasc: await lmasc(),
@@ -313,6 +332,7 @@ const savoirs = {
   wu_shen_dynapathomu: await wuShen(),
   hdom_phantom: await hdom(),
   dodecaedre_branches: await dodecaedre(),
+  meridiens_vifa: await meridiens(),
 };
 const texte = JSON.stringify({ genere_par: 'scripts/extraire_savoirs_apps.mjs', savoirs }, null, 1) + '\n';
 if (process.argv.includes('--verifier')) {
