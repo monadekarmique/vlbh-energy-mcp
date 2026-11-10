@@ -782,6 +782,30 @@ async def journaliser_cout(source: str, mode: str, model: str, data: dict,
         log.warning("digisha_cout_appel non écrit : %r", exc)
 
 
+# ── Comptes de revue (DEC Patrick 10.11.2026 : « oui fait répondre aux comptes de revue sans appeler le modèle ») ──
+# Mesuré le 10.11 : le compte de démonstration fourni aux magasins (svlbh.review@gmail.com, code REVIEW-AND-E1952AC2) a
+# fait 71 appels en 7 jours (2,87 USD) depuis les adresses de Google (66.249.x, 66.102.x, 64.233.x) : le robot de Google
+# Play touche les lettres de la bande Malachim et envoie. Ces comptes reçoivent une réponse fixe, sans modèle, sans coût,
+# sans page ni journal. Liste surchargeable par DIGISHA_COMPTES_REVUE (uid Supabase séparés par des virgules).
+COMPTES_REVUE = frozenset(
+    x.strip().lower() for x in os.environ.get(
+        "DIGISHA_COMPTES_REVUE",
+        "a4732493-9331-43dc-8590-5850bc3e00c6,"      # svlbh.review@gmail.com — Demo, svlbh eab72ae5
+        "3b5d4229-6987-4148-8397-4986e7e810ed",      # vlbh.review@gmail.com — Demo, svlbh 7ef741d6
+    ).split(",") if x.strip()
+)
+REPONSE_REVUE = (
+    "Bonjour, je suis DiGiSha, l'assistante d'accompagnement de SVLBH. Ce compte est un compte de démonstration : "
+    "je n'y réponds pas aux questions. Avec un compte de praticienne, je vous accompagne dans vos décodages, "
+    "à partir de vos séances et du savoir du Cercle."
+)
+
+
+def compte_de_revue(ident: dict | None) -> bool:
+    """Le compte connecté est-il un compte de revue des magasins (Apple, Google) ? Lu sur l'uid de la session."""
+    return bool(ident) and str(ident.get("uid") or "").lower() in COMPTES_REVUE
+
+
 class ChatResponse(BaseModel):
     reply: str
     model: str
@@ -1621,6 +1645,9 @@ async def _digisha_chat(
     # déclenchent ni lecture de prompt ni résumé d'historique par le modèle — même ordre que /accompagnement.
     ident = await gate_subscription(authorization)
     refuser_st1(ident)
+    if compte_de_revue(ident):
+        log.info("digisha — compte de revue : réponse fixe, sans modèle (chat)")
+        return ChatResponse(reply=REPONSE_REVUE, model="revue-sans-modele", heure=heure_zurich())
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -1938,6 +1965,9 @@ async def _digisha_accompagnement(
     await authorize_caller(request, x_digisha_token, authorization)
     ident = await gate_subscription(authorization)
     refuser_st1(ident)
+    if compte_de_revue(ident):
+        log.info("digisha — compte de revue : réponse fixe, sans modèle (accompagnement)")
+        return ChatResponse(reply=REPONSE_REVUE, model="revue-sans-modele", heure=heure_zurich())
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
