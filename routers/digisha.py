@@ -1323,7 +1323,12 @@ SAVOIR_CADRE = (
     "## Savoir du Cercle — décodages déjà posés ailleurs, sans les noms\n"
     "Des décodages radiesthésiques réellement posés dans le Cercle (fils et séances), gardés tels quels, sans les noms. "
     "Sers-t'en comme d'un savoir : relations déjà vues, mesures, enchaînements, explications. Ce n'est PAS l'histoire de la "
-    "personne qui te parle : ne le lui attribue jamais, ne dis pas d'où ça vient, ne cite pas ces fiches comme des cas.\n\n"
+    "personne qui te parle : ne le lui attribue jamais, ne dis pas d'où ça vient, ne cite pas ces fiches comme des cas.\n"
+    "Chaque extrait est le décodage d'UNE personne, un jour donné. Ce qu'elle a mesuré peut t'éclairer ; ce qu'elle a "
+    "compris, ressenti ou reçu (« je le comprends comme… », « reçu comme un soutien ») est SA lecture, pas une doctrine. "
+    "N'en tire jamais une règle ni un sens général : n'écris pas « dans le Cercle, quand X apparaît, on le lit comme… », "
+    "« ce nom revient comme… », « cela signifie… ». Le sens d'un nom, d'une image ou d'un signe pour la personne qui te "
+    "parle se mesure chez elle, maintenant ; s'il n'est pas dans le lexique de Patrick, dis que tu ne le sais pas.\n\n"
 )
 
 
