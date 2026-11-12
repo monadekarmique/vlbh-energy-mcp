@@ -37,6 +37,7 @@ from routers.digisha_memoire import extrait_journal, journaliser_usage, preparer
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_apprendre import apprendre_en_seance, extraire_appris, corriger_en_seance, extraire_corrige
 from routers.digisha_savoirs import SAVOIRS_CADRE, appeler_avec_savoirs, stade_de
+from routers.digisha_sondage import SONDAGE_CADRE, cle_jointe, envoyer_sur_son_mot, extraire_sondage, proposer_sondage
 from routers.digisha_envoi import une_seule_fois
 from routers.digisha_apprendre import extraire_montrer, illustrations as illustrations_du_lexique, marques as marques_illustrations
 from routers.digisha_contexte import mettre_en_forme, sans_relances
@@ -645,6 +646,29 @@ class ChatTurn(BaseModel):
 def derniere_question(body) -> str:
     """Le texte du dernier tour (les pièces y deviennent « [photo] » / « [document : titre] »)."""
     return texte_de(body.messages[-1].content) if body.messages else ""
+
+
+def tours_en_texte(body) -> list[tuple[str, str]]:
+    """[(rôle, texte)] de la conversation reçue, du plus ancien au plus récent."""
+    return [(m.role, texte_de(m.content)) for m in (body.messages or [])]
+
+
+async def sondage_sur_son_mot(body, authorization: str | None, ident: dict | None) -> str | None:
+    """« envoie » du propriétaire, sur lui-même, avec un sondage en suspens : la phrase à rendre (le tour est déposé dans
+    son fil comme les autres). None sinon."""
+    moi = str((ident or {}).get("svlbh_id") or "").lower() or None
+    if not moi or getattr(body, "fil_consultante_id", None):
+        return None
+    question = derniere_question(body)
+    parti = await envoyer_sur_son_mot(_rpc_personne, _rpc_service, authorization, moi, question)
+    if not parti:
+        return None
+    log.info("digisha — sondage remis à la file sur le mot du propriétaire")
+    canal = await canal_digisha(authorization, moi, sur_soi=True, choisi=getattr(body, "canal", None),
+                                stx=(ident or {}).get("stx"))
+    if canal:
+        await fil_digisha_deposer(authorization, None, canal, question, parti, "accompagnement")
+    return parti
 
 
 def reponse_precedente(body) -> str:
@@ -1971,6 +1995,10 @@ async def _digisha_accompagnement(
     if compte_de_revue(ident):
         log.info("digisha — compte de revue : réponse fixe, sans modèle (accompagnement)")
         return ChatResponse(reply=REPONSE_REVUE, model="revue-sans-modele", heure=heure_zurich())
+    # 13.11.2026 (carte 280b0b5a) : « envoie » du propriétaire, un sondage en suspens → il part en file, sans modèle.
+    parti = await sondage_sur_son_mot(body, authorization, ident)
+    if parti:
+        return ChatResponse(reply=parti, model="sondage-sans-modele", heure=heure_zurich())
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -2076,6 +2104,8 @@ async def _digisha_accompagnement(
     stade = stade_de((ident or {}).get("stx"))
     ajouter_au_systeme(payload, SAVOIRS_CADRE if stade >= 2 else "")
     proprio = await cadres_de_seance(payload, authorization, moi_acc, cible_acc)
+    if proprio and not cible_acc:
+        ajouter_du_tour(payload, SONDAGE_CADRE)
     model = passer_en_5_5(payload, str((ident or {}).get("svlbh_id") or "") or None)
     ranger_pour_cache(payload)
     client = _http()
@@ -2119,6 +2149,13 @@ async def _digisha_accompagnement(
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)
         log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
+    # 13.11.2026 (carte 280b0b5a) : la ligne ⟦Sondage …⟧ ne s'affiche jamais ; pour le propriétaire, sur lui-même, la
+    # proposition est rangée (rien ne part) et ce qui partira s'affiche sous la réponse.
+    text, sondage = extraire_sondage(text)
+    if sondage and proprio and not cible_acc:
+        bloc = await proposer_sondage(_rpc_service, moi_acc, sondage, cle_jointe(tours_en_texte(body)))
+        log.info("digisha — sondage proposé pour=%s options=%d", sondage.get("pour"), len(sondage.get("options") or []))
+        text = (text + "\n\n" + bloc).strip()
     text, montrer = extraire_montrer(text)
     illus = illustrations_du_lexique(montrer, heure_zurich())
     if montrer:
