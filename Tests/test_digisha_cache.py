@@ -442,3 +442,132 @@ def test_a_propos_en_mode_decodage(monkeypatch):
     # sans a_propos : relecture, comme avant
     assert not d.decoder_pour_elle(d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="x")], fil_consultante_id=x))
     assert not d.decoder_pour_elle(d.AccompagnementRequest(messages=[d.ChatTurn(role="user", content="x")], a_propos="decodage"))
+
+
+# ── 13.11.2026 (fiche 9daa60f4) : le lexique dans la consigne stable, le cache d'une heure, le point du tour ─────────────
+# Mesuré dans digisha_cout_appel et le journal : 60 % du coût de l'accompagnement sur Opus était de l'entrée hors cache.
+
+def _points_dans_l_ordre(p):
+    pts = [b["cache_control"] for b in p["system"] if "cache_control" in b]
+    for m in p["messages"]:
+        if isinstance(m["content"], list):
+            pts += [b["cache_control"] for b in m["content"] if isinstance(b, dict) and "cache_control" in b]
+    return pts
+
+
+def test_la_duree_d_une_heure_se_pose_sur_la_consigne_et_la_conversation():
+    h = [{"role": "user", "content": "Q1"}, {"role": "assistant", "content": "R1"}, {"role": "user", "content": "Q2"}]
+    p = _payload(h, "savoir", "10h00")
+    p["system"][0] = partage({"type": "text", "text": "BASE"})
+    assert _points_dans_l_ordre(ranger_pour_cache(p, duree="1h")) == [{"type": "ephemeral", "ttl": "1h"}] * 3
+    assert _points_dans_l_ordre(ranger_pour_cache(_payload(h, "savoir", "10h00"))) == [{"type": "ephemeral"}] * 2   # défaut : 5 min
+
+
+def test_le_point_du_tour_est_le_dernier_et_reste_a_cinq_minutes():
+    h = [{"role": "user", "content": "Q1"}, {"role": "assistant", "content": "R1"}, {"role": "user", "content": "Q2"}]
+    p = _payload(h, "savoir", "10h00")
+    p["system"][0] = partage({"type": "text", "text": "BASE"})
+    r = ranger_pour_cache(p, duree="1h", point_du_tour=True)
+    pts = _points_dans_l_ordre(r)
+    assert len(pts) == 4                                                    # le maximum permis, pas un de plus
+    assert pts[:3] == [{"type": "ephemeral", "ttl": "1h"}] * 3 and pts[3] == {"type": "ephemeral"}   # une heure AVANT cinq minutes
+    assert r["messages"][-1]["content"][-1] == {"type": "text", "text": "Q2", "cache_control": {"type": "ephemeral"}}
+    assert r["messages"][-1]["content"][0]["text"].startswith(OUVERTURE)    # le contexte du tour est couvert par ce point
+
+
+def test_la_boucle_d_outils_renvoie_le_message_du_tour_a_l_identique():
+    """Le second appel de la boucle doit retrouver, octet pour octet, tout ce que le premier a écrit en cache."""
+    from routers import digisha_savoirs as sv
+    envois = []
+
+    async def poster(p):
+        envois.append(json.loads(json.dumps(p)))
+        if len(envois) == 1:
+            return {"stop_reason": "tool_use", "usage": {"input_tokens": 10, "output_tokens": 5},
+                    "content": [{"type": "tool_use", "id": "t1", "name": "chercher_savoir",
+                                 "input": {"savoir": "rose_des_vents", "requete": "NNO"}}]}
+        return {"stop_reason": "end_turn", "usage": {"input_tokens": 20, "output_tokens": 7},
+                "content": [{"type": "text", "text": "ok"}]}
+
+    h = [{"role": "user", "content": "Q1"}, {"role": "assistant", "content": "R1"}, {"role": "user", "content": "NNO ?"}]
+    p = ranger_pour_cache(_payload(h, "savoir", "10h00"), duree="1h", point_du_tour=True)
+    asyncio.run(sv.appeler_avec_savoirs(poster, p, 2))
+    a, b = envois
+    assert (a["tools"], a["system"]) == (b["tools"], b["system"])
+    assert b["messages"][:len(a["messages"])] == a["messages"]              # préfixe identique, point compris
+    assert "cache_control" in b["messages"][len(a["messages"]) - 1]["content"][-1]
+    assert len(_points_dans_l_ordre(b)) <= 4
+
+
+def test_l_usage_additionne_garde_la_part_ecrite_pour_une_heure():
+    from routers import digisha_savoirs as sv
+    total = {}
+    sv._additionner(total, {"input_tokens": 10, "cache_creation_input_tokens": 900,
+                            "cache_creation": {"ephemeral_5m_input_tokens": 100, "ephemeral_1h_input_tokens": 800}})
+    sv._additionner(total, {"input_tokens": 5, "cache_creation_input_tokens": 50, "service_tier": "standard",
+                            "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 50}})
+    assert total == {"input_tokens": 15, "cache_creation_input_tokens": 950,
+                     "cache_creation": {"ephemeral_5m_input_tokens": 100, "ephemeral_1h_input_tokens": 850}}
+
+
+def test_accompagnement_le_lexique_est_dans_la_consigne_stable_et_le_cache_tient_une_heure(monkeypatch):
+    envois = []
+
+    async def rien(*a, **k):
+        return None
+
+    async def ident(*a, **k):
+        return {"svlbh_id": "52adbc98-d2b0-4444-b89c-b1311a02a983", "uid": "306c2408-b200-4a52-971b-c77c53d31573",
+                "stx": "ST6", "profondeur": True}
+
+    async def prompt():
+        return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
+
+    async def historique(client, key, msgs):
+        return None, msgs, 0
+
+    async def canal(*a, **k):
+        return "z12"
+
+    async def reprise(auth, cible, canal):
+        return f"séances, {len(envois)} tour(s) déposé(s)"
+
+    async def vide(*a, **k):
+        return ""
+
+    async def zero(*a, **k):
+        return 0
+
+    async def liste(*a, **k):
+        return []
+
+    async def lexique(rpc):
+        return "## Lexique de Patrick\n- **Gu** : nœud."
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    for nom, f in {"authorize_caller": rien, "gate_subscription": ident, "fetch_prompt": prompt,
+                   "_compter_accompagnement": zero, "preparer_historique": historique, "canal_digisha": canal,
+                   "fil_digisha_reprise": reprise, "contexte_personne": reprise, "relecture_pour": vide, "savoir_pour": vide,
+                   "fetch_banque_qr": liste, "journaliser_cout": rien, "log_exchange": rien, "fil_digisha_deposer": rien,
+                   "_rpc_service": rien, "_rpc_personne": rien, "lexique_patrick": lexique}.items():
+        monkeypatch.setattr(d, nom, f)
+    monkeypatch.setattr(d, "refuser_st1", lambda ident: None)
+    monkeypatch.setattr(d, "journaliser_usage", lambda *a, **k: None)
+    monkeypatch.setattr(d, "_http", lambda: _Client(envois))
+
+    def corps(msgs):
+        return d.AccompagnementRequest(messages=[d.ChatTurn(**m) for m in msgs])
+
+    h = [{"role": "user", "content": "Q1"}]
+    asyncio.run(d.digisha_accompagnement(request=None, body=corps(h), x_digisha_token=None, authorization="Bearer t"))
+    h2 = h + [{"role": "assistant", "content": "R1"}, {"role": "user", "content": "Q2"}]
+    asyncio.run(d.digisha_accompagnement(request=None, body=corps(h2), x_digisha_token=None, authorization="Bearer t"))
+    e1, e2 = envois
+    assert e1["system"] == e2["system"]                                     # la consigne ne bouge pas d'un tour à l'autre
+    i_lex = next(i for i, b in enumerate(e2["system"]) if "Lexique de Patrick" in b["text"])
+    assert i_lex == 1 and e2["system"][1]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}   # préfixe commun à toutes
+    assert "Lexique de Patrick" not in json.dumps(e2["messages"], ensure_ascii=False)             # plus dans le message du tour
+    assert "tour(s) déposé(s)" in e2["messages"][-1]["content"][0]["text"]                        # la reprise, elle, y reste
+    pts = _points_dans_l_ordre(e2)
+    assert pts == [{"type": "ephemeral", "ttl": "1h"}] * 3 + [{"type": "ephemeral"}]              # Profondeur : point du tour
+    assert "cache_control" in e2["messages"][-1]["content"][-1]

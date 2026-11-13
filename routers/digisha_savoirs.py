@@ -179,9 +179,18 @@ def executer(nom: str, entree: dict, stade: int) -> str:
 
 
 def _additionner(total: dict, usage: dict) -> None:
+    """Additionne l'usage d'un appel, compteurs imbriqués compris : `cache_creation.ephemeral_1h_input_tokens` dit quelle
+    part du cache est écrite pour une heure (2× le prix d'entrée) ; perdu, le coût journalisé serait sous-compté."""
     for k, v in (usage or {}).items():
+        if isinstance(v, bool):
+            continue
         if isinstance(v, (int, float)):
             total[k] = total.get(k, 0) + v
+        elif isinstance(v, dict):
+            sous = total.get(k)
+            if not isinstance(sous, dict):
+                sous = total[k] = {}
+            _additionner(sous, v)
 
 
 async def appeler_avec_savoirs(poster, payload: dict, stade: int) -> tuple[dict, list[str]]:

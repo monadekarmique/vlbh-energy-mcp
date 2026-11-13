@@ -71,22 +71,34 @@ def _blocs(contenu) -> list:
     return [_sans_cache(b) for b in (contenu or [])]
 
 
-def ranger_pour_cache(payload: dict) -> dict:
+def _point(duree: str | None = None) -> dict:
+    """Un point de cache : 5 minutes par défaut, une heure avec duree="1h" (écriture à 2× au lieu de 1,25×)."""
+    return {"type": "ephemeral", "ttl": duree} if duree else {"type": "ephemeral"}
+
+
+def ranger_pour_cache(payload: dict, duree: str | None = None, point_du_tour: bool = False) -> dict:
     """Range la consigne et les messages pour que le préfixe soit relu d'un tour à l'autre (modifie et rend `payload`).
+
+    `duree="1h"` : les points de la consigne et de la conversation tiennent une heure (13.11.2026 : dans l'accompagnement
+    les messages se suivent à 6–10 minutes, le cache de 5 minutes était écrit puis jamais relu sur 29 appels Opus de 142).
+    `point_du_tour` : un point de plus, de 5 minutes, à la fin du dernier message de la personne — pour la boucle d'outils,
+    qui renvoie ce message (contexte du tour compris) une seconde fois quelques secondes plus tard. Il coûte 25 % de plus à
+    l'écriture : à ne poser que là où l'outil est appelé plus d'une fois sur quatre.
 
     · consigne : les blocs `du_tour` en sortent ; tous les points de cache existants sont retirés ; DU_TOUR_CADRE s'ajoute
       (toujours, pour que la consigne ne change pas selon qu'un tour a du savoir ou non) ; un point sur son dernier bloc ;
     · dernier message de la personne : les blocs du tour en tête, entre OUVERTURE et FERMETURE ;
     · dernière réponse de DiGiSha (avant ce message) : un point de cache ;
     · le dernier bloc `partage(...)` de la consigne garde le sien (préfixe commun à toutes les conversations).
-    Trois points au plus, sur quatre permis. Dans les messages de la personne, ⟦ et ⟧ sont neutralisés."""
+    Trois points au plus (quatre avec `point_du_tour`), sur quatre permis. Dans les messages de la personne, ⟦ et ⟧
+    sont neutralisés."""
     systeme = payload.get("system")
     blocs = [{"type": "text", "text": systeme}] if isinstance(systeme, str) else list(systeme or [])
     gardes = [b for b in blocs if not (isinstance(b, dict) and b.get(MARQUE))]
     i_partage = max((i for i, b in enumerate(gardes) if isinstance(b, dict) and b.get(PARTAGE)), default=None)
     stables = [_sans_cache(b) for b in gardes]
     if i_partage is not None and i_partage < len(stables) - 1:
-        stables[i_partage] = {**stables[i_partage], "cache_control": {"type": "ephemeral"}}
+        stables[i_partage] = {**stables[i_partage], "cache_control": _point(duree)}
     du = [b for b in blocs if isinstance(b, dict) and b.get(MARQUE) and (b.get("text") or "").strip()]
     messages = []
     for m in payload.get("messages") or []:
@@ -101,7 +113,7 @@ def ranger_pour_cache(payload: dict) -> dict:
         stables += [{"type": "text", "text": b["text"]} for b in du]
         du = []
     stables.append({"type": "text", "text": DU_TOUR_CADRE})
-    stables[-1] = {**stables[-1], "cache_control": {"type": "ephemeral"}}
+    stables[-1] = {**stables[-1], "cache_control": _point(duree)}
     payload["system"] = stables
     if du:
         texte = OUVERTURE + "\n\n".join(b["text"] for b in du) + FERMETURE
@@ -111,8 +123,13 @@ def ranger_pour_cache(payload: dict) -> dict:
     for i in range(fin - 1, -1, -1):
         if messages[i].get("role") == "assistant" and isinstance(messages[i]["content"], list) and messages[i]["content"]:
             c = list(messages[i]["content"])
-            c[-1] = {**c[-1], "cache_control": {"type": "ephemeral"}}
+            c[-1] = {**c[-1], "cache_control": _point(duree)}
             messages[i] = {**messages[i], "content": c}
             break
+    if point_du_tour and dernier_user is not None:
+        c = messages[dernier_user]["content"]
+        if isinstance(c, list) and c and isinstance(c[-1], dict):
+            # Toujours 5 minutes, et toujours le dernier point : une durée longue ne peut pas suivre une courte.
+            messages[dernier_user] = {**messages[dernier_user], "content": c[:-1] + [{**c[-1], "cache_control": _point()}]}
     payload["messages"] = messages
     return payload

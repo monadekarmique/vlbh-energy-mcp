@@ -136,8 +136,10 @@ def test_accompagnement_rend_l_image_et_la_depose_dans_le_fil(monkeypatch):
                                   "titre": "Gui"}]
     assert depots == ["Ce sont les V qui bloquent : c'est un Gui.\n[illustration : Gui]"]
     assert pieces == [{"p_session": "seance", "p_pieces": [dict(rep.illustrations[0], role="digisha")]}]
-    dernier = systemes[0]["messages"][-1]["content"][0]["text"]
-    assert "(illustration : ⟦Montrer : Gui⟧)" in dernier
+    # 13.11.2026 : le lexique est dans la consigne stable (cache commun), plus dans le contexte du tour.
+    consigne = "\n".join(b["text"] for b in systemes[0]["system"])
+    assert "(illustration : ⟦Montrer : Gui⟧)" in consigne
+    assert "Montrer : Gui" not in systemes[0]["messages"][-1]["content"][0]["text"]
 
 
 def test_sans_ligne_montrer_rien_ne_change():

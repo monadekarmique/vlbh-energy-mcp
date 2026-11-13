@@ -1781,7 +1781,10 @@ async def _digisha_chat(
             )
         system_blocks = [
             {"type": "text", "text": base},
-            partage({"type": "text", "text": m1_block}),
+            {"type": "text", "text": m1_block},
+            # Le lexique de Patrick : stable, commun à toutes — dans la consigne, plus dans le contexte du tour (13.11.2026).
+            partage({"type": "text", "text": APPRENDRE_CADRE
+                     + (("\n" + lex) if (lex := await lexique_patrick(_rpc_service)) else "")}),
             du_tour("## État du membre\n" + json.dumps(
                  {"parcours_accompagnante": body.parcours,
                   "parcours_proche": parcours_proche,
@@ -1791,8 +1794,7 @@ async def _digisha_chat(
                  ensure_ascii=False)),
         ] + ([du_tour(CONTEXTE_CADRE + donnees_de_tiers("reprise_des_seances", reprise))] if reprise else []) \
           + ([{"type": "text", "text": RELECTURE_COULISSE + coulisse}] if coulisse else []) \
-          + ([du_tour(SAVOIR_CADRE + donnees_de_tiers("savoir_du_cercle", savoir))] if savoir else []) + resume_blocks \
-          + [du_tour(APPRENDRE_CADRE + (("\n" + lex) if (lex := await lexique_patrick(_rpc_service)) else ""))]
+          + ([du_tour(SAVOIR_CADRE + donnees_de_tiers("savoir_du_cercle", savoir))] if savoir else []) + resume_blocks
         depot_fil = (body.proche_consultante_id, canal_fil)
         payload = {
             "model": model,
@@ -2026,10 +2028,15 @@ async def _digisha_accompagnement(
         model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
     raw_messages = avec_heures([t.model_dump(exclude_none=True) for t in body.messages])
     resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
-    system_blocks = [partage({"type": "text", "text": system})]
+    # Le lexique de Patrick fait partie de la consigne stable, commune à toutes (13.11.2026, fiche 9daa60f4). Rangé avec le
+    # contexte du tour, ses 68 termes (23 445 caractères, ≈ 8 000 jetons) repartaient hors cache à chaque message alors
+    # qu'il ne change que lorsque Patrick enseigne un terme : 60 % du coût de l'accompagnement sur Opus.
+    lex = await lexique_patrick(_rpc_service)
+    system_blocks = [{"type": "text", "text": system},
+                     partage({"type": "text", "text": APPRENDRE_CADRE + (("\n" + lex) if lex else "")})]
     if resume_block:
         system_blocks.append(resume_block)
-    mesure_fil = ""
+    mesure_fil = f" lexique_car={len(lex or '')}"
     if body.fil_consultante_id:
         # « À propos de X » = un retour et des consignes de Patrick pour le profil X, pas la matière de la réponse (fiche
         # 2329fddd, 17.10.2026 14h30). Plus de passages du fil cherchés pour répondre ; ses séances restent plus bas, pour
@@ -2081,8 +2088,6 @@ async def _digisha_accompagnement(
         if savoir:
             system_blocks.append(du_tour(SAVOIR_CADRE + donnees_de_tiers("savoir_du_cercle", savoir)))
             mesure_fil += f" savoir_car={len(savoir)}"
-    lex = await lexique_patrick(_rpc_service)
-    system_blocks.append(du_tour(APPRENDRE_CADRE + (("\n" + lex) if lex else "")))
     if pieces_du_dernier(body):
         mesure_fil += f" pieces={pieces_du_dernier(body)}"
     if body.decodage_id:
@@ -2106,8 +2111,11 @@ async def _digisha_accompagnement(
     proprio = await cadres_de_seance(payload, authorization, moi_acc, cible_acc)
     if proprio and not cible_acc:
         ajouter_du_tour(payload, SONDAGE_CADRE)
+    profondeur = payload["model"] == ACCOMPAGNEMENT_MODEL_PROFONDEUR
     model = passer_en_5_5(payload, str((ident or {}).get("svlbh_id") or "") or None)
-    ranger_pour_cache(payload)
+    # Cache d'une heure, et un point sur le message du tour quand l'outil des savoirs sert souvent. Mesuré le 13.11.2026 dans
+    # le journal (9 jours) : en Profondeur 86 appels sur 142 consultent les savoirs (61 %), ailleurs 7 sur 65 (11 %).
+    ranger_pour_cache(payload, duree="1h", point_du_tour=(profondeur and stade >= 2))
     client = _http()
 
     async def poster(p: dict) -> dict:

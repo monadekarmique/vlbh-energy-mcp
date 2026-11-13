@@ -116,8 +116,10 @@ def test_accompagnement_retire_la_ligne_avant_affichage_et_depot(monkeypatch):
     rep = asyncio.run(d.digisha_accompagnement(request=None, body=corps, x_digisha_token=None, authorization="Bearer t"))
     assert "⟦" not in rep.reply and "⟦" not in depots[0]
     assert notes == ["COEX"]
-    dernier = systemes[0]["messages"][-1]["content"][0]["text"]
-    assert "Ce que tu ne sais pas expliquer" in dernier and "**logoïque** : projection mentale" in dernier
+    # 13.11.2026 : le lexique est dans la consigne stable (cache commun), plus dans le contexte du tour.
+    consigne = "\n".join(b["text"] for b in systemes[0]["system"])
+    assert "Ce que tu ne sais pas expliquer" in consigne and "**logoïque** : projection mentale" in consigne
+    assert "logoïque" not in systemes[0]["messages"][-1]["content"][0]["text"]
 
 
 def test_appris_retire_la_ligne_et_rend_le_terme():
