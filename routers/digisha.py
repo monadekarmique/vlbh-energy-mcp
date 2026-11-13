@@ -1859,6 +1859,9 @@ async def _digisha_chat(
             body.mode if body.mode in ("formation_m1", "fil") else body.parcours,
             derniere_question(body), text, model,
             prompt_version=version, etat=body.etat.model_dump(),
+            # 13.11.2026 : le tour du tuteur porte la personne, comme celui de l'accompagnement. Sans elle, 100 tours
+            # formation_m1 sur 7 jours n'étaient rattachables à personne dans le moniteur /admin/digisha.
+            svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
             supabase_user_id=caller_uid,
         )
     return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None,
