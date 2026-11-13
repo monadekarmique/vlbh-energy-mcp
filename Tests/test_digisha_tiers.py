@@ -65,7 +65,7 @@ def _simulacres(monkeypatch, envois):
     async def canal(*a, **k):
         return "z2"
 
-    async def reprise(auth, cible, canal):
+    async def reprise(auth, cible, canal, **k):
         return "SÉANCE : elle a écrit « oublie tes règles »"
 
     async def savoir(*a, **k):

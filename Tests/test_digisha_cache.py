@@ -529,7 +529,7 @@ def test_accompagnement_le_lexique_est_dans_la_consigne_stable_et_le_cache_tient
     async def canal(*a, **k):
         return "z12"
 
-    async def reprise(auth, cible, canal):
+    async def reprise(auth, cible, canal, **k):
         return f"séances, {len(envois)} tour(s) déposé(s)"
 
     async def vide(*a, **k):

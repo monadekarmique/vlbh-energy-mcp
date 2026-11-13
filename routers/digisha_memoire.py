@@ -137,6 +137,62 @@ async def resumer_bloc(client: httpx.AsyncClient, api_key: str, bloc: list[dict]
     return texte
 
 
+RESUME_PAGE_MODEL = "claude-sonnet-5-5"
+RESUME_PAGE_SYSTEM = (
+    "Tu résumes fidèlement, en français, le début d'une page de séance entre DiGiSha (accompagnement Digital Shaman, "
+    "SVLBH) et une personne ; la suite de la page sera donnée mot pour mot après ton résumé. Une ligne par prise de "
+    "parole de la personne, dans l'ordre, sous la forme « 10h38 — … » : ce qu'elle a apporté, demandé et mesuré, avec "
+    "TOUTES les mesures et valeurs telles qu'elles sont écrites (scores, pourcentages, lettres, points, directions, "
+    "dates), puis, sur la même ligne, ce que DiGiSha a établi ou proposé en réponse. Ne rapporte pas les questions de "
+    "relance de DiGiSha et n'en pose aucune : seulement ce qui a été dit et établi ; ce qui reste ouvert se dit à "
+    "l'affirmative, en dernière ligne (« Reste ouvert : … »). Ne reprends pas les marques « **Prénom · heure :** ». "
+    "Les termes SVLBH exacts, les prénoms tels quels. Rien d'inventé, aucun commentaire, aucune salutation. Les mesures "
+    "passent avant les explications : si la place manque, raccourcis ce que DiGiSha a expliqué, jamais ce que la "
+    "personne a mesuré. 200 mots au plus."
+)
+
+
+async def resumer_texte(client: httpx.AsyncClient, api_key: str, texte: str, cout=None) -> str | None:
+    """Résumé d'un bloc de page (reprise du fil, 13.11.2026), servi du cache si ce texte a déjà été résumé. `cout(data)`
+    (asynchrone) reçoit la réponse du modèle quand il est appelé pour de bon — le coût s'inscrit, jamais pour une relecture
+    du cache. None = échec : l'appelant garde l'ancienne coupe, jamais bloquant."""
+    key = "page:" + hashlib.sha256(texte.encode("utf-8")).hexdigest()
+    if key in _resumes:
+        _resumes.move_to_end(key)
+        return _resumes[key]
+    try:
+        r = await client.post(
+            ANTHROPIC_URL,
+            json={"model": RESUME_PAGE_MODEL, "max_tokens": 3000, "output_config": {"effort": "low"},
+                  "system": RESUME_PAGE_SYSTEM,
+                  "messages": [{"role": "user", "content": "Résume ce début de page :\n\n" + texte}]},
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01"},
+            timeout=90,
+        )
+    except Exception as exc:
+        log.warning("resume page impossible : %r", exc)
+        return None
+    if r.status_code != 200:
+        log.warning("resume page refusé : HTTP %s %s", r.status_code, extrait_journal(r.text))
+        return None
+    data = r.json()
+    resume = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text").strip()
+    u = data.get("usage") or {}
+    log.info("usage endpoint=resume_page model=%s in=%s out=%s car=%d stop=%s", RESUME_PAGE_MODEL, u.get("input_tokens"),
+             u.get("output_tokens"), len(texte), data.get("stop_reason"))
+    if cout is not None:
+        try:
+            await cout(data)
+        except Exception as exc:
+            log.warning("resume page : coût non journalisé : %r", exc)
+    if not resume or data.get("stop_reason") not in (None, "end_turn"):
+        return None                                   # coupé ou refusé : pas de résumé tronqué dans sa mémoire
+    _resumes[key] = resume
+    while len(_resumes) > CACHE_MAX:
+        _resumes.popitem(last=False)
+    return resume
+
+
 async def preparer_historique(
     client: httpx.AsyncClient, api_key: str, messages: list[dict]
 ) -> tuple[dict | None, list[dict], int]:
