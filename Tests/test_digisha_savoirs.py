@@ -161,3 +161,24 @@ def test_la_correction_part_en_base_par_la_porte_de_patrick():
                     {"p_terme": "absinthe", "p_svlbh": "306c2408",
                      "p_texte": "Correction de Patrick du 06.11.2026 : « Correction : … » — retenu : Dark entities"})]
     assert asyncio.run(corriger_en_seance(rpc, [("x", "")], None, "m", "j")) == []
+
+
+def test_un_chiffre_seul_departage_les_faces():
+    """14.11.2026 — servi le 13.11 : « face 8 » rendait les faces 1 et 2 (le chiffre était jeté, « face » est dans toutes
+    les clés), et DiGiSha cherchait une seconde fois par le nom entier."""
+    for n, nom in ((8, "Face 8"), (5, "Face 5"), (7, "Face 7"), (10, "Face 10")):
+        d = json.loads(sv.chercher("dodecaedre_branches", f"face {n}", 9))
+        assert str(d["resultats"][0]["entree"]["cle"]).startswith(nom + " "), (n, d["resultats"][0]["entree"]["cle"])
+
+
+def test_une_entree_deja_rendue_dans_la_reponse_est_nommee_pas_renvoyee():
+    deja: set = set()
+    un = json.loads(sv.chercher("dodecaedre_branches", "face 8", 9, deja))
+    cles = [str(r["entree"]["cle"]) for r in un["resultats"]]
+    assert cles and deja
+    deux_texte = sv.chercher("dodecaedre_branches", "Face 8 — 未 Wèi", 9, deja)
+    deux = json.loads(deux_texte)
+    assert cles[0] in deux["deja_rendues_plus_haut_dans_cette_reponse"]
+    assert cles[0] not in [str(r["entree"]["cle"]) for r in deux["resultats"]]
+    # Sans mémoire (un autre message), la même recherche rend l'entrée entière.
+    assert cles[0] in [str(r["entree"]["cle"]) for r in json.loads(sv.chercher("dodecaedre_branches", "Face 8 — 未 Wèi", 9))["resultats"]]

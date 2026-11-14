@@ -51,7 +51,8 @@ def _mots(requete: str) -> list[str]:
     vus, sortie = set(), []
     for m in re.findall(r"[0-9a-z][0-9a-z\-]*", _plat(requete)):
         m = m.strip("-")
-        if len(m) >= 2 and m not in vus and m not in _VIDES:
+        # 14.11.2026 : un chiffre seul compte (« face 8 » rendait les faces 1 et 2 : le 8 était jeté, restait « face »).
+        if (len(m) >= 2 or m.isdigit()) and m not in vus and m not in _VIDES:
             vus.add(m)
             sortie.append(m)
     return sortie
@@ -113,8 +114,18 @@ def _entrees(savoir: dict, stade: int) -> list[tuple[dict, dict]]:
     return list(par_cle.values())
 
 
-def chercher(savoir_id: str, requete: str, stade: int) -> str:
-    """Le résultat de l'outil, en JSON compact borné."""
+def _dans_cle(m: str, cle: str) -> bool:
+    return bool(re.search(rf"(?<![0-9a-z]){re.escape(m)}(?![0-9a-z])", cle))
+
+
+def chercher(savoir_id: str, requete: str, stade: int, deja: set | None = None) -> str:
+    """Le résultat de l'outil, en JSON compact borné.
+
+    14.11.2026 (fiche 9daa60f4, mesuré sur les messages servis le 13.11) : un mot présent dans la clé de plus de la moitié
+    des entrées (« face » dans le dodécaèdre) ne départage plus rien par la clé ; une entrée notée à moins de la moitié de
+    la meilleure n'est plus rendue entière (elle reste nommée, à redemander par sa clé) ; et `deja` — les entrées déjà
+    rendues dans CETTE réponse — ne sont pas renvoyées une seconde fois : elles sont nommées (20 à 43 % des caractères
+    rendus étaient des répétitions)."""
     savoir = SAVOIRS.get(savoir_id)
     if not savoir or not versions_lisibles(savoir, stade):
         return json.dumps({"erreur": f"savoir inconnu ou fermé à ce stade : {savoir_id}", "savoirs": [
@@ -126,14 +137,18 @@ def chercher(savoir_id: str, requete: str, stade: int) -> str:
             {"nom": v["nom"], "stade": f"ST{v['stade']}", "app": v["app"],
              "cles": [e.get("cle") for e in v.get("entrees", [])]} for v in versions_lisibles(savoir, stade)]})
     notes = []
+    cles = [_plat(str(e.get("cle") or "")) for _, e in paires]
+    communs = {m for m in mots if len(cles) >= 4 and sum(_dans_cle(m, c) for c in cles) * 2 > len(cles)}
     for v, e in paires:
         texte = _plat(json.dumps(e, ensure_ascii=False))
         cle = _plat(str(e.get("cle") or ""))
         note = 0.0
         for m in mots:
-            if m == cle or (len(m) >= 3 and cle.startswith(m + " ")):
+            if m in communs and m != cle:
+                pass
+            elif m == cle or (len(m) >= 3 and cle.startswith(m + " ")):
                 note += 10
-            elif re.search(rf"(?<![0-9a-z]){re.escape(m)}(?![0-9a-z])", cle):
+            elif _dans_cle(m, cle):
                 note += 6
             n = len(re.findall(rf"(?<![0-9a-z]){re.escape(m)}(?![0-9a-z])", texte))
             if n:
@@ -143,9 +158,26 @@ def chercher(savoir_id: str, requete: str, stade: int) -> str:
         if note > 0:
             notes.append((note, v, e))
     notes.sort(key=lambda t: -t[0])
-    resultats = [{"source": f"{v['app']} · {v['nom']} (ST{v['stade']})", "entree": e} for _, v, e in notes[:MAX_RESULTATS]]
-    return _borne({"savoir": savoir["titre"], "requete": requete, "trouves": len(notes), "resultats": resultats},
-                  [e for _, _, e in notes[:40]])
+    seuil = notes[0][0] / 2 if notes else 0
+    resultats, repetees = [], []
+    for note, v, e in notes:
+        if len(resultats) >= MAX_RESULTATS or note < seuil:
+            break
+        if deja is not None and _empreinte(e) in deja:
+            repetees.append(str(e.get("cle")))
+            continue
+        resultats.append({"source": f"{v['app']} · {v['nom']} (ST{v['stade']})", "entree": e})
+    objet = {"savoir": savoir["titre"], "requete": requete, "trouves": len(notes), "resultats": resultats}
+    if repetees:
+        objet["deja_rendues_plus_haut_dans_cette_reponse"] = repetees
+    texte = _borne(objet, [e for _, _, e in notes[:40] if not (deja is not None and _empreinte(e) in deja)])
+    if deja is not None:
+        deja.update(_empreinte(r["entree"]) for r in objet["resultats"])
+    return texte
+
+
+def _empreinte(e: dict) -> str:
+    return json.dumps(e, ensure_ascii=False, sort_keys=True)
 
 
 def _titre(e: dict) -> str:
@@ -159,7 +191,7 @@ def _borne(objet: dict, toutes: list[dict] | None = None) -> str:
     """Au-delà de la borne, on garde les premières entrées entières et on nomme les autres (clé + titre) : DiGiSha peut les
     redemander par leur clé — mesuré au banc le 06.11 : un type Lmasc pèse 4 à 6 000 car., la liste s'arrêtait sans le dire."""
     texte = json.dumps(objet, ensure_ascii=False)
-    if len(texte) <= MAX_CAR_RESULTAT:
+    if len(texte) <= MAX_CAR_RESULTAT and not (toutes and len(toutes) > len(objet.get("resultats") or [])):
         return texte
     if "resultats" in objet:
         while len(objet["resultats"]) > 1 and len(json.dumps(objet, ensure_ascii=False)) > MAX_CAR_RESULTAT - 1500:
@@ -172,10 +204,10 @@ def _borne(objet: dict, toutes: list[dict] | None = None) -> str:
     return texte[:MAX_CAR_RESULTAT]
 
 
-def executer(nom: str, entree: dict, stade: int) -> str:
+def executer(nom: str, entree: dict, stade: int, deja: set | None = None) -> str:
     if nom != OUTIL_NOM or not isinstance(entree, dict):
         return json.dumps({"erreur": f"outil inconnu : {nom}"}, ensure_ascii=False)
-    return chercher(str(entree.get("savoir") or ""), str(entree.get("requete") or ""), stade)
+    return chercher(str(entree.get("savoir") or ""), str(entree.get("requete") or ""), stade, deja)
 
 
 def _additionner(total: dict, usage: dict) -> None:
@@ -203,6 +235,7 @@ async def appeler_avec_savoirs(poster, payload: dict, stade: int) -> tuple[dict,
     payload["tools"] = [definition]
     usage: dict = {}
     faites: list[str] = []
+    deja: set = set()       # les entrées déjà rendues dans cette réponse : nommées, pas renvoyées
     data = await poster(payload)
     _additionner(usage, data.get("usage"))
     tours = 0
@@ -216,7 +249,7 @@ async def appeler_avec_savoirs(poster, payload: dict, stade: int) -> tuple[dict,
             e = b.get("input") or {}
             faites.append(f"{e.get('savoir')}:{str(e.get('requete'))[:40]}")
             resultats.append({"type": "tool_result", "tool_use_id": b.get("id"),
-                              "content": executer(b.get("name"), e, stade)})
+                              "content": executer(b.get("name"), e, stade, deja)})
         if tours >= MAX_TOURS_OUTIL:
             # Dernière passe : plus d'outil, et on le lui DIT — mesuré au banc le 06.11 (sonnet 5.5) : avec tool_choice « none »
             # seul, il rendait un bloc de réflexion et aucun texte (il voulait encore chercher).
