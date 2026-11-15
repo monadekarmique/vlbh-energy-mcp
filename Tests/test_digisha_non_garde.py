@@ -20,7 +20,6 @@ from routers import digisha_non_garde as ng
 MOI = "11111111-1111-4111-8111-111111111111"
 FICHE = "22222222-2222-4222-8222-222222222222"
 SEANCE = "33333333-3333-4333-8333-333333333333"
-VUE = "44444444-4444-4444-8444-444444444444"
 PNG = base64.b64encode(b"\x89PNG petit").decode()
 
 DEPOTS = ("digisha_fil_deposer", "digisha_relecture_deposer")
@@ -162,18 +161,28 @@ def test_session_refusee_par_la_base(base):
     assert _accompagnement().non_garde_motif == ng.MOTIFS_TOUR["session"]
 
 
-def test_voir_comme_se_dit_l_artefact_d_app_non(base, journal_digisha):
-    """La base répond 200 « null » sans rien écrire dans deux cas : en « voir comme » (ça se dit), et pour le message
-    d'ouverture écrit par l'app (« 🎓 … », jamais gardé : rien à dire, personne n'a rien écrit)."""
+def test_sans_seance_l_artefact_d_app_se_tait_une_vraie_question_se_dit(base, journal_digisha):
+    """La base répond 200 « null » sans rien écrire pour le message d'ouverture écrit par l'app (« 🎓 … », jamais gardé :
+    rien à dire, personne n'a rien écrit). Le même retour pour une vraie question n'a pas de raison connue : il se dit.
+    « Voir comme » n'est pas un cas : ce serveur n'envoie pas l'en-tête de surface, la base ne le voit jamais en vue."""
     base.rpc["digisha_fil_deposer"] = (200, None)
-    base.rpc["coach_view_target"] = (200, VUE)
-    r = _accompagnement()
-    assert r.non_garde is True and r.non_garde_motif == ng.MOTIFS_TOUR["voir_comme"]
-    assert "«\N{NO-BREAK SPACE}voir comme\N{NO-BREAK SPACE}»" in r.non_garde_motif and VUE not in r.non_garde_motif
-    base.rpc["coach_view_target"] = (200, None)
-    r = _accompagnement("🎓 Module 1 ouvert pour Maya")
-    assert r.non_garde is False and r.non_garde_motif is None
+    for ouverture in ("🎓 Module 1 ouvert pour Maya", "  « 🎓 Bonjour", "Le Module 1 est déjà\nouvert pour elle"):
+        r = _accompagnement(ouverture)
+        assert r.non_garde is False and r.non_garde_motif is None, ouverture
     assert any(l.startswith("INFO: digisha — depot_sans_seance=digisha_fil_deposer") for l in journal_digisha)   # une trace, pas un écran
+    r = _accompagnement("Que dit ce rêve ?")
+    assert r.non_garde is True and r.non_garde_motif == ng.MOTIFS_TOUR["refus"]
+    assert any("non_garde=tour genre=sans_seance" in l for l in journal_digisha)
+    assert "coach_view_target" not in base.appels          # plus aucun appel de contrôle : il rendait toujours nul d'ici
+
+
+@pytest.mark.parametrize("question, artefact", [
+    ("🎓 Module 1 ouvert pour Maya", True), ("«🎓 M1", True), ('"🎓 M1', True), ("\n 🎓", True),
+    ("Le Module 1 est-il déjà ouvert pour elle ?", True),      # la base le prend pour un artefact : on se tait comme elle
+    ("Parle-moi du 🎓", False), ("Module 2 ouvert pour elle", False), ("", False), (None, False), (["🎓"], False),
+])
+def test_artefact_app_memes_motifs_que_la_base(question, artefact):
+    assert ng.est_artefact_app(question) is artefact
 
 
 def test_le_sondage_parti_sur_son_mot_dit_aussi_son_depot(base, monkeypatch):
@@ -221,7 +230,7 @@ def test_genre_du_refus(code, corps, genre):
 def test_aucun_motif_ne_porte_une_donnee():
     """Les phrases sont fixes : ni chiffre (identifiant, code), ni mot venu de la base."""
     phrases = list(ng.MOTIFS_TOUR.values()) + [ng.MOTIF_CONSIGNES, ng.MOTIF_ILLUSTRATIONS, ng.motif_pieces(1, 1)]
-    assert set(ng.MOTIFS_TOUR) == {"droit", "fiche_soi", "fiche_introuvable", "canal", "session", "refus", "panne", "voir_comme"}
+    assert set(ng.MOTIFS_TOUR) == {"droit", "fiche_soi", "fiche_introuvable", "canal", "session", "refus", "panne"}
     for p in phrases:
         assert p.endswith(".") and len(p) < 140 and not any(c.isdigit() for c in p), p
     assert ng.Suivi().champs() == {}                                     # rien à dire : la réponse garde non_garde faux

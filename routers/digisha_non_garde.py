@@ -12,13 +12,18 @@ Une app qui ne lit pas ces champs ne voit rien changer.
 
 Ce qui se dit :
   · le tour (la page DiGiSha du jour, ou la page « Relecture ») que la base a refusé, auquel elle n'a pas répondu, ou
-    qu'elle n'écrit pas parce que la personne est en « voir comme » ;
+    qu'elle a rendu sans séance pour une question qui n'est pas un message d'ouverture de l'app ;
   · une pièce jointe (photo, PDF) qui n'est pas arrivée dans le seau, ou n'a pas été rattachée à la page ;
   · les consignes d'un tour « À propos de » qui ne sont pas posées : refusées, base muette, réponse coupée, ou prénom
     de la fiche illisible (une fiche neuve, avant sa première séance) ;
   · les images du lexique montrées avec la réponse, quand elles n'ont pas été rattachées à la page.
 Ce qui ne se dit pas : le message d'ouverture écrit par l'app (« 🎓 … »), que la base ne garde jamais ; un compte de
 revue (réponse fixe, sans page) ; digisha_chat_log et le journal des coûts, qui sont des compteurs et non la séance.
+
+« Voir comme » ne se dit PAS ici, et ce n'est pas un oubli (contre-épreuve du 15.11.2026) : ce serveur appelle la base
+sans l'en-tête de surface de l'app, donc coach_view_target() y est toujours nul — la base ne le voit jamais « en vue »,
+et la garde « on regarde, on n'écrit pas » de digisha_fil_deposer (17.10) ne joue pas pour un tour passé par ici. Une
+branche qui ne peut pas se produire ne s'écrit pas ; le sujet a sa propre carte.
 
 Le motif ne recopie JAMAIS le message de la base : il peut porter un identifiant, ou la ligne d'une autre personne. Le
 message est reconnu parmi ceux que les fonctions de dépôt lèvent (relus dans pg_proc le 15.11.2026) et rendu par une
@@ -52,7 +57,6 @@ MOTIFS_TOUR = {
     "refus": _TOUR + "l'enregistrement a été refusé.",
     # « probablement » : sur un délai dépassé, le serveur ne sait pas si la base a fini d'écrire après lui.
     "panne": f"Ce tour n'a probablement pas été gardé{_I}: la base de données n'a pas répondu.",
-    "voir_comme": _TOUR + f"en «{_I}voir comme{_I}», rien ne s'écrit. Quitte la vue pour garder tes tours.",
 }
 MOTIF_CONSIGNES = "Les consignes de ce tour n'ont pas été enregistrées."
 MOTIF_ILLUSTRATIONS = "Les images montrées avec cette réponse n'ont pas été rattachées à la page."
@@ -66,6 +70,17 @@ _MESSAGES_CONNUS = (
     (re.compile(r"canal inconnu"), "canal"),
     (re.compile(r"non authentifi|\bjwt\b", re.I), "session"),
 )
+
+
+# Les deux formes de question que la base ne garde jamais (digisha_fil_page_ajouter et digisha_relecture_deposer, relues
+# dans pg_proc le 15.11.2026) : le message d'ouverture écrit par l'app, pas par la personne. Mêmes motifs, même portée
+# (« . » y prend aussi un saut de ligne, comme dans la base).
+_ARTEFACTS_APP = (re.compile(r'^\s*[«"]?\s*🎓'), re.compile(r"Module 1 .{0,80}ouvert pour", re.S))
+
+
+def est_artefact_app(question) -> bool:
+    """La question est-elle un message d'ouverture de l'app, que la base ne garde pas ?"""
+    return isinstance(question, str) and any(m.search(question) for m in _ARTEFACTS_APP)
 
 
 def motif_pieces(manquantes: int, jointes: int) -> str:
@@ -133,13 +148,13 @@ def echec_rpc(nom: str, code: int | None, corps: str | None) -> None:
         suivi.dernier_echec = (nom, genre_du_refus(code, corps))
 
 
-async def tour_non_depose(rpc_personne, authorization: str | None, nom: str) -> None:
+def tour_non_depose(nom: str, question=None) -> None:
     """Le dépôt `nom` n'a pas rendu de séance. Si le tour devait être gardé, le suivi de l'appel le dit, avec sa raison.
 
     Trois issues (fonctions relues dans pg_proc le 15.11.2026) : la base a refusé ou n'a pas répondu — l'appel a
-    échoué, son genre est dans le suivi ; la base a répondu sans rien écrire parce que la personne est en « voir comme »
-    (coach_view_target() non nul) ; ou parce que la question est un artefact de l'app (le message d'ouverture « 🎓 … »),
-    que la base ne garde jamais : celui-là ne se dit pas, personne n'a rien écrit."""
+    échoué, son genre est dans le suivi ; la base a répondu sans rien écrire parce que la question est un artefact de
+    l'app (le message d'ouverture « 🎓 … »), qu'elle ne garde jamais : celui-là ne se dit pas, personne n'a rien écrit ;
+    ou elle a répondu sans séance pour une vraie question, sans raison connue d'ici : ce tour n'est pas gardé, on le dit."""
     suivi = _suivi.get()
     if suivi is None:
         return
@@ -147,9 +162,9 @@ async def tour_non_depose(rpc_personne, authorization: str | None, nom: str) -> 
     if echec is not None and echec[0] == nom:
         suivi.noter("tour", MOTIFS_TOUR[echec[1]], echec[1])
         return
-    vue = await rpc_personne(authorization, "coach_view_target", {})
-    if isinstance(vue, str) and vue:
-        suivi.noter("tour", MOTIFS_TOUR["voir_comme"], "voir_comme")
-    else:
-        # Rien à l'écran, mais une trace : si la base gagne un jour une autre façon de ne rien écrire, elle se verra ici.
-        log.info("digisha — depot_sans_seance=%s : ni refus ni voir comme (message d'ouverture de l'app)", nom)
+    if est_artefact_app(question):
+        # Rien à l'écran, mais une trace : c'est la base qui décide de ne pas garder ce message.
+        log.info("digisha — depot_sans_seance=%s : message d'ouverture de l'app, que la base ne garde pas", nom)
+        return
+    # Ni refus, ni panne, ni artefact : si la base gagne un jour une autre façon de ne rien écrire, elle ne restera pas muette.
+    suivi.noter("tour", MOTIFS_TOUR["refus"], "sans_seance")

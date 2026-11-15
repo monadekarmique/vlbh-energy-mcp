@@ -1218,7 +1218,7 @@ async def fil_digisha_deposer(authorization: str | None, consultante_id: str | N
                                  "p_reponse": reponse, "p_mode": mode}, timeout=15)
     if isinstance(r, str):
         return r
-    await digisha_non_garde.tour_non_depose(_rpc_personne, authorization, depot)
+    digisha_non_garde.tour_non_depose(depot, question)
     return None
 
 
