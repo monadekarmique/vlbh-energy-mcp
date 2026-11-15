@@ -61,7 +61,7 @@ def test_accompagnement_retire_la_ligne_avant_affichage_et_depot(monkeypatch):
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*x, **k):

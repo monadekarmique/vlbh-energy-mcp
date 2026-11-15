@@ -16,7 +16,9 @@ Ce qui se dit :
   · une pièce jointe (photo, PDF) qui n'est pas arrivée dans le seau, ou n'a pas été rattachée à la page ;
   · les consignes d'un tour « À propos de » qui ne sont pas posées : refusées, base muette, réponse coupée, ou prénom
     de la fiche illisible (une fiche neuve, avant sa première séance) ;
-  · les images du lexique montrées avec la réponse, quand elles n'ont pas été rattachées à la page.
+  · les images du lexique montrées avec la réponse, quand elles n'ont pas été rattachées à la page ;
+  · (15.11.2026, carte 5142f03a) ce que Patrick enseigne, corrige ou ferme en séance (⟦Appris⟧, ⟦Corrigé⟧, « Impasse »),
+    et, pour lui seul, ce que DiGiSha voulait retenir pour lui (⟦À apprendre⟧), quand la base refuse ou ne répond pas.
 Ce qui ne se dit pas : le message d'ouverture écrit par l'app (« 🎓 … »), que la base ne garde jamais ; un compte de
 revue (réponse fixe, sans page) ; digisha_chat_log et le journal des coûts, qui sont des compteurs et non la séance.
 
@@ -60,6 +62,10 @@ MOTIFS_TOUR = {
 }
 MOTIF_CONSIGNES = "Les consignes de ce tour n'ont pas été enregistrées."
 MOTIF_ILLUSTRATIONS = "Les images montrées avec cette réponse n'ont pas été rattachées à la page."
+MOTIF_APPRIS = "Ce que tu viens d'enseigner à DiGiSha n'a pas été enregistré."
+MOTIF_CORRIGE = "Ta correction n'a pas été enregistrée dans le lexique."
+MOTIF_IMPASSE = "L'impasse que tu as marquée n'a pas été enregistrée."
+MOTIF_A_APPRENDRE = "Ce que DiGiSha voulait retenir pour toi n'a pas été noté."
 
 # Les messages que digisha_fil_deposer et digisha_relecture_deposer lèvent (pg_proc, 15.11.2026). Reconnus sans dépendre
 # d'une lettre accentuée ni d'une espace insécable : la forme exacte des octets en base n'est pas garantie.
@@ -132,6 +138,21 @@ class Suivi:
 
 
 _suivi: ContextVar[Suivi | None] = ContextVar("digisha_non_garde", default=None)
+
+
+def ecritures_en_echec(sorties) -> int:
+    """Combien d'écritures d'apprentissage n'ont pas abouti. Les fonctions en base rendent un statut (« appris »,
+    « redefini », « nouveau », « note », « deja », « gardee », « vide »…) ; seuls « refus » (la base refuse l'auteur) et
+    rien du tout (la base a refusé l'appel ou n'a pas répondu : _rpc_service rend None) sont des échecs."""
+    return sum(1 for s in (sorties or []) if s is None or s == "refus")
+
+
+def noter_ecritures(quoi: str, phrase: str, sorties) -> None:
+    """Le suivi de l'appel en cours dit qu'une écriture d'apprentissage de ce tour n'a pas abouti (carte 5142f03a)."""
+    n = ecritures_en_echec(sorties)
+    suivi = _suivi.get()
+    if n and suivi is not None:
+        suivi.noter(quoi, phrase, f"echec_{n}")
 
 
 def ouvrir() -> Suivi:

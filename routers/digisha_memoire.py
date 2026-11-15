@@ -94,9 +94,11 @@ def _rendu(bloc: list[dict]) -> str:
     )
 
 
-async def resumer_bloc(client: httpx.AsyncClient, api_key: str, bloc: list[dict]) -> str | None:
+async def resumer_bloc(client: httpx.AsyncClient, api_key: str, bloc: list[dict], cout=None) -> str | None:
     """Résumé d'un bloc, servi du cache si déjà calculé. None = échec (l'appelant
-    renvoie alors l'historique brut, comme avant — jamais bloquant)."""
+    renvoie alors l'historique brut, comme avant — jamais bloquant). `cout(data)` (asynchrone) reçoit la réponse du modèle
+    quand il est appelé pour de bon, jamais pour une relecture du cache — comme resumer_texte (15.11.2026, carte 5142f03a :
+    ces appels n'entraient pas dans digisha_cout_appel, donc pas dans la ligne de coût des apps)."""
     key = empreinte(bloc)
     if key in _resumes:
         _resumes.move_to_end(key)
@@ -120,6 +122,11 @@ async def resumer_bloc(client: httpx.AsyncClient, api_key: str, bloc: list[dict]
         log.warning("resume bloc refusé : HTTP %s %s", r.status_code, extrait_journal(r.text))
         return None
     data = r.json()
+    if cout is not None:
+        try:                        # l'appel est facturé, même s'il ne rend pas de texte
+            await cout(data)
+        except Exception as exc:    # le coût ne bloque jamais le résumé
+            log.warning("resume bloc : coût non inscrit : %r", exc)
     texte = "".join(
         b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"
     ).strip()
@@ -194,7 +201,7 @@ async def resumer_texte(client: httpx.AsyncClient, api_key: str, texte: str, cou
 
 
 async def preparer_historique(
-    client: httpx.AsyncClient, api_key: str, messages: list[dict]
+    client: httpx.AsyncClient, api_key: str, messages: list[dict], cout=None
 ) -> tuple[dict | None, list[dict], int]:
     """→ (bloc système « résumé » ou None, messages bruts à envoyer, nb de blocs résumés).
 
@@ -204,7 +211,7 @@ async def preparer_historique(
         return None, messages, 0
     parties = []
     for i, bloc in enumerate(blocs, 1):
-        resume = await resumer_bloc(client, api_key, bloc)
+        resume = await resumer_bloc(client, api_key, bloc, cout=cout)
         if resume is None:
             return None, messages, 0
         parties.append(f"### Bloc {i} ({len(bloc)} messages)\n{resume}")

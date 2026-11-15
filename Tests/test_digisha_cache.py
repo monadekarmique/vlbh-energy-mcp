@@ -178,7 +178,7 @@ def test_a_propos_de_x_la_consigne_ne_bouge_plus_d_un_tour_a_l_autre(monkeypatch
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*a, **k):
@@ -270,7 +270,7 @@ def _accompagnement_a_propos(monkeypatch, reponse, stop="end_turn"):
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*a, **k):
@@ -379,7 +379,7 @@ def test_a_propos_en_mode_decodage(monkeypatch):
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*a, **k):
@@ -523,7 +523,7 @@ def test_accompagnement_le_lexique_est_dans_la_consigne_stable_et_le_cache_tient
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*a, **k):

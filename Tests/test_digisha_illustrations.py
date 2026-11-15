@@ -75,7 +75,7 @@ def test_accompagnement_rend_l_image_et_la_depose_dans_le_fil(monkeypatch):
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*x, **k):

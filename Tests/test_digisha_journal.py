@@ -37,7 +37,7 @@ def journal(monkeypatch):
     async def prompt():
         return {"core": "C", "tuteur_frame": "T", "accompagnement_frame": "A", "st3": "S", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*a, **k):

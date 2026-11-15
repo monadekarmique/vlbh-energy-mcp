@@ -184,7 +184,7 @@ def test_accompagnement_le_signalement_part_en_coulisse(monkeypatch):
     async def prompt():
         return {"core": "CŒUR", "accompagnement_frame": "CADRE", "st3": "ST3", "version": "t"}
 
-    async def historique(client, key, msgs):
+    async def historique(client, key, msgs, cout=None):
         return None, msgs, 0
 
     async def canal(*x, **k):

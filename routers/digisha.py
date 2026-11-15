@@ -33,7 +33,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from routers import digisha_non_garde, digisha_semantique, digisha_signalement
 from routers.digisha_formation_m1 import m1_system_block, decodage_system_block
-from routers.digisha_memoire import (RESUME_PAGE_MODEL, extrait_journal, journaliser_usage, preparer_historique,
+from routers.digisha_memoire import (RESUME_MODEL, RESUME_PAGE_MODEL, extrait_journal, journaliser_usage, preparer_historique,
                                      resumer_texte)
 from routers.digisha_apprendre import APPRENDRE_CADRE, extraire as extraire_a_apprendre, lexique as lexique_patrick, noter as noter_a_apprendre
 from routers.digisha_apprendre import apprendre_en_seance, extraire_appris, corriger_en_seance, extraire_corrige
@@ -1146,8 +1146,9 @@ async def garder_impasses(text: str, body, proprio: bool, auteur: str | None, co
     if proprio and not dites and dit_impasse(question):
         dites = [impasse_de_secours(question, reponse_precedente(body))]
     if proprio and dites:
-        log.info("digisha — impasse %s → %s", [c for c, _ in dites],
-                 await noter_impasses(_rpc_service, dites, auteur, consultante, question))
+        sorties = await noter_impasses(_rpc_service, dites, auteur, consultante, question)
+        log.info("digisha — impasse %s → %s", [c for c, _ in dites], sorties)
+        digisha_non_garde.noter_ecritures("impasse", digisha_non_garde.MOTIF_IMPASSE, sorties)
     return sans_heure_en_tete(text)
 
 
@@ -1794,7 +1795,13 @@ async def _digisha_chat(
     # Historique : au-delà de 20 messages, les tours anciens sont résumés par
     # blocs (cache) et seuls les derniers restent bruts — voir digisha_memoire.
     raw_messages = avec_heures([t.model_dump(exclude_none=True) for t in body.messages])
-    resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
+
+    async def cout_resume(data: dict) -> None:
+        # 15.11.2026 (carte 5142f03a) : les résumés de l'historique sont des appels au modèle, comptés comme le tour.
+        await journaliser_cout(
+            "render-resume", body.mode, RESUME_MODEL, data,
+            svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None), supabase_user_id=caller_uid)
+    resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages, cout=cout_resume)
     resume_blocks = [resume_block] if resume_block else []
     usage_extra = ""
     # Expérience de Patrick (16.10.2026 22h4x) : « toute utilisation de DiGiSha répond dès maintenant dans le canal qui
@@ -1940,14 +1947,18 @@ async def _digisha_chat(
     # 19.10.2026 (carte 6f1ef080) : ce qu'elle ne sait pas expliquer part à Patrick ; la ligne ne s'affiche ni ne se dépose.
     text, appris = extraire_appris(text)
     if appris and await _rpc_personne(authorization, "is_owner_st6", {}) is True:      # 2026-10-20j : Patrick seul
-        log.info("digisha — appris %s → %s", appris, await apprendre_en_seance(
-            _rpc_service, appris, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None), derniere_question(body)))
+        sorties = await apprendre_en_seance(
+            _rpc_service, appris, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None), derniere_question(body))
+        log.info("digisha — appris %s → %s", appris, sorties)
+        digisha_non_garde.noter_ecritures("appris", digisha_non_garde.MOTIF_APPRIS, sorties)
     # 06.11.2026 : ses corrections en direct se rangent dans le lexique (⟦Corrigé : …⟧, Patrick seul).
     text, corriges = extraire_corrige(text)
     if corriges and await _rpc_personne(authorization, "is_owner_st6", {}) is True:
-        log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], await corriger_en_seance(
+        sorties = await corriger_en_seance(
             _rpc_service, corriges, (str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
-            derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y")))
+            derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y"))
+        log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], sorties)
+        digisha_non_garde.noter_ecritures("corrige", digisha_non_garde.MOTIF_CORRIGE, sorties)
     # 07.11.2026 : « Impasse », le mot code de Patrick — le chemin abandonné est gardé et lui sera rappelé comme fermé.
     text = await garder_impasses(text, body, proprio, moi, cible_imp)
     text, a_apprendre = extraire_a_apprendre(text)
@@ -1956,6 +1967,8 @@ async def _digisha_chat(
                                         (depot_fil[0] if depot_fil else None), derniere_question(body), text)
         usage_extra += f" a_apprendre={len(a_apprendre)}"
         log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
+        if proprio:     # ce que DiGiSha retient pour Patrick : à lui seul de savoir que la note manque
+            digisha_non_garde.noter_ecritures("a_apprendre", digisha_non_garde.MOTIF_A_APPRENDRE, notes)
     text, montrer = extraire_montrer(text)
     illus = illustrations_du_lexique(montrer, heure_zurich())
     if montrer:
@@ -2117,7 +2130,15 @@ async def _digisha_accompagnement(
     if ident and ident.get("profondeur") and ident.get("svlbh_id") and used <= PROFONDEUR_FAIR_USE:
         model = ACCOMPAGNEMENT_MODEL_PROFONDEUR
     raw_messages = avec_heures([t.model_dump(exclude_none=True) for t in body.messages])
-    resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages)
+
+    async def cout_resume(data: dict) -> None:
+        # 15.11.2026 (carte 5142f03a) : au-delà de 20 messages, l'historique se résume par blocs — des appels au modèle
+        # qui n'entraient pas dans digisha_cout_appel, donc pas dans la ligne de coût de la personne.
+        await journaliser_cout(
+            "render-resume", "accompagnement", RESUME_MODEL, data,
+            svlbh_id=(str(ident["svlbh_id"]) if ident and ident.get("svlbh_id") else None),
+            supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None))
+    resume_block, recents, n_blocs = await preparer_historique(_http(), api_key, raw_messages, cout=cout_resume)
     # Le lexique de Patrick fait partie de la consigne stable, commune à toutes (13.11.2026, fiche 9daa60f4). Rangé avec le
     # contexte du tour, ses 68 termes (23 445 caractères, ≈ 8 000 jetons) repartaient hors cache à chaque message alors
     # qu'il ne change que lorsque Patrick enseigne un terme : 60 % du coût de l'accompagnement sur Opus.
@@ -2245,16 +2266,22 @@ async def _digisha_accompagnement(
     # 19.10.2026 (carte 6f1ef080) : ce qu'elle ne sait pas expliquer part à Patrick ; la ligne ne s'affiche ni ne se dépose.
     text, appris = extraire_appris(text)
     if appris and await _rpc_personne(authorization, "is_owner_st6", {}) is True:      # 2026-10-20j : Patrick seul
-        log.info("digisha — appris %s → %s", appris, await apprendre_en_seance(_rpc_service, appris, moi_acc, derniere_question(body)))
+        sorties = await apprendre_en_seance(_rpc_service, appris, moi_acc, derniere_question(body))
+        log.info("digisha — appris %s → %s", appris, sorties)
+        digisha_non_garde.noter_ecritures("appris", digisha_non_garde.MOTIF_APPRIS, sorties)
     text, corriges = extraire_corrige(text)
     if corriges and await _rpc_personne(authorization, "is_owner_st6", {}) is True:
-        log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], await corriger_en_seance(
-            _rpc_service, corriges, moi_acc, derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y")))
+        sorties = await corriger_en_seance(
+            _rpc_service, corriges, moi_acc, derniere_question(body), datetime.now(ZoneInfo("Europe/Zurich")).strftime("%d.%m.%Y"))
+        log.info("digisha — corrigé %s → %s", [c for c, _ in corriges], sorties)
+        digisha_non_garde.noter_ecritures("corrige", digisha_non_garde.MOTIF_CORRIGE, sorties)
     text = await garder_impasses(text, body, proprio, moi_acc, cible_acc)
     text, a_apprendre = extraire_a_apprendre(text)
     if a_apprendre:
         notes = await noter_a_apprendre(_rpc_service, a_apprendre, moi_acc, cible_acc, derniere_question(body), text)
         log.info("digisha — a_apprendre %s → %s", [t for t, _ in a_apprendre], notes)
+        if proprio:     # ce que DiGiSha retient pour Patrick : à lui seul de savoir que la note manque
+            digisha_non_garde.noter_ecritures("a_apprendre", digisha_non_garde.MOTIF_A_APPRENDRE, notes)
     # 13.11.2026 (carte 280b0b5a) : la ligne ⟦Sondage …⟧ ne s'affiche jamais ; pour le propriétaire, sur lui-même, la
     # proposition est rangée (rien ne part) et ce qui partira s'affiche sous la réponse.
     text, sondage = extraire_sondage(text)
