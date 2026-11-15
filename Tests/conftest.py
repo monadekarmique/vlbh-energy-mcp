@@ -4,6 +4,7 @@ Mocks Supabase + Make.com so tests run without external services.
 """
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from unittest.mock import MagicMock, AsyncMock, patch
@@ -90,3 +91,31 @@ def client():
 
 
 HEADERS = {"X-VLBH-Token": "test-token-12345"}
+
+
+# ---------------------------------------------------------------------------
+# The « digisha » logger (the lines Render shows)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def journal_digisha():
+    """Les lignes écrites par le journal « digisha » pendant le test, niveau compris (« WARNING: … »).
+
+    Ce journal a son propre handler et ne remonte pas à la racine (routers/digisha.py, `log.propagate = False`). `caplog`,
+    accroché à la racine, ne le voit que depuis pytest 9.1, qui s'accroche aussi aux journaux non propagés ; avant, il
+    reste vide (mesuré le 15.11.2026 sous pytest 9.0.3, alors que requirements.txt admet `pytest>=8.0` — carte 914d8d3f).
+    Un handler posé sur le journal lui-même, le temps du test, ne dépend d'aucune version."""
+    from routers import digisha  # le journal est configuré à l'import : jamais avant lui
+
+    lignes: list[str] = []
+
+    class _Capte(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            lignes.append(f"{record.levelname}: {record.getMessage()}")
+
+    capte = _Capte()
+    digisha.log.addHandler(capte)
+    try:
+        yield lignes
+    finally:
+        digisha.log.removeHandler(capte)

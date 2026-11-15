@@ -131,16 +131,18 @@ def _requete():
                     "client": ("203.0.113.77", 4242)})
 
 
-def test_appel_sans_session_refuse_sans_ip_ni_ua(monkeypatch, caplog):
+# Le journal « digisha » ne remonte pas à la racine : ces deux tests le lisent par `journal_digisha` (conftest), pas par
+# `caplog`, qui restait vide avant pytest 9.1 (carte 914d8d3f).
+def test_appel_sans_session_refuse_sans_ip_ni_ua(monkeypatch, journal_digisha):
     monkeypatch.delenv("DIGISHA_JETON_SEUL", raising=False)
-    with caplog.at_level("WARNING", logger="digisha"):
-        with pytest.raises(d.HTTPException):
-            asyncio.run(d.authorize_caller(_requete(), None, None))
-    assert "/digisha/chat" in caplog.text
-    assert "SondeUA" not in caplog.text and "203.0.113.77" not in caplog.text
+    with pytest.raises(d.HTTPException):
+        asyncio.run(d.authorize_caller(_requete(), None, None))
+    ecrit = "\n".join(journal_digisha)
+    assert ecrit.startswith("WARNING: ") and "/digisha/chat" in ecrit
+    assert "SondeUA" not in ecrit and "203.0.113.77" not in ecrit
 
 
-def test_jeton_statique_sans_ip_ni_ua(monkeypatch, caplog):
+def test_jeton_statique_sans_ip_ni_ua(monkeypatch, journal_digisha):
     cles = []
 
     async def quota(cle, limite):
@@ -149,8 +151,8 @@ def test_jeton_statique_sans_ip_ni_ua(monkeypatch, caplog):
     monkeypatch.setenv("DIGISHA_JETON_SEUL", "oui")
     monkeypatch.setattr(d, "verify_digisha_token", lambda t: None)
     monkeypatch.setattr(d, "_quota", quota)
-    with caplog.at_level("WARNING", logger="digisha"):
-        assert asyncio.run(d.authorize_caller(_requete(), "jeton", None)) is None
-    assert "jeton statique SANS session" in caplog.text
-    assert "SondeUA" not in caplog.text and "203.0.113.77" not in caplog.text
+    assert asyncio.run(d.authorize_caller(_requete(), "jeton", None)) is None
+    ecrit = "\n".join(journal_digisha)
+    assert ecrit.startswith("WARNING: ") and "jeton statique SANS session" in ecrit
+    assert "SondeUA" not in ecrit and "203.0.113.77" not in ecrit
     assert cles == ["ip:203.0.113.77"]          # le quota par IP reste, hors journal
