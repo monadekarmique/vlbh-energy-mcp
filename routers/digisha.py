@@ -31,7 +31,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
-from routers import digisha_non_garde, digisha_semantique
+from routers import digisha_non_garde, digisha_semantique, digisha_signalement
 from routers.digisha_formation_m1 import m1_system_block, decodage_system_block
 from routers.digisha_memoire import (RESUME_PAGE_MODEL, extrait_journal, journaliser_usage, preparer_historique,
                                      resumer_texte)
@@ -1294,6 +1294,41 @@ def heure_zurich() -> str:
     return datetime.now(ZoneInfo("Europe/Zurich")).strftime("%Hh%M")
 
 
+async def _lire_service(chemin: str, timeout: int = 10):
+    """Une lecture REST avec la clé de SERVICE (`chemin` = « table?select=…&… »). None sur panne."""
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return None
+    try:
+        r = await _http().get(f"{supa_url}/rest/v1/{chemin}",
+                              headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}"}, timeout=timeout)
+        if r.status_code != 200:
+            log.warning("digisha — lecture service %s HTTP %s : %s", chemin.split("?")[0], r.status_code, extrait_journal(r.text))
+            return None
+        return r.json()
+    except Exception as exc:
+        log.warning("digisha — lecture service %s en erreur : %r", chemin.split("?")[0], exc)
+        return None
+
+
+async def _inserer_service(table: str, ligne: dict, timeout: int = 10) -> str | None:
+    """Une insertion avec la clé de SERVICE. None = écrite ; sinon le motif du refus (jamais levé : l'appelant décide)."""
+    supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
+    supa_key = os.environ.get("DIGISHA_SUPABASE_SERVICE_KEY", "")
+    if not supa_url or not supa_key:
+        return "DIGISHA_SUPABASE_URL/_SERVICE_KEY absents"
+    try:
+        r = await _http().post(f"{supa_url}/rest/v1/{table}", json=ligne,
+                               headers={"apikey": supa_key, "Authorization": f"Bearer {supa_key}",
+                                        "Content-Type": "application/json", "Prefer": "return=minimal"}, timeout=timeout)
+        if r.status_code >= 300:
+            return f"HTTP {r.status_code} {extrait_journal(r.text)}"
+        return None
+    except Exception as exc:
+        return repr(exc)
+
+
 async def _rpc_service(nom: str, corps: dict, timeout: int = 10):
     """Un appel RPC avec la clé de SERVICE — pour ce qu'aucune personne ne doit lire elle-même (la relecture). None sur panne."""
     supa_url = os.environ.get("DIGISHA_SUPABASE_URL", "")
@@ -2184,7 +2219,15 @@ async def _digisha_accompagnement(
             raise erreur_du_modele(resp, "accompagnement")
         return resp.json()
 
-    data, recherches = await appeler_avec_savoirs(poster, payload, stade)
+    # 15.11.2026 (carte 38e837cf — Patrick : « Porte-le sur le serveur ») : le signalement silencieux vers la file de formation,
+    # que la consigne active nomme, n'existait que sur Pro web. L'auteur est celui de la session (ident), jamais du modèle.
+    async def signaler(entree: dict) -> str:
+        return await digisha_signalement.deposer(entree, ident, rpc_service=_rpc_service, lire_service=_lire_service,
+                                                 inserer_service=_inserer_service)
+
+    data, recherches = await appeler_avec_savoirs(
+        poster, payload, stade,
+        autres={digisha_signalement.OUTIL_NOM: (digisha_signalement.OUTIL, signaler)})
     if recherches:
         mesure_fil += f" savoirs={len(recherches)}"
         log.info("digisha — savoirs %s", recherches)

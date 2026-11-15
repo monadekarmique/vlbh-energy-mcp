@@ -225,14 +225,20 @@ def _additionner(total: dict, usage: dict) -> None:
             _additionner(sous, v)
 
 
-async def appeler_avec_savoirs(poster, payload: dict, stade: int) -> tuple[dict, list[str]]:
+async def appeler_avec_savoirs(poster, payload: dict, stade: int, autres: dict | None = None) -> tuple[dict, list[str]]:
     """Appelle le modèle avec l'outil ; tant qu'il cherche (deux fois au plus), exécute et rappelle. Rend la DERNIÈRE réponse,
     son usage additionné sur tous les appels (le coût journalisé est le vrai), et les recherches faites (pour le journal).
-    `poster(payload) -> dict` fait un appel au modèle et lève en cas d'erreur, comme avant."""
+    `poster(payload) -> dict` fait un appel au modèle et lève en cas d'erreur, comme avant.
+
+    `autres` (15.11.2026, carte 38e837cf) : d'autres outils, {nom: (définition, async exécuteur(entrée) -> texte)}, offerts à
+    côté des savoirs et quel que soit le stade — aujourd'hui signaler_difficulte. Ils comptent dans les deux tours ; ils
+    n'entrent pas dans la liste des recherches rendue (le journal ne doit pas porter leur entrée)."""
     definition = outil(stade)
-    if not definition:
+    autres = autres or {}
+    outils = ([definition] if definition else []) + [d for d, _ in autres.values()]
+    if not outils:
         return await poster(payload), []
-    payload["tools"] = [definition]
+    payload["tools"] = outils
     usage: dict = {}
     faites: list[str] = []
     deja: set = set()       # les entrées déjà rendues dans cette réponse : nommées, pas renvoyées
@@ -247,9 +253,13 @@ async def appeler_avec_savoirs(poster, payload: dict, stade: int) -> tuple[dict,
         resultats = []
         for b in appels:
             e = b.get("input") or {}
-            faites.append(f"{e.get('savoir')}:{str(e.get('requete'))[:40]}")
-            resultats.append({"type": "tool_result", "tool_use_id": b.get("id"),
-                              "content": executer(b.get("name"), e, stade, deja)})
+            nom = b.get("name")
+            if nom in autres:
+                contenu = await autres[nom][1](e)
+            else:
+                faites.append(f"{e.get('savoir')}:{str(e.get('requete'))[:40]}")
+                contenu = executer(nom, e, stade, deja)
+            resultats.append({"type": "tool_result", "tool_use_id": b.get("id"), "content": contenu})
         if tours >= MAX_TOURS_OUTIL:
             # Dernière passe : plus d'outil, et on le lui DIT — mesuré au banc le 06.11 (sonnet 5.5) : avec tool_choice « none »
             # seul, il rendait un bloc de réflexion et aucun texte (il voulait encore chercher).
