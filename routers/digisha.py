@@ -31,7 +31,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
 
-from routers import digisha_semantique
+from routers import digisha_non_garde, digisha_semantique
 from routers.digisha_formation_m1 import m1_system_block, decodage_system_block
 from routers.digisha_memoire import (RESUME_PAGE_MODEL, extrait_journal, journaliser_usage, preparer_historique,
                                      resumer_texte)
@@ -839,6 +839,11 @@ class ChatResponse(BaseModel):
     # forme exacte d'une pièce gardée {heure, genre, chemin, media_type, titre} ; seau « digisha-pieces », dossier lexique/.
     illustrations: list[dict] | None = None
     heure: str | None = None        # 07.11.2026 : l'heure de la réponse (« 21h36 »), que l'app affiche et renvoie avec l'historique
+    # 15.11.2026 (carte ac79ce6b, digisha_non_garde) : ce que ce tour n'a pas pu garder se dit à l'écran. Le 09.11, 14 dépôts
+    # d'Anne refusés par la base n'avaient laissé qu'un WARNING au journal. `non_garde` vrai = le tour, une pièce jointe ou
+    # des consignes ne sont pas dans ses pages ; `non_garde_motif` = la phrase à afficher sous la réponse (null sinon).
+    non_garde: bool = False
+    non_garde_motif: str | None = None
 
 
 async def fetch_proche_parcours(consultante_id: str, authorization: str | None) -> str:
@@ -941,7 +946,8 @@ def refuser_st1(ident: dict | None) -> None:
 
 
 async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeout: int = 10):
-    """Un appel RPC PostgREST avec le jeton de la PERSONNE (RLS et droits = les siens). None sur toute panne."""
+    """Un appel RPC PostgREST avec le jeton de la PERSONNE (RLS et droits = les siens). None sur toute panne ; le genre
+    de la panne (refus, base muette) est retenu pour l'appel en cours — un dépôt refusé se dit à l'écran (digisha_non_garde)."""
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
     token = authorization.split(" ", 1)[1].strip()
@@ -957,10 +963,12 @@ async def _rpc_personne(authorization: str | None, nom: str, corps: dict, timeou
         )
         if r.status_code != 200:
             log.warning("digisha — rpc %s HTTP %s : %s", nom, r.status_code, extrait_journal(r.text))
+            digisha_non_garde.echec_rpc(nom, r.status_code, r.text)
             return None
         return r.json()
     except Exception as exc:
         log.warning("digisha — rpc %s en erreur : %r", nom, exc)
+        digisha_non_garde.echec_rpc(nom, None, None)
         return None
 
 
@@ -1194,18 +1202,24 @@ async def contexte_personne(authorization: str | None, consultante_id: str | Non
 async def fil_digisha_deposer(authorization: str | None, consultante_id: str | None, canal: str,
                               question: str, reponse: str, mode: str, pour_elle: bool = False) -> str | None:
     """Dépose le tour dans le fil (migration 2026-10-16g, digisha_fil_deposer) : la conversation survit, tour après
-    tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant."""
+    tour, dans la séance DiGiSha du jour et du canal. Jamais bloquant — mais plus jamais muet : un tour qui n'est pas
+    déposé se dit dans la réponse (digisha_non_garde, carte ac79ce6b)."""
     if consultante_id and mode != "formation_m1" and not pour_elle:
         # « À propos de » une autre fiche (accompagnement, mode « fil ») : c'est une RELECTURE — elle se dépose chez celle qui
         # relit, jamais dans le fil de la personne relue (migration 2026-10-17k ; sur sa propre fiche, le dépôt d'avant).
-        r = await _rpc_personne(authorization, "digisha_relecture_deposer",
+        depot = "digisha_relecture_deposer"
+        r = await _rpc_personne(authorization, depot,
                                 {"p_sujet": consultante_id, "p_canal": canal, "p_question": question,
                                  "p_reponse": reponse, "p_mode": mode}, timeout=15)
-        return r if isinstance(r, str) else None
-    r = await _rpc_personne(authorization, "digisha_fil_deposer",
-                            {"p_consultante": consultante_id or None, "p_canal": canal, "p_question": question,
-                             "p_reponse": reponse, "p_mode": mode}, timeout=15)
-    return r if isinstance(r, str) else None
+    else:
+        depot = "digisha_fil_deposer"
+        r = await _rpc_personne(authorization, depot,
+                                {"p_consultante": consultante_id or None, "p_canal": canal, "p_question": question,
+                                 "p_reponse": reponse, "p_mode": mode}, timeout=15)
+    if isinstance(r, str):
+        return r
+    await digisha_non_garde.tour_non_depose(_rpc_personne, authorization, depot)
+    return None
 
 
 PIECES_SEAU = "digisha-pieces"
@@ -1245,8 +1259,11 @@ async def ranger_pieces(session_id: str | None, contenu) -> int:
             continue
         gardees.append({"heure": heure, "genre": "photo" if b["type"] == "image" else "document", "chemin": chemin,
                         "media_type": mt, "titre": b.get("title")})
-    if gardees:
-        await _rpc_service("digisha_page_pieces_ajouter", {"p_session": session_id, "p_pieces": gardees})
+    if gardees and not await _rpc_service("digisha_page_pieces_ajouter", {"p_session": session_id, "p_pieces": gardees}):
+        # Dans le seau mais sur aucune page (la base n'a pas répondu, ou n'a trouvé aucune page à compléter) : personne
+        # ne les reverra — elles ne comptent pas comme gardées.
+        log.warning("digisha — %d pièce(s) envoyée(s) mais rattachée(s) à aucune page, séance %s", len(gardees), session_id[:8])
+        return 0
     return len(gardees)
 
 
@@ -1257,6 +1274,20 @@ async def deposer_illustrations(session_id: str | None, pieces: list[dict]) -> i
         return None
     return await _rpc_service("digisha_page_pieces_ajouter",
                               {"p_session": session_id, "p_pieces": [dict(p, role="digisha") for p in pieces]})
+
+
+async def garder_pieces_et_illustrations(seance: str | None, body, illus: list[dict], suivi: digisha_non_garde.Suivi) -> None:
+    """Après le dépôt du tour : ses pièces jointes puis les images du lexique rejoignent la page. Ce qui n'y arrive pas
+    alors que le tour, lui, est gardé se dit dans la réponse (carte ac79ce6b) ; sans séance, c'est le tour qui le dit."""
+    jointes = pieces_du_dernier(body)
+    if jointes:
+        n_gardees = await ranger_pieces(seance, body.messages[-1].content)
+        log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
+        if seance and n_gardees < jointes:
+            suivi.noter("pieces", digisha_non_garde.motif_pieces(jointes - n_gardees, jointes))
+    rattachees = await deposer_illustrations(seance, illus)
+    if seance and illus and not rattachees:
+        suivi.noter("illustrations", digisha_non_garde.MOTIF_ILLUSTRATIONS)
 
 
 def heure_zurich() -> str:
@@ -1356,6 +1387,18 @@ def consignes_du_texte(texte: str, prenom: str | None = None) -> tuple[list[str]
                 out.append(t[:600])
         return out[:12]
     return propres(blocs["nouvelles"]), propres(blocs["retirees"])
+
+
+def consignes_annoncees(texte: str) -> bool:
+    """La réponse porte-t-elle un bloc « Consignes [retirées] pour … : » suivi d'une ligne à puce, quel que soit le prénom ?
+    Sert quand le prénom de la fiche n'a pas pu être lu : le bloc ne peut pas être posé, et cela doit se dire. Pur."""
+    lignes = (texte or "").replace("\r\n", "\n").split("\n")
+    for i, l in enumerate(lignes):
+        if _TETE.match(l) and _PUCE.match(next((x for x in lignes[i + 1:] if x.strip()), "")):
+            return True
+    return False
+
+
 RELECTURE_PRECEDENTES = (
     "## Tes relectures précédentes de cette personne\n"
     "Ce que tu as déjà posé en relisant ses décodages ; pars de là, ne le redemande pas.\n\n"
@@ -1677,6 +1720,7 @@ async def _digisha_chat(
     x_digisha_token: str | None,
     authorization: str | None,
 ) -> ChatResponse:
+    suivi = digisha_non_garde.ouvrir()      # ce que ce tour ne pourra pas garder, dit dans la réponse (carte ac79ce6b)
     caller_uid = await authorize_caller(request, x_digisha_token, authorization)
     # Le stade AVANT tout le reste (21.10.2026, « ST1 a) ») : une ST1, un compte désactivé ou un stade illisible (503) ne
     # déclenchent ni lecture de prompt ni résumé d'historique par le modèle — même ordre que /accompagnement.
@@ -1888,10 +1932,7 @@ async def _digisha_chat(
     if depot_fil and moi:
         seance = await fil_digisha_deposer(authorization, depot_fil[0], depot_fil[1], derniere_question(body),
                                            text + ("\n" + marques_illustrations(illus) if illus else ""), body.mode)
-        if pieces_du_dernier(body):
-            n_gardees = await ranger_pieces(seance, body.messages[-1].content)
-            log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
-        await deposer_illustrations(seance, illus)
+        await garder_pieces_et_illustrations(seance, body, illus, suivi)
     if journal_permis(body):
         await log_exchange(
             "render-tuteur",
@@ -1904,7 +1945,7 @@ async def _digisha_chat(
             supabase_user_id=caller_uid,
         )
     return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None,
-                        heure=heure_zurich())
+                        heure=heure_zurich(), **suivi.champs())
 
 
 class AccompagnementRequest(BaseModel):
@@ -2004,6 +2045,7 @@ async def _digisha_accompagnement(
     x_digisha_token: str | None,
     authorization: str | None,
 ) -> ChatResponse:
+    suivi = digisha_non_garde.ouvrir()      # ce que ce tour ne pourra pas garder, dit dans la réponse (carte ac79ce6b)
     await authorize_caller(request, x_digisha_token, authorization)
     ident = await gate_subscription(authorization)
     refuser_st1(ident)
@@ -2013,7 +2055,7 @@ async def _digisha_accompagnement(
     # 13.11.2026 (carte 280b0b5a) : « envoie » du propriétaire, un sondage en suspens → il part en file, sans modèle.
     parti = await sondage_sur_son_mot(body, authorization, ident)
     if parti:
-        return ChatResponse(reply=parti, model="sondage-sans-modele", heure=heure_zurich())
+        return ChatResponse(reply=parti, model="sondage-sans-modele", heure=heure_zurich(), **suivi.champs())
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise HTTPException(
@@ -2193,10 +2235,16 @@ async def _digisha_accompagnement(
                 n = await _rpc_personne(authorization, "digisha_consignes_poser",
                                         {"p_sujet": cible_acc, "p_nouvelles": nouvelles, "p_retirees": retirees, "p_session": seance})
                 log.info("digisha — consignes nouvelles=%d retirees=%d resultat=%s sujet=%s", len(nouvelles), len(retirees), n, cible_acc[:8])
-        if pieces_du_dernier(body):
-            n_gardees = await ranger_pieces(seance, body.messages[-1].content)
-            log.info("digisha — pieces_gardees=%d seance=%s", n_gardees, (seance or "∅")[:8])
-        await deposer_illustrations(seance, illus)
+                if n is None:       # refusées ou base muette : la réponse les affiche, la mentorée ne les lira pas
+                    suivi.noter("consignes", digisha_non_garde.MOTIF_CONSIGNES, "echec")
+            elif nouvelles or retirees:      # réponse coupée : rien n'est posé — cela se dit aussi
+                suivi.noter("consignes", digisha_non_garde.MOTIF_CONSIGNES, "coupee")
+        elif cible_acc and not decoder_pour_elle(body) and consignes_annoncees(text):
+            # Le prénom de la fiche n'a pas pu être lu — digisha_consignes_contexte rend null tant que la fiche n'est pas dans
+            # fils_lisibles() (une fiche neuve, avant sa première séance), ou la base n'a pas répondu : le bloc « Consignes
+            # pour … » de la réponse ne peut pas être posé.
+            suivi.noter("consignes", digisha_non_garde.MOTIF_CONSIGNES, "prenom")
+        await garder_pieces_et_illustrations(seance, body, illus, suivi)
     # Un fil en contexte n'entre JAMAIS dans digisha_chat_log (carte b8d68119) : la réponse peut le citer.
     if journal_permis(body):
         await log_exchange(
@@ -2207,4 +2255,4 @@ async def _digisha_accompagnement(
             supabase_user_id=(str(ident["uid"]) if ident and ident.get("uid") else None),
         )
     return ChatResponse(reply=text, model=model, release=await release_courante(_rpc_service), illustrations=illus or None,
-                        heure=heure_zurich())
+                        heure=heure_zurich(), **suivi.champs())
